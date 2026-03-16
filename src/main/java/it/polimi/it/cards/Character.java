@@ -14,10 +14,12 @@ public class Character extends Card {
      }
 
      public CharacterType getTypeOfCharacter() {
+
         return typeOfCharacter;
     }
 
     public int getIcon() {
+
         return icon;
     }
 

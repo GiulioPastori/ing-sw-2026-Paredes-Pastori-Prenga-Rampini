@@ -1,34 +1,56 @@
 package it.polimi.it.cards;
 
+import it.polimi.mesos.model.Player;
+import it.polimi.mesos.model.Tribe;
+import it.polimi.mesos.model.enums.Era;
 
-import it.polimi.mesos.Game;
-import it.polimi.mesos.enums.Era;
 
 public class Building extends Card {
 
-    private int costFood;
+        private int foodCost;
+        private int finalPoints;
+        private int buildingId;
+        private String effectDescription;
 
-    private int finalPoints;
+        public Building(String name, Era era, int foodCost, int finalPoints, int buildingId, String effectDescription) {
+            super(name, era);
+            this.foodCost = foodCost;
+            this.finalPoints = finalPoints;
+            this.buildingId = buildingId;
+            this.effectDescription = effectDescription;
+        }
 
-    public Building(String name, Era era, int costFood, int finalPoints) {
 
-        super(name, era);
+        // * Applica l'effetto dell'edificio al giocatore */
+        public void applyEffect(Player player) {
 
-        this.costFood = costFood;
-        this.finalPoints = finalPoints;
+            System.out.println("Building effect activated: " + effectDescription);
+
+        }
+
+        /**Restituisce il costo in cibo dell'edificio*/
+        public int getCost() {
+
+            return foodCost;
+        }
+
+
+        public int calculateFinalPoints(Tribe tribe) {
+
+            return finalPoints;
+
+        }
+
+        public int getBuildingId() {
+
+            return buildingId;
+        }
+
+        public String getEffectDescription() {
+            return effectDescription;
+        }
 
     }
 
-    public int getCostFood() {
-        return costFood;
-    }
 
-    public int getFinalPoints() {
-        return finalPoints;
-    }
-
-    @Override
-    public void applyEffect(Game game) {
-
-    }
 }

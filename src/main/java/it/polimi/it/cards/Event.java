@@ -5,19 +5,40 @@ import it.polimi.it.enums.EventType;
 
 public class Event extends Card {
 
-        private EventType type;
 
-        public Event(String name, Era era, EventType type) {
+    private EventType typeOfEvent;
+    private int valueEra;
 
-            super(name, era);
+    public Event(String name, Era era, EventType typeOfEvent, int valueEra) {
 
-            this.type = type;
+        super(name, era);
+
+        this.typeOfEvent = typeOfEvent;
+        this.valueEra = valueEra;
+    }
+
+
+
+    public EventType applyEvent(List<Player> players) {
+
+        if (players == null) {
+                    return;
+        }
+
+        for (Player p : players) {
+
+            applyEffect(p);
 
         }
 
-        public EventType getType() {
-            return type;
+        public EventType getTypeOfEvent() {
+            return typeOfEvent;
         }
+
+        public int getValueEra() {
+            return valueEra;
+        }
+
 
         @Override
         public void applyEffect(Game game) {
