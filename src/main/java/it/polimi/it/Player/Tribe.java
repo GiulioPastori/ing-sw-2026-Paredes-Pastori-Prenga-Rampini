@@ -17,7 +17,7 @@ public class Tribe {
         this.buildings= new ArrayList<>();
     }
 
-    public void addCharacter(Character p){
+    public void addCharacter(CharacterType p){
         characters.add(p); //aggiunge personaggio
     }
 
@@ -101,5 +101,8 @@ public class Tribe {
     }
 
     public void addShamanIcons(int shamanIcons) {
+    }
+
+    public void addHuntBonus(int huntBonus) {
     }
 }

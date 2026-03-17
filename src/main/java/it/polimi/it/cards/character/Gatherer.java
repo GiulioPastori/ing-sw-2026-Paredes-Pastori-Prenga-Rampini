@@ -9,7 +9,7 @@ public class Gatherer extends Character {
     private int sustenanceDiscount;
 
     public Gatherer(String name, Era era, CharacterType type, int icon, int sustenanceDiscount) {
-        super(name, era, type, icon);
+        super(name, era, type);
         this.sustenanceDiscount = sustenanceDiscount;
     }
 

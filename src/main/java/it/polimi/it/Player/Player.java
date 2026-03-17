@@ -31,8 +31,12 @@ public class Player {
         return true;
     }
 
-    public void addFood(int amount)          { food += amount; }
-    public void addPrestigePoint(int pp)     { prestigePoint += pp; }
+    public void addFood(int amount)          {
+        food += amount;
+    }
+    public void addPrestigePoint(int pp)     {
+        prestigePoint += pp;
+    }
 
 
     public int calculateFinalScore() {
@@ -43,7 +47,9 @@ public class Player {
                 + tribe.ppBuildings();
     }
 
-    public String getName()              { return name; }
+    public String getName()              {
+        return name;
+    }
     public int    getFood()              { return food; }
     public int    getPrestigePoint()     { return prestigePoint; }
     public int    getTurnOrder()         { return turnOrder; }

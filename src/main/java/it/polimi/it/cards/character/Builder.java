@@ -26,6 +26,7 @@ public abstract class Builder extends Character {
     @Override
     public void applyEffect( Player player){
         Tribe tribe= player.getTribe();
+        Object playerTribe = null;
         playerTribe.addBuildingDiscount(this.buildingsDiscount);
         playerTribe.addPrestigePoints(this.endGamePoints();
     }

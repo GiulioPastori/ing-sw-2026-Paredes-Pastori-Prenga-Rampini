@@ -10,7 +10,7 @@ public abstract class Inventor extends Character {
     private int inventionIcon;
 
     public Inventor(String name, Era era, CharacterType type, int icon, int inventionIcon) {
-        super(name, era, type, icon);
+        super(name, era, type);
         this.inventionIcon = inventionIcon;
     }
 
@@ -23,6 +23,7 @@ public abstract class Inventor extends Character {
     }
 
     public int getInventionIcon() {
+
         return this.inventionIcon;
     }
 
@@ -33,16 +34,19 @@ public abstract class Inventor extends Character {
 
     @Override
     public int getIcon() {
+
         return this.getIcon();
     }
 
     @Override
     public String getName() {
+
         return this.name;
     }
 
     @Override
     public Era getEra() {
+
         return this.era;
     }
 

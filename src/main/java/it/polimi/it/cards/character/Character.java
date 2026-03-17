@@ -10,13 +10,13 @@ public abstract class Character extends Card {
     private CharacterType typeOfCharacter;
     private final int icon;
 
-    public Character(String name, Era era, CharacterType typeOfCharacter, int icon) {
+    public Character(String name, Era era, CharacterType typeOfCharacter) {
             super(name, era);
             this.typeOfCharacter = typeOfCharacter;
             this.icon = icon;
      }
 
-     public java.lang.Character getTypeOfCharacter() {
+     public CharacterType getTypeOfCharacter() {
 
         return this.typeOfCharacter;
     }

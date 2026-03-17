@@ -10,7 +10,7 @@ public abstract class Shaman extends Character {
     private int shamanIcons;
 
     public Shaman(String name, Era era, CharacterType type, int icon, int shamanIcons) {
-        super(name, era, type, icon);
+        super(name, era, type);
         this.shamanIcons = shamanIcons;
     }
 
@@ -43,6 +43,7 @@ public abstract class Shaman extends Character {
 
     @Override
     public String getName() {
+
         return this.name;
     }
 
