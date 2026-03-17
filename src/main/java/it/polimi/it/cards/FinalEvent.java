@@ -1,6 +1,7 @@
 package it.polimi.it.cards;
 
 
+import it.polimi.it.cards.events.Event;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.EventType;
 

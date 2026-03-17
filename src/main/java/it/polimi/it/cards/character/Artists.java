@@ -1,12 +1,14 @@
-package it.polimi.it.cards;
+package it.polimi.it.cards.character;
 
+import it.polimi.it.Player.Player;
 import it.polimi.it.enums.CharacterType;
 
 
-public class Artist extends Character {
+public abstract class Artist extends Character {
 
 
     public Artist(String name) {
+
         super(name, CharacterType.ARTIST);
        }
 
@@ -16,8 +18,6 @@ public class Artist extends Character {
 
     }
 
-    private int calculatePaintingPoints() {
-    }
 
 
 }

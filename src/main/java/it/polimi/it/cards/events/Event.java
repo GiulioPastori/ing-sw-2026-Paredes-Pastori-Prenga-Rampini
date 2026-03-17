@@ -1,5 +1,6 @@
-package it.polimi.it.cards;
+package it.polimi.it.cards.events;
 
+import it.polimi.it.cards.Card;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.EventType;
 

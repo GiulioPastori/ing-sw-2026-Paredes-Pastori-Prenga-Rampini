@@ -1,6 +1,6 @@
 package it.polimi.it.cards;
 
-import it.polimi.mesos.enums.Era
+import it.polimi.it.enums.Era;
 
 public abstract class Card {
     protected String name;
@@ -12,10 +12,12 @@ public abstract class Card {
     }
 
     public String getName() {
+
         return name;
     }
 
     public Era getEra() {
+
         return era;
     }
 
