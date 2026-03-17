@@ -1,6 +1,8 @@
 package it.polimi.it;
 
 import it.polimi.it.Player.Player;
+import it.polimi.it.cards.Building;
+import it.polimi.it.cards.Card;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -98,7 +100,7 @@ public class Game {
             if (taken) board.takeCard(b, player);
         } else if (card instanceof Character c) {
             player.takeCharacterCard(c);
-            board.takeCard(c, player);
+            board.takeCard(card, player);
         }
         // Event cards cannot be taken (enforced by chooseCardFromRow)
     }

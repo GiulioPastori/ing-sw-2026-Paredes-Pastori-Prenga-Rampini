@@ -50,4 +50,7 @@ public class Player {
     public void   setTurnOrder(int o)    { this.turnOrder = o; }
     public Totem  getTotem()             { return totem; }
     public Tribe  getTribe()             { return tribe; }
+
+    public void spendFood(int toPay) {
+    }
 }

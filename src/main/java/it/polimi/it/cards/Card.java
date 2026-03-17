@@ -1,5 +1,6 @@
 package it.polimi.it.cards;
 
+import it.polimi.it.Player.Player;
 import it.polimi.it.enums.Era;
 
 public abstract class Card {

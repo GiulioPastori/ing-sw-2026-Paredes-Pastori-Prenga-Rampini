@@ -1,5 +1,11 @@
 package it.polimi.it.cards.events;
 
+import it.polimi.it.Board;
+import it.polimi.it.Player.Player;
+import it.polimi.it.enums.CharacterType;
+
+import java.util.List;
+
 public class Sustenance implements EventStrategy {
 
     private int penaltyPerMissingFood;
@@ -13,7 +19,7 @@ public class Sustenance implements EventStrategy {
         for (Player p : players) {
 
             int characters = p.getTribe().getCharacters().size();
-            int discount = p.getTribe().countByType(CharacterType.GATHERER) * 3;
+            int discount = p.getTribe().countByType(CharacterType.GATHERERS) * 3;
 
             int foodNeeded = Math.max(0, characters - discount);
             int availableFood = p.getFood();
