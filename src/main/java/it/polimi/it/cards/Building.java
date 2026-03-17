@@ -1,9 +1,7 @@
 package it.polimi.it.cards;
 
-import it.polimi.mesos.model.Player;
-import it.polimi.mesos.model.Tribe;
-import it.polimi.mesos.model.enums.Era;
 
+import it.polimi.it.enums.Era;
 
 public class Building extends Card {
 
@@ -28,7 +26,7 @@ public class Building extends Card {
 
         }
 
-        /**Restituisce il costo in cibo dell'edificio*/
+        //**Restituisce il costo in cibo dell'edificio*//
         public int getCost() {
 
             return foodCost;
@@ -47,6 +45,7 @@ public class Building extends Card {
         }
 
         public String getEffectDescription() {
+
             return effectDescription;
         }
 

@@ -1,4 +1,4 @@
-package it.polimi.it.cards;
+package it.polimi.it.cards.character;
 
 import it.polimi.it.enums.CharacterType;
 
@@ -12,3 +12,4 @@ public class Gatherer extends Character {
     public int getFoodDiscount() {
         return FOOD_DISCOUNT;
     }
+}
