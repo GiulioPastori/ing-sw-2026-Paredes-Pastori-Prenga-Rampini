@@ -23,8 +23,9 @@ import it.polimi.it.enums.Era;
     }
 
     @Override
-    public java.lang.Character getTypeOfCharacter() {
-        return CharacterType.ARTISTS;
+    public CharacterType getTypeOfCharacter() {
+        return CharacterType.ARTIST;
+
     }
 
     @Override
@@ -38,5 +39,6 @@ import it.polimi.it.enums.Era;
 
      public int getEndGameSetBonus() {
         this.endGameSetBonus=endGameSetBonus;
+        return endGameSetBonus;
      }
  }
