@@ -97,4 +97,9 @@ public class Tribe {
         return points;
     }
 
+    public void addInventionIcon(int inventionIcon) {
+    }
+
+    public void addShamanIcons(int shamanIcons) {
+    }
 }

@@ -1,48 +1,40 @@
 package it.polimi.it.cards.character;
 
+import it.polimi.it.Player.Player;
+import it.polimi.it.Player.Tribe;
 import it.polimi.it.enums.CharacterType;
+import it.polimi.it.enums.Era;
 
-public class Builder extends Character {
-    private final int constructionDiscount;
+import java.util.Locale;
+
+public abstract class Builder extends Character {
+    private final int buildingsDiscount;
     private final int endPrestigePoints;
 
-    public Builder(String name, int era, int constructionDiscount, int endPrestigePoints) {
+    public Builder(String name, Era era, int buildingsDiscount, int endPrestigePoints) {
         super(name, era, CharacterType.BUILDER);
-        this.constructionDiscount = constructionDiscount;
+        this.buildingsDiscount = buildingsDiscount;
         this.endPrestigePoints = endPrestigePoints;
     }
 
-    public int getConstructionDiscount() {
-        return constructionDiscount;
+    public int getbuildingsDiscount() {
+
+        return buildingsDiscount;
     }
+
+
+    @Override
+    public void applyEffect( Player player){
+        Tribe tribe= player.getTribe();
+        playerTribe.addBuildingDiscount(this.buildingsDiscount);
+        playerTribe.addPrestigePoints(this.endGamePoints();
+    }
+
+
 
     public int endGamePoints() {
-        return endPrestigePoints;
+
+     return endPrestigePoints;
     }
 
-    public static class Inventor extends java.lang.Character {
-        private String inventionIcon;
-
-        public Inventor(String nome, int era, String icona) {
-            super(nome, era, CharacterType.INVENTORS);
-            this.inventionIcon = icon;
-        }
-
-        public String getinventionIcon() {
-            return inventionIcon;
-        }
-    }
-
-    public static class Shaman extends Character {
-        private final int shamanicIconsCount;
-
-        public Shaman(String name, int era, int shamanicIconsCount) {
-            super(name, era, CharacterType.SHAMAN);
-            this.shamanicIconsCount = shamanicIconsCount;
-        }
-
-        public int getShamanicIconsCount() {
-            return shamanicIconsCount;
-        }
-    }
 }

@@ -8,7 +8,7 @@ import it.polimi.it.enums.Era;
 
 public abstract class Character extends Card {
     private CharacterType typeOfCharacter;
-    private int icon;
+    private final int icon;
 
     public Character(String name, Era era, CharacterType typeOfCharacter, int icon) {
             super(name, era);
@@ -16,10 +16,11 @@ public abstract class Character extends Card {
             this.icon = icon;
      }
 
-     public CharacterType getTypeOfCharacter() {
+     public java.lang.Character getTypeOfCharacter() {
 
         return this.typeOfCharacter;
     }
+
   //restituisce quante icone ha la carta//
     public int getIcon() {
 

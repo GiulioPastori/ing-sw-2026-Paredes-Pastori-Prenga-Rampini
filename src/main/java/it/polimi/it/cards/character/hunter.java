@@ -1,19 +1,36 @@
 package it.polimi.it.cards.character;
 
 
+import it.polimi.it.Player.Player;
+import it.polimi.it.Player.Tribe;
 import it.polimi.it.enums.CharacterType;
+import it.polimi.it.enums.Era;
 
 
-public class Hunter extends Character {
+public abstract class Hunter extends Character {
+    private int huntBonus;
 
-
-    private final int foodBonus;
-    private final int huntEventBonus; //
-
-    public Hunter(String name, int era, int foodBonus, int huntEventBonus) {
-        super(name, era, CharacterType.HUNTER);
-        this.foodBonus = foodBonus;
-        this.huntEventBonus = huntEventBonus;
+    public Hunter(String name, Era era, CharacterType type, int icon, int huntBonus) {
+        super(name, era, type, icon);
+        this.huntBonus = huntBonus;
     }
+
+    @Override
+    public void applyEffect(Player player) {
+        if (player != null && player.getTribe() != null) {
+            Tribe tribe = player.getTribe();
+            tribe.addHuntBonus(this.huntBonus);
+            tribe.addCharacter(this.getTypeOfCharacter())
+        }
+    }
+
+    public int getHuntBonus() {
+        return this.huntBonus;
+    }
+
+    public void setHuntBonus(int huntBonus) {
+        this.huntBonus = huntBonus;
+    }
+
 
 }
