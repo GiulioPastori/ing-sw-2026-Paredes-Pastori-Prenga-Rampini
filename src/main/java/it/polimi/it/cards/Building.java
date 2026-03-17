@@ -1,6 +1,8 @@
 package it.polimi.it.cards;
 
 
+import it.polimi.it.Player.Player;
+import it.polimi.it.Player.Tribe;
 import it.polimi.it.enums.Era;
 
 public class Building extends Card {
