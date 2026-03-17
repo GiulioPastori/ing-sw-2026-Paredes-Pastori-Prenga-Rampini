@@ -59,7 +59,7 @@ public class Tribe {
         return discount;
     }
 
-    public int pointperBuilder(){
+    public int ppBuilders(){
         int points=0;
         for( Character c : characters){
             if(c.getType() == CharacterType.BUILDERS)
@@ -68,7 +68,7 @@ public class Tribe {
         return points;
     }
 
-    public int pointperInventors(){
+    public int ppInventors(){
         int points=0;
         for (Character c : characters){
             if(c.getType() == CharacterType.INVENTORS){
@@ -79,7 +79,7 @@ public class Tribe {
         return points;
     }
 
-    public int pointperArtist(){
+    public int ppArtists(){
         int points=0;
         for(Character c : characters){
             if(c.getType()== CharacterType.ARTISTS){
@@ -89,7 +89,7 @@ public class Tribe {
         return points;
     }
 
-    public int pointperBuildings(){
+    public int ppBuildings(){
         int points= 0;
         for (Building b : buildings){
             points+=b.getPoints();
