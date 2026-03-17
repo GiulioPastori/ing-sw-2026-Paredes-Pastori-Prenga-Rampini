@@ -21,8 +21,7 @@ public class OfferTiles {
     public void placeTotem(Player player, OfferTile tile) {
         if (tile.isFree()) {
             tile.occupy();
-            Totem t = player.getTotem();
-            turnOrderTiles.placeTotem(t);
+            turnOrderTiles.placeTotem(player);
         }
     }
 
@@ -52,8 +51,3 @@ public class OfferTiles {
         }
         turnOrderTiles.reset();
     }
-
-    public TurnOrderTile getTurnOrderTiles() {
-        return turnOrderTiles;
-    }
-}
