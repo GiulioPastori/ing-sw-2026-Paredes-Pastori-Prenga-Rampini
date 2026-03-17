@@ -25,7 +25,7 @@ public class Building extends Card {
         public void applyEffect(Player player) {
             if (player== null) {
             }
-            player.addprestigePoints(1);
+            player.addPrestigePoint(-1);
         }
 
         //**Restituisce il costo in cibo dell'edificio*//

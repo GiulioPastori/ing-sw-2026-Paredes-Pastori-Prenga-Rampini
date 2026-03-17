@@ -38,7 +38,8 @@ public class Tribe {
     public int shamanIcons(){  //conta icone shaman
         int total=0;
         for(Character c : characters){
-            total+= c.getShamanIcons();
+            if (c.CharacterType == "SHAMAN")
+            total += c.shamanIcons();
         }
         return total;
     }

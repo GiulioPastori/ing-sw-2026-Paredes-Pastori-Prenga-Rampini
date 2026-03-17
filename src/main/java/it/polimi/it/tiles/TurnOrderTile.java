@@ -1,6 +1,7 @@
 package it.polimi.it.tiles;
 
-package mesos;
+
+import it.polimi.it.enums.TotemColour;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,11 +17,7 @@ public class TurnOrderTile {
     }
 
     /**
-     * Positions per rulebook:
-     *  - 1st space: +3 food bonus
-     *  - 2nd space: +1 food bonus
-     *  - middle spaces: no bonus/penalty
-     *  - last space: pay 1 food or lose 2 PP
+    Bonus e malus del tabellone come da regolamento
      */
     private void buildPositions(int n) {
         for (int i = 1; i <= n; i++) {
@@ -34,9 +31,9 @@ public class TurnOrderTile {
      * Places the player's totem in the first free space from the top,
      * applies food bonus or last-place penalty immediately.
      */
-    public SpaceTurn placeTotem(Player player) {
+    public TurnPosition placeTotem(Player player) {
         for (TurnPosition pos : positions) {
-            if (pos.isFree()) {
+            if (pos.freeisFree()) {
                 pos.place(player.getTotem());
                 player.setTurnOrder(pos.getPosition());
                 if (pos.getFoodTokens() > 0)
@@ -52,8 +49,8 @@ public class TurnOrderTile {
     }
 
     /** Returns the ordered list of totems for next round's placement order. */
-    public List<Totem> getOrder() {
-        List<Totem> order = new ArrayList<>();
+    public List<TotemColour> getOrder() {
+        List<TotemColour> order = new ArrayList<>();
         for (TurnPosition pos : positions)
             if (!pos.isFree()) order.add(pos.getPlacedTotem());
         return order;

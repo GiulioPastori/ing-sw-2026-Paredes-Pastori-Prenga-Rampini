@@ -1,5 +1,9 @@
 package it.polimi.it.tiles;
 
+import it.polimi.it.Player.Player;
+import it.polimi.it.Player.Tribe;
+
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,7 +24,7 @@ public class OfferTiles {
 
     public void placeTotem(Player player, OfferTile tile) {
         if (tile.isFree()) {
-            tile.occupy();
+            tile.placeTotem(player);
             turnOrderTiles.placeTotem(player);
         }
     }
@@ -47,7 +51,7 @@ public class OfferTiles {
 
     public void reset() {
         for (OfferTile tile : card) {
-            tile.free();
+            tile.removeTotem();
         }
         turnOrderTiles.reset();
     }
