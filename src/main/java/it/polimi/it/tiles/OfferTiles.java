@@ -1,5 +1,7 @@
 package it.polimi.it.tiles;
 
+import it.polimi.it.Player.Player;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,3 +53,8 @@ public class OfferTiles {
         }
         turnOrderTiles.reset();
     }
+
+    public TurnOrderTile getTurnOrderTiles() {
+        return turnOrderTiles;
+    }
+}
