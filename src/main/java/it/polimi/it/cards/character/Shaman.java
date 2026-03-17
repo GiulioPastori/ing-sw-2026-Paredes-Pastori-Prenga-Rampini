@@ -28,11 +28,13 @@ public abstract class Shaman extends Character {
     }
 
     public void setShamanIcons(int shamanIcons) {
+
         this.shamanIcons = shamanIcons;
     }
 
     @Override
     public java.lang.Character getTypeOfCharacter() {
+
         return CharacterType.SHAMAN;
     }
 

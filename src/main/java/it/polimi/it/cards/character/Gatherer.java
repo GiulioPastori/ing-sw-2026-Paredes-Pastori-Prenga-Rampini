@@ -23,10 +23,12 @@ public class Gatherer extends Character {
     }
 
     public int getSustenanceDiscount() {
+
         return this.sustenanceDiscount;
     }
 
     public void setSustenanceDiscount(int sustenanceDiscount) {
+
         this.sustenanceDiscount = sustenanceDiscount;
     }
 

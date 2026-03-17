@@ -28,7 +28,7 @@ public abstract class Builder extends Character {
         Tribe tribe= player.getTribe();
         Object playerTribe = null;
         playerTribe.addBuildingDiscount(this.buildingsDiscount);
-        playerTribe.addPrestigePoints(this.endGamePoints();
+        playerTribe.addPrestigePoints(this.endGamePoints());
     }
 
 
