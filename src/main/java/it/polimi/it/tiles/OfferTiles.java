@@ -5,7 +5,6 @@ public class OfferTiles {
     private List<OfferTile> card;
     private TurnOrderTile turnOrderTiles;
 
-
     public OfferTiles(TurnOrderTile turnOrderTiles) {
         this.card = new ArrayList<>();
         this.turnOrderTiles = turnOrderTiles;
