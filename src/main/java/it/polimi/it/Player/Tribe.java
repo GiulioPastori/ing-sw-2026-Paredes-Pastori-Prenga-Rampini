@@ -28,7 +28,7 @@ public class Tribe {
     public int countType(CharacterType type){    //conta personaggi di un certo tipo
         int count=0;
         for (Character c: characters){
-            if(c.typeOfCharacter() == type){
+            if(c.getTypeOfCharacter() == type){
                 count++;
             }
         }
