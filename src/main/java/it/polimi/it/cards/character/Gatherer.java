@@ -1,15 +1,35 @@
 package it.polimi.it.cards.character;
 
+import it.polimi.it.Player.Player;
+import it.polimi.it.Player.Tribe;
 import it.polimi.it.enums.CharacterType;
+import it.polimi.it.enums.Era;
 
 public class Gatherer extends Character {
-    private static final int FOOD_DISCOUNT = 3;
+    private int sustenanceDiscount;
 
-    public Gatherer(String name, int era) {
-        super(name, era, CharacterType.GATHERER);
+    public Gatherer(String name, Era era, CharacterType type, int icon, int sustenanceDiscount) {
+        super(name, era, type);
+        this.sustenanceDiscount = sustenanceDiscount;
     }
 
-    public int getFoodDiscount() {
-        return FOOD_DISCOUNT;
+    @Override
+    public void applyEffect(Player player) {
+        if (player != null && player.getTribe() != null) {
+            Tribe tribe = player.getTribe();
+            tribe.addSustenanceDiscount(this.sustenanceDiscount);
+            tribe.addCharacter(this);
+        }
     }
+
+    public int getSustenanceDiscount() {
+
+        return this.sustenanceDiscount;
+    }
+
+    public void setSustenanceDiscount(int sustenanceDiscount) {
+
+        this.sustenanceDiscount = sustenanceDiscount;
+    }
+
 }
