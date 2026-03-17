@@ -18,20 +18,20 @@ public abstract class Character extends Card {
 
      public CharacterType getTypeOfCharacter() {
 
-        return typeOfCharacter;
+        return this.typeOfCharacter;
     }
-
+  //restituisce quante icone ha la carta//
     public int getIcon() {
 
-        return icon;
+        return this.icon;
     }
 
-    public void applyEffect(Player player) {
+    public abstract void applyEffect(Player player);
 
-    }
 
-    @Override
     public void applyEffect(Game game) {
+        Player currentPlayer= game.getCurrentPlayer();
+        applyEffect(currentPlayer);
 
     }
 }

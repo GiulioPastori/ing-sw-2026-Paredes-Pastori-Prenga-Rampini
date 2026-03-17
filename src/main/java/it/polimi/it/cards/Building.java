@@ -21,19 +21,26 @@ public class Building extends Card {
 
         // * Applica l'effetto dell'edificio al giocatore */
         public void applyEffect(Player player) {
-
-            System.out.println("Building effect activated: " + effectDescription);
-
+            if (player== null) {
+            }
+            player.addprestigePoints(1);
         }
 
         //**Restituisce il costo in cibo dell'edificio*//
         public int getCost() {
 
-            return foodCost;
+            return this.foodCost;
         }
 
 
         public int calculateFinalPoints(Tribe tribe) {
+            int     FinalPoints = 0;
+            for (Player p : tribe.getPlayers()) {
+                finalPoints += p.getPoints();
+            }
+            // Applica bonus dell'effetto
+            finalPoints += bonusPoints;
+
 
             return finalPoints;
 
