@@ -1,5 +1,7 @@
 package it.polimi.it.Player;
 
+import it.polimi.it.cards.Building;
+
 public class Player {
     private final String name;
     private int food;

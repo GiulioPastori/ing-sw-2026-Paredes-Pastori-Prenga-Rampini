@@ -3,6 +3,7 @@ package it.polimi.it;
 import it.polimi.it.Player.Player;
 import it.polimi.it.cards.Building;
 import it.polimi.it.cards.Card;
+import it.polimi.it.cards.events.Event;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -222,4 +223,8 @@ public class Game {
     public List<Player> getPlayers()      { return players; }
     public Board        getBoard()        { return board; }
     public int          getCurrentRound() { return currentRound; }
+
+    public Player getCurrentPlayer() {
+        return currentPlayerIndex;
+    }
 }

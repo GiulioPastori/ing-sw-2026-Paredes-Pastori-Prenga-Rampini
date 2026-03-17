@@ -104,5 +104,12 @@ public class Tribe {
     }
 
     public void addHuntBonus(int huntBonus) {
+
+    }
+
+    public void addCavePaintingScore(int cavePaintingScores) {
+    }
+
+    public void addEndGameSetBonus(int endGameSetBonus) {
     }
 }

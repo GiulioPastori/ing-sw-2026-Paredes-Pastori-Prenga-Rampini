@@ -8,9 +8,9 @@ import it.polimi.it.enums.Era;
 
 public abstract class Character extends Card {
     private CharacterType typeOfCharacter;
-    private final int icon;
+    private int icon = 0;
 
-    public Character(String name, Era era, CharacterType typeOfCharacter) {
+    public Character(String name, Era era, CharacterType typeOfCharacter, int icon) {
             super(name, era);
             this.typeOfCharacter = typeOfCharacter;
             this.icon = icon;
