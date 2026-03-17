@@ -5,16 +5,16 @@ public class Player {
     private int food;
     private int prestigePoint;
     private int turnOrder;
-    private final Totem totem;
+    private final TotemColour totem;
     private final Tribe tribe;
 
-    public Player(String name, Totem totem) {
-        this.name          = name;
-        this.totem         = totem;
-        this.tribe         = new Tribe();
-        this.food          = 0;
+    public Player(String name, TotemColour totem) {
+        this.name = name;
+        this.totem = totem;
+        this.tribe = new Tribe();
+        this.food = 0;
         this.prestigePoint = 0;
-        this.turnOrder     = 0;
+        this.turnOrder = 0;
     }
 
     public void takeCharacterCard(Character c) {
