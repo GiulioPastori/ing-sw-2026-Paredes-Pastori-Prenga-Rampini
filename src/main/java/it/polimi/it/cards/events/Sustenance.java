@@ -11,7 +11,7 @@ public class Sustenance implements EventStrategy {
 
     private int penaltyPerMissingFood;
 
-    public SustenanceStrategy(int penaltyPerMissingFood) {
+    public void SustenanceStrategy(int penaltyPerMissingFood) {
         this.penaltyPerMissingFood = penaltyPerMissingFood;
     }
 

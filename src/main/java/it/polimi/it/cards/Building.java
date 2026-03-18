@@ -1,6 +1,7 @@
 package it.polimi.it.cards;
 
 
+import it.polimi.it.Board;
 import it.polimi.it.Player.Player;
 import it.polimi.it.Player.Tribe;
 import it.polimi.it.enums.Era;
@@ -22,7 +23,7 @@ public class Building extends Card {
 
 
         // * Applica l'effetto dell'edificio al giocatore */
-        public void applyEffect(Player player) {
+        public void applyEffect(Player player, Board board) {
             if (player== null) {
             }
             player.addPrestigePoint(-1);
