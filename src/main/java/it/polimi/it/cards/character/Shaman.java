@@ -1,29 +1,23 @@
 package it.polimi.it.cards.character;
 
+
+import it.polimi.it.Board;
 import it.polimi.it.Player.Player;
-import it.polimi.it.Player.Tribe;
 import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
 
-
-public abstract class Shaman extends Character {
+public class Shaman extends Character {
     private int shamanIcons;
+    private int icon;
 
     public Shaman(String name, Era era, CharacterType type, int icon, int shamanIcons) {
-        super(name, era, type);
+        super(name, era, type.SHAMAN, 0, 0);
         this.shamanIcons = shamanIcons;
     }
 
-    @Override
-    public void applyEffect(Player player) {
-        if (player != null && player.getTribe() != null) {
-            Tribe tribe = player.getTribe();
-            tribe.addShamanIcons(this.shamanIcons);
-            tribe.addCharacter(this);
-        }
-    }
 
     public int getShamanIcons() {
+
         return this.shamanIcons;
     }
 
@@ -32,25 +26,22 @@ public abstract class Shaman extends Character {
         this.shamanIcons = shamanIcons;
     }
 
-    @Override
-    public java.lang.Character getTypeOfCharacter() {
 
-        return CharacterType.SHAMAN;
+
+    @Override
+    protected void onAcquire(Player player, Board board) {
+        // nessun effetto immediato
     }
 
     @Override
     public int getIcon() {
+
         return this.icon;
     }
 
     @Override
-    public String getName() {
-
-        return this.name;
+    public void onEvent(Player player, Board board) {
+        // usato nel calcolo rituale (gestito da Event)
     }
 
-    @Override
-    public Era getEra() {
-        return this.era;
-    }
 }

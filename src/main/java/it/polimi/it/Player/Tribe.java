@@ -1,6 +1,7 @@
 package it.polimi.it.Player;
 
 import it.polimi.it.cards.Building;
+import it.polimi.it.cards.character.Shaman;
 import it.polimi.it.enums.CharacterType;
 
 import java.util.ArrayList;
@@ -17,7 +18,7 @@ public class Tribe {
         this.buildings= new ArrayList<>();
     }
 
-    public void addCharacter(CharacterType p){
+    public void addCharacter(Shaman p){
         characters.add(p); //aggiunge personaggio
     }
 

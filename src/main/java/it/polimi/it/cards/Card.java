@@ -1,5 +1,6 @@
 package it.polimi.it.cards;
 
+import it.polimi.it.Board;
 import it.polimi.it.Player.Player;
 import it.polimi.it.enums.Era;
 
@@ -12,8 +13,12 @@ public abstract class Card {
         this.era  = era;
     }
 
-    public String getName() { return name; }
-    public Era    getEra()  { return era; }
+    public String getName() {
+        return name;
+    }
+    public Era getEra()  {
+        return era;
+    }
 
-    public abstract void applyEffect(Player player);
+    public abstract void applyEffect(Player player, Board board);
 }

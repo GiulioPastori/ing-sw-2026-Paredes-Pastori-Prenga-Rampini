@@ -4,6 +4,7 @@ import it.polimi.it.Player.Player;
 import it.polimi.it.cards.Building;
 import it.polimi.it.cards.Card;
 import it.polimi.it.cards.events.Event;
+import it.polimi.it.tiles.OfferTile;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -16,7 +17,7 @@ public class Game {
     private final List<Player> players;
     private final Board board;
     private int currentRound;
-    private int currentPlayerIndex;
+    private final int currentPlayerIndex;
 
     public Game(List<Player> players, Board board) {
         this.players            = players;
@@ -224,7 +225,7 @@ public class Game {
     public Board        getBoard()        { return board; }
     public int          getCurrentRound() { return currentRound; }
 
-    public Player getCurrentPlayer() {
+    public int getCurrentPlayer() {
         return currentPlayerIndex;
     }
 }

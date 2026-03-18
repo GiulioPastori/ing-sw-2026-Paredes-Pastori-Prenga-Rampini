@@ -1,6 +1,7 @@
 package it.polimi.it.cards.character;
 
 
+import it.polimi.it.Board;
 import it.polimi.it.Player.Player;
 import it.polimi.it.Player.Tribe;
 import it.polimi.it.enums.CharacterType;
@@ -10,11 +11,11 @@ public class Hunter extends Character {
     private int huntBonus;
 
     public Hunter(String name, Era era, CharacterType type, int icon, int huntBonus) {
-        super(name, era, type, icon);
+        super(name, era, type, icon, 0);
         this.huntBonus = huntBonus;
     }
 
-    public void applyEffect(Player player) {
+    public void applyEffect(Player player, Board board) {
         if (player != null && player.getTribe() != null) {
             Tribe tribe = player.getTribe();
             tribe.addHuntBonus(this.huntBonus);
