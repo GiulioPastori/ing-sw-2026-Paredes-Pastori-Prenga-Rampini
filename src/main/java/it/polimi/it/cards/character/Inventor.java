@@ -10,8 +10,8 @@ import it.polimi.it.enums.Era;
 public class Inventor extends Character {
     private int inventionIcon;
 
-    public Inventor(String name, Era era, int icon, int inventionIcon) {
-        super(name, era, CharacterType.INVENTOR,icon, 0);
+    public Inventor(String name, Era era, int inventionIcon) {
+        super(name, era, CharacterType.INVENTOR,0);
         this.inventionIcon = inventionIcon;
     }
 

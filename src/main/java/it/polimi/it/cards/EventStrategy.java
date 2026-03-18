@@ -1,9 +1,13 @@
-package it.polimi.it.cards.events;
+package it.polimi.it.cards;
 
-import com.sun.tools.javac.util.List;
-import it.polimi.it.Board;
+
 import it.polimi.it.Player.Player;
+import java.util.List;
 
 public interface EventStrategy {
-    void apply(List<Player> players, Board board);
+    void apply(List<Player> players);
+
+    void applyEffect(Player player);
+
+
 }

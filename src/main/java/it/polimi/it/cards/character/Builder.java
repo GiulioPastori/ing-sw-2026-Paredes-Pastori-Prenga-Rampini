@@ -11,7 +11,7 @@ public class Builder extends Character {
     private final int endPrestigePoints;
 
     public Builder(String name, Era era,CharacterType type, int buildingsDiscount, int endPrestigePoints) {
-        super(name, era, CharacterType.BUILDER,0, 0);
+        super(name, era, CharacterType.BUILDER, 0);
         this.buildingsDiscount = buildingsDiscount;
         this.endPrestigePoints = endPrestigePoints;
     }

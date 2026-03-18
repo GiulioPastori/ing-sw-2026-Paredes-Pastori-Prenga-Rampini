@@ -10,8 +10,8 @@ public class Shaman extends Character {
     private int shamanIcons;
     private int icon;
 
-    public Shaman(String name, Era era, CharacterType type, int icon, int shamanIcons) {
-        super(name, era, type.SHAMAN, 0, 0);
+    public Shaman(String name, Era era, CharacterType type, int shamanIcons) {
+        super(name, era, type.SHAMAN, 0);
         this.shamanIcons = shamanIcons;
     }
 

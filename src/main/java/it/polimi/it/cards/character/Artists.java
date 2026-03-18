@@ -10,8 +10,8 @@ import it.polimi.it.enums.Era;
     public int cavePaintingScores;
     public int endGameSetBonus;
 
-    public Artists(String name, Era era, CharacterType type, int icon, int cavePaintingScores, int endGameSetBonus) {
-        super(name, era, CharacterType.ARTIST, 0,0);
+    public Artists(String name, Era era, CharacterType type, int cavePaintingScores, int endGameSetBonus) {
+        super(name, era, CharacterType.ARTIST,0);
         this.cavePaintingScores = cavePaintingScores;
         this.endGameSetBonus = endGameSetBonus;
     }

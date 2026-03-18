@@ -12,10 +12,9 @@ public abstract class Character extends Card {
     private int icon = 0;
     private int basePrestige;
 
-    public Character(String name, Era era, CharacterType type, int icon, int i) {
+    public Character(String name, Era era, CharacterType type, int i) {
         super(name, era);
         this.type = type;
-        this.icon = icon;
     }
 
     public CharacterType getType() {

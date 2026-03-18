@@ -10,8 +10,8 @@ import it.polimi.it.enums.Era;
 public class Gatherer extends Character {
     private int sustenanceDiscount;
 
-    public Gatherer(String name, Era era, CharacterType type, int icon, int sustenanceDiscount) {
-        super(name, era, type.GATHERER, 0, 0);
+    public Gatherer(String name, Era era, CharacterType type, int sustenanceDiscount) {
+        super(name, era, type.GATHERER, 0);
         this.sustenanceDiscount = sustenanceDiscount;
     }
 

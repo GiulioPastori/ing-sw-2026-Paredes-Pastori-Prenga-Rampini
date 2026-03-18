@@ -4,7 +4,7 @@ import com.sun.tools.javac.util.List;
 import it.polimi.it.Board;
 import it.polimi.it.Player.Player;
 
-public class ShamanicRitual implements EventStrategy {
+public class ShamanicRitualStrategy implements EventStrategy {
 
     private int reward;
     private int penalty;

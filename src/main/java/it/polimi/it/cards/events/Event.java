@@ -1,15 +1,17 @@
 package it.polimi.it.cards.events;
 
-import com.sun.tools.javac.util.List;
+
 import it.polimi.it.Board;
 import it.polimi.it.Player.Player;
 import it.polimi.it.cards.Card;
+import it.polimi.it.cards.EventStrategy;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.EventType;
 
 public class Event extends Card {
 
     private EventType type;
+    private Era era;
     private int value;
     private EventStrategy strategy;
 
