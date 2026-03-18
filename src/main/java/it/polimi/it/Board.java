@@ -4,6 +4,7 @@ import it.polimi.it.Player.Player;
 import it.polimi.it.cards.Building;
 import it.polimi.it.cards.Card;
 import it.polimi.it.enums.Era;
+import it.polimi.it.tiles.OfferTile;
 import it.polimi.it.tiles.OfferTiles;
 
 import java.util.ArrayList;
@@ -67,4 +68,13 @@ public class Board {
    public void refillTopRow(int numPlayers){
 
    }
+
+    public void resolveEndOfGameEvents(List<Player> players) {
+    }
+
+    public List<OfferTile> getOfferTrack() {
+    }
+
+    public OfferTile getTurnOrderTile() {
+    }
 }

@@ -3,6 +3,7 @@ package it.polimi.it.cards.events;
 import it.polimi.it.Board;
 import it.polimi.it.Player.Player;
 import it.polimi.it.enums.CharacterType;
+import it.polimi.it.cards.events.EventStrategy;
 
 import java.util.List;
 
@@ -10,7 +11,7 @@ public class Sustenance implements EventStrategy {
 
     private int penaltyPerMissingFood;
 
-    public SustenanceStrategy(int penaltyPerMissingFood) {
+    public void SustenanceStrategy(int penaltyPerMissingFood) {
         this.penaltyPerMissingFood = penaltyPerMissingFood;
     }
 

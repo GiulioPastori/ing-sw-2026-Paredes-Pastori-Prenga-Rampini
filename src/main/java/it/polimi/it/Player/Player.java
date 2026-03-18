@@ -1,5 +1,7 @@
 package it.polimi.it.Player;
 
+import it.polimi.it.cards.Building;
+
 public class Player {
     private final String name;
     private int food;
@@ -27,7 +29,7 @@ public class Player {
         if (food < cost) return false;
         food -= cost;
         tribe.addBuilding(b);
-        b.applyEffect(this);
+        b.applyEffect(this, );
         return true;
     }
 
@@ -58,5 +60,8 @@ public class Player {
     public Tribe  getTribe()             { return tribe; }
 
     public void spendFood(int toPay) {
+    }
+    public int addPrestige(int basePrestige){
+        return prestigePoint;
     }
 }
