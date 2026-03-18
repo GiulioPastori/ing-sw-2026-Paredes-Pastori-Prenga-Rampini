@@ -2,12 +2,15 @@ package it.polimi.it.Player;
 
 import it.polimi.it.cards.Building;
 import it.polimi.it.cards.character.Shaman;
+import it.polimi.it.cards.character.Character;
 import it.polimi.it.enums.CharacterType;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import static it.polimi.it.enums.CharacterType.SHAMAN;
 
 public class Tribe {
     private List<Character> characters;
@@ -29,7 +32,7 @@ public class Tribe {
     public int countType(CharacterType type){    //conta personaggi di un certo tipo
         int count=0;
         for (Character c: characters){
-            if(c.getTypeOfCharacter() == type){
+            if(c.getType() == type){
                 count++;
             }
         }
@@ -39,7 +42,9 @@ public class Tribe {
     public int shamanIcons(){  //conta icone shaman
         int total=0;
         for(Character c : characters){
-            total+= c.getShamanIcons();
+            if (c.getType() == SHAMAN) {
+                total += Shaman(c).getShamanIcons();
+            }
         }
         return total;
     }
@@ -75,7 +80,6 @@ public class Tribe {
             if(c.getType() == CharacterType.INVENTORS){
                 points+=c.getPoints();
             }
-
         }
         return points;
     }

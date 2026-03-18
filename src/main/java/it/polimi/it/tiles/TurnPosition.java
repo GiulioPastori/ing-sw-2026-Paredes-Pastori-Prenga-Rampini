@@ -1,10 +1,13 @@
 package it.polimi.it.tiles;
 
+
+import it.polimi.it.Player.Player;import it.polimi.it.enums.TotemColour;
+
 public class TurnPosition {
     private final int position;
     private final int foodTokens; // food bonus when landing here
     private final int penalties;  // PP penalty if this is the last space (0 or -2)
-    private Totem placedTotem;
+    private Player placedTotem;
 
     public TurnPosition(int position, int foodTokens, int penalties) {
         this.position    = position;
@@ -14,11 +17,11 @@ public class TurnPosition {
     }
 
     public boolean isFree()        { return placedTotem == null; }
-    public void    place(Totem t)  { this.placedTotem = t; }
-    public Totem   free()          { Totem t = placedTotem; placedTotem = null; return t; }
+    public void    place(Player p)  { this.placedTotem = p; }
+    public Player   free()          { Player p = placedTotem; placedTotem = null; return p; }
 
     public int   getPosition()    { return position; }
     public int   getFoodTokens()  { return foodTokens; }
     public int   getPenalties()   { return penalties; }
-    public Totem getPlacedTotem() { return placedTotem; }
+    public Player getPlacedTotem() { return placedTotem; }
 }

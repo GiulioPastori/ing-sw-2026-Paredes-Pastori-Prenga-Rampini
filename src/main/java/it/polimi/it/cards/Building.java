@@ -26,7 +26,7 @@ public class Building extends Card {
         public void applyEffect(Player player, Board board) {
             if (player== null) {
             }
-            player.addprestigePoints(1);
+            player.addPrestigePoint(-1);
         }
 
         //**Restituisce il costo in cibo dell'edificio*//
@@ -37,10 +37,7 @@ public class Building extends Card {
 
 
         public int calculateFinalPoints(Tribe tribe) {
-            int     FinalPoints = 0;
-            for (Player p : tribe.getPlayers()) {
-                finalPoints += p.getPoints();
-            }
+            int  finalPoints = tribe.getPlayer().points;
             // Applica bonus dell'effetto
             finalPoints += bonusPoints;
 

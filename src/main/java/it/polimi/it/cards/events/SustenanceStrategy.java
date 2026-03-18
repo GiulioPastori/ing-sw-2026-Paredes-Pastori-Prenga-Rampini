@@ -32,7 +32,7 @@ public class SustenanceStrategy implements EventStrategy {
             int missing = foodNeeded - toPay;
 
             if (missing > 0) {
-                p.addPrestige(-missing * penaltyPerMissingFood);
+                p.addPrestigePoint(-missing * penaltyPerMissingFood);
             }
         }
     }

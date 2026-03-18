@@ -17,7 +17,6 @@ public class Shaman extends Character {
 
 
     public int getShamanIcons() {
-
         return this.shamanIcons;
     }
 
