@@ -4,7 +4,7 @@ import com.sun.tools.javac.util.List;
 import it.polimi.it.Board;
 import it.polimi.it.Player.Player;
 
-public class ShamanicRitual implements EventStrategy {
+public class ShamanicRitual implements it.polimi.it.cards.events.EventStrategy {
 
     private int reward;
     private int penalty;
@@ -29,10 +29,11 @@ public class ShamanicRitual implements EventStrategy {
             int icons = p.getTribe().shamanIcons();
 
             if (icons == max) {
-                p.addPrestige(reward);
+                // aggiungere
+                p.addPrestigePoint(reward);
             }
             if (icons == min) {
-                p.addPrestige(-penalty);
+                p.addPrestigePoint(-penalty);
             }
         }
     }

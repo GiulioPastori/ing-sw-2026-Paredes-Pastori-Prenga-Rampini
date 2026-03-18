@@ -37,10 +37,7 @@ public class Building extends Card {
 
 
         public int calculateFinalPoints(Tribe tribe) {
-            int     FinalPoints = 0;
-            for (Player p : tribe.getPlayers()) {
-                finalPoints += p.getPoints();
-            }
+            int  finalPoints = tribe.getPlayer().points;
             // Applica bonus dell'effetto
             finalPoints += bonusPoints;
 
