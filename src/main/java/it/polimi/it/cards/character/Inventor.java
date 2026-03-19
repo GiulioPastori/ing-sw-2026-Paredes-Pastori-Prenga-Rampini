@@ -1,41 +1,32 @@
 package it.polimi.it.cards.character;
 
-
 import it.polimi.it.Board;
 import it.polimi.it.Player.Player;
-import it.polimi.it.Player.Tribe;
 import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
 
 public class Inventor extends Character {
-    private int inventionIcon;
+    private final int inventionIconId; //identifica l'invenzione
 
-    public Inventor(String name, Era era, int inventionIcon) {
-        super(name, era, CharacterType.INVENTOR,0);
-        this.inventionIcon = inventionIcon;
+    public Inventor(String name, Era era, int icon, int inventionIconId) {
+        // basePrestige è 0 perché i punti dell'inventore si calcolano solo alla fine
+        super(name, era, CharacterType.INVENTOR, icon, 0);
+        this.inventionIconId = inventionIconId;
     }
 
-
-    public int getInventionIcon() {
-
-        return this.inventionIcon;
-    }
-
-    public void setInventionIcon(int inventionIcon) {
-
-        this.inventionIcon = inventionIcon;
-    }
-
-    public CharacterType getTypeOfCharacter() {
-
-        return CharacterType.INVENTOR;
+    public int getInventionIconId() {
+        return inventionIconId;
     }
 
     @Override
     protected void onAcquire(Player player, Board board) {
-        // Nessun effetto immediato
-        // ma il metodo DEVE esistere
+        // Nessun effetto immediato all'acquisto
     }
 
+    @Override
+    public int calculateFinalPoints(Player player) {
+        // Qui non restituiamo ancora il calcolo
 
+        return 0;
+    }
 }

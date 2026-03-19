@@ -7,25 +7,28 @@ import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
 
  public class Artists extends Character {
-    public int cavePaintingScores;
-    public int endGameSetBonus;
 
-    public Artists(String name, Era era, CharacterType type, int cavePaintingScores, int endGameSetBonus) {
-        super(name, era, CharacterType.ARTIST,0);
-        this.cavePaintingScores = cavePaintingScores;
-        this.endGameSetBonus = endGameSetBonus;
+
+    public Artists(String name, Era era) {
+        super(name, era, CharacterType.ARTIST,0,0);
     }
 
 
 
 
- @Override
- protected void onAcquire(Player player, Board board) {
+    @Override
+    protected void onAcquire(Player player, Board board) {
      // niente effetto immediato
- }
+    }
 
- @Override
- public void onEvent(Player player, Board board) {
-     // usato nel Cave Painting
- }
+     @Override
+     public void applyEventBonus(Player player, Board board) {
+         // Nessun bonus individuale specifico; l'evento conta il totale degli oggetti Artists
+     }
+
+     @Override
+     public int calculateFinalPoints(Player player) {
+
+        return 0; // Il calcolo è aggregato: (count / 2) * 10
+     }
  }

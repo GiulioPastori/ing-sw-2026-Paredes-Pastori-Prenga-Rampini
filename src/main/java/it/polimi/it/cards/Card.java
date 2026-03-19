@@ -14,9 +14,11 @@ public abstract class Card {
     }
 
     public String getName() {
+
         return name;
     }
     public Era getEra()  {
+
         return era;
     }
 

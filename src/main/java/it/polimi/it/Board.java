@@ -73,8 +73,14 @@ public class Board {
     }
 
     public List<OfferTile> getOfferTrack() {
+        return List.of();
     }
 
     public OfferTile getTurnOrderTile() {
+        return getTurnOrderTile();
+    }
+
+    public List<Card> getBottomRow() {
+        return List.of();
     }
 }

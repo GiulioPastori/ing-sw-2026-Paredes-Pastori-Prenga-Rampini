@@ -4,6 +4,7 @@ import it.polimi.it.Player.Player;
 import it.polimi.it.cards.Building;
 import it.polimi.it.cards.Card;
 import it.polimi.it.cards.events.Event;
+import it.polimi.it.tiles.OfferTile;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -60,7 +61,7 @@ public class Game {
 
             // Return totem to Turn Order tile; bonuses/penalties applied inside
             tile.removeTotem();
-            board.getTurnOrderTile().placeTotem(acting);
+            board.getTurnOrderTile().placeTotem(acting.getTotem());
         }
 
         endOfRound();

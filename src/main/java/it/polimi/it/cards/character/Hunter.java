@@ -2,35 +2,31 @@ package it.polimi.it.cards.character;
 
 import it.polimi.it.Board;
 import it.polimi.it.Player.Player;
-import it.polimi.it.Player.Tribe;
 import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
 
 public class Hunter extends Character {
-    private int huntBonus;
-    private boolean hasIcon;
+    private final int huntBonus;
+    private final boolean hasIcon;
 
-    public Hunter(String name, Era era, CharacterType type,int huntBonus, boolean hasIcon) {
-        super(name, era, CharacterType.HUNTER, 0);
+    public Hunter(String name, Era era, int icon, int basePrestige, int huntBonus, boolean hasIcon) {
+        // Passiamo icon e basePrestige a  Character
+        super(name, era, CharacterType.HUNTER, icon, basePrestige);
         this.huntBonus = huntBonus;
-        this.hasIcon= hasIcon;
+        this.hasIcon = hasIcon;
     }
 
     @Override
     protected void onAcquire(Player player, Board board) {
-        // produzione immediata di cibo
-        player.addFood(player.getFood());
+        // Aggiunge il cibo fisso indicato sulla carta
+        player.addFood(this.huntBonus);
     }
 
     public int getHuntBonus() {
-
         return this.huntBonus;
     }
 
-    public void setHuntBonus(int huntBonus) {
-
-        this.huntBonus = huntBonus;
+    public boolean hasIcon() {
+        return this.hasIcon;
     }
-
-
 }

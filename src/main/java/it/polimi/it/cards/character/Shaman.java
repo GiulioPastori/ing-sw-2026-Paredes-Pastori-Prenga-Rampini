@@ -7,40 +7,20 @@ import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
 
 public class Shaman extends Character {
-    private int shamanIcons;
-    private int icon;
 
-    public Shaman(String name, Era era, CharacterType type, int shamanIcons) {
-        super(name, era, type.SHAMAN, 0);
-        this.shamanIcons = shamanIcons;
+    public Shaman(String name, Era era, CharacterType type, int shamanIcons, int basePrestige) {
+        super(name, era, CharacterType.SHAMAN,shamanIcons,basePrestige);
     }
 
 
     public int getShamanIcons() {
-        return this.shamanIcons;
+
+        return getIcon();
     }
-
-    public void setShamanIcons(int shamanIcons) {
-
-        this.shamanIcons = shamanIcons;
-    }
-
-
 
     @Override
     protected void onAcquire(Player player, Board board) {
         // nessun effetto immediato
-    }
-
-    @Override
-    public int getIcon() {
-
-        return this.icon;
-    }
-
-    @Override
-    public void onEvent(Player player, Board board) {
-        // usato nel calcolo rituale (gestito da Event)
     }
 
 }

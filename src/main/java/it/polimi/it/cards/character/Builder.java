@@ -11,12 +11,13 @@ public class Builder extends Character {
     private final int endPrestigePoints;
 
     public Builder(String name, Era era,CharacterType type, int buildingsDiscount, int endPrestigePoints) {
-        super(name, era, CharacterType.BUILDER, 0);
+        // Passiamo endPrestigePoints come basePrestige alla classe madre
+        super(name, era, CharacterType.BUILDER, 0, endPrestigePoints);
         this.buildingsDiscount = buildingsDiscount;
         this.endPrestigePoints = endPrestigePoints;
     }
 
-    public int getbuildingsDiscount() {
+    public int getBuildingsDiscount() {
 
         return buildingsDiscount;
     }
@@ -27,11 +28,15 @@ public class Builder extends Character {
         // nessun effetto immediato
     }
 
+    /**
+     * I punti di fine partita sono già memorizzati in basePrestige,
+     * sovrascrivo
+     */
+    @Override
+    public int calculateFinalPoints(Player player) {
 
-
-    public int endGamePoints() {
-
-     return endPrestigePoints;
+        return 0;
     }
+
 
 }

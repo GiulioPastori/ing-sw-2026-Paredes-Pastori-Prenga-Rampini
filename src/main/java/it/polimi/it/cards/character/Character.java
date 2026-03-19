@@ -1,6 +1,5 @@
 package it.polimi.it.cards.character;
 
-
 import it.polimi.it.Board;
 import it.polimi.it.Player.Player;
 import it.polimi.it.cards.Card;
@@ -8,61 +7,65 @@ import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
 
 public abstract class Character extends Card {
-    private CharacterType type;
-    private int icon = 0;
-    private int basePrestige;
+    protected CharacterType type;
+    protected int icon; // Numero di icone (es. per Shaman o Inventor)
+    protected int basePrestige;
 
-    public Character(String name, Era era, CharacterType type, int i) {
+    public Character(String name, Era era, CharacterType type, int icon, int basePrestige) {
         super(name, era);
         this.type = type;
+        this.icon = icon;
+        this.basePrestige = basePrestige;
     }
 
     public CharacterType getType() {
-
         return type;
     }
 
-    public int getbasePrestige() {
+    public int getBasePrestige() {
         return basePrestige;
-
     }
 
-
-    /**
-     * Effetto quando la carta viene presa
-     */
-    @Override
-    public void applyEffect(Player player, Board board) {
-        if (basePrestige > 0) {
-            player.addPrestige(basePrestige);
-        }
-        onAcquire(player, board);
-    }
-
-    //restituisce quante icone ha la carta//
     public int getIcon() {
-
         return this.icon;
     }
 
     /**
-     * Hook per sottoclassi
+     * Applica l'effetto quando la carta viene acquisita.
+     */
+    @Override
+    public void applyEffect(Player player, Board board) {
+        // 1. Aggiungi subito alla tribù (così gli effetti vedono la carta)
+        player.getTribe().addCharacter(this);
+
+        // 2. Applica i punti prestigio base (se presenti)
+        if (basePrestige > 0) {
+            player.addPrestigePoint(basePrestige);
+        }
+
+        // 3. Esegue l'effetto specifico (Hook)
+        onAcquire(player, board);
+    }
+
+    /**
+     * Hook per le sottoclassi (es. Hunter che aggiunge cibo)
      */
     protected abstract void onAcquire(Player player, Board board);
 
     /**
-     * Effetto durante eventi (override se serve)
+     * Bonus specifico durante gli eventi (da sovrascrivere se serve)
      */
-    public void onEvent(Player player, Board board) {
-        // default: nessun effetto
+    public void applyEventBonus(Player player, Board board) {
     }
 
     /**
-     * Effetto di fine partita (override se serve)
+     * Calcolo punti extra a fine partita (es. per Artist o Inventor)
      */
-    public int endGamePoints(Player player) {
+    public int calculateFinalPoints(Player player) {
         return 0;
     }
 
+    public int getPoint() {
+        return 0;
+    }
 }
-

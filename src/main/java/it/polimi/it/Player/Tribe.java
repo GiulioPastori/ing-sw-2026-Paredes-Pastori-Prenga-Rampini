@@ -1,7 +1,7 @@
 package it.polimi.it.Player;
 
 import it.polimi.it.cards.Building;
-import it.polimi.it.cards.character.Shaman;
+import it.polimi.it.cards.character.*;
 import it.polimi.it.cards.character.Character;
 import it.polimi.it.enums.CharacterType;
 
@@ -13,20 +13,26 @@ import java.util.Set;
 import static it.polimi.it.enums.CharacterType.SHAMAN;
 
 public class Tribe {
-    private List<Character> characters;
-    private List<Building> buildings;
+    private final List<Character> characters;
+    private final List<Building> buildings;
+    private final Player player;
 
-    public Tribe(){
+    public Tribe(Player player){
+        this.player = player;
         this.characters= new ArrayList<>();
         this.buildings= new ArrayList<>();
     }
 
-    public void addCharacter(Shaman p){
-        characters.add(p); //aggiunge personaggio
+    public void addCharacter(Character p) {
+        if (p != null) {
+            characters.add(p); //aggiunge personaggio
+        }
     }
 
-    public void addBuilding( Building e){
-        buildings.add(e);  //aggiunge edificio
+    public void addBuilding( Building b) {
+        if (b != null) {
+            buildings.add(b);  //aggiunge edificio
+        }
     }
 
     public int countType(CharacterType type){    //conta personaggi di un certo tipo
@@ -39,82 +45,120 @@ public class Tribe {
         return count;
     }
 
-    public int shamanIcons(){  //conta icone shaman
-        int total=0;
-        for(Character c : characters){
-            if (c.getType() == SHAMAN) {
-                total += Shaman(c).getShamanIcons();
+    /* Somma tutte le icone sciamano presenti sulle carte Shaman.
+     */
+    public int getTotalShamanIcons() {
+        int total = 0;
+        for (Character c : characters) {
+            if (c instanceof Shaman) {
+                total += ((Shaman) c).getShamanIcons();
             }
         }
         return total;
     }
 
-    public int uniqueInventorIcon(){   //conta le icone inventore uniche
-        Set<String> icons = new HashSet<>();
-        for (Character c : characters){
-            icons.addAll(c.getIventorActions());
+    /**
+     * Conta quante icone invenzione UNICHE ha il giocatore (per il calcolo finale).
+     */
+    public int getUniqueInventorIconsCount() {
+        Set<Integer> uniqueIcons = new HashSet<>();
+        for (Character c : characters) {
+            if (c instanceof Inventor) {
+                uniqueIcons.add(((Inventor) c).getInventionIconId());
+            }
         }
-        return icons.size();
+        return uniqueIcons.size();
     }
 
-    public int compBuildingDiscount(){
-        int discount=0;
-        for (Character c: characters){
-            discount+=c.getConstructionDiscount();
+
+    /**
+     * Calcola lo sconto totale per la costruzione di edifici (fornito dai Builder).
+     */
+    public int getBuildingDiscount() {
+        int totalDiscount = 0;
+        for (Character c : characters) {
+            if (c instanceof Builder) {
+                totalDiscount += ((Builder) c).getBuildingsDiscount();
+            }
         }
-        return discount;
+        return totalDiscount;
     }
 
-    public int ppBuilders(){
-        int points=0;
-        for( Character c : characters){
-            if(c.getType() == CharacterType.BUILDERS)
-                points+= c.getPoints();
+    /**
+     * Calcola lo sconto totale di cibo (fornito dai Gatherer) per l'evento Sustenance.
+     */
+    public int getSustenanceDiscount() {
+        int total = 0;
+        for (Character c : characters) {
+            if (c instanceof Gatherer) {
+                total += ((Gatherer) c).getSustenanceDiscount();
+            }
+        }
+        return total;
+    }
+
+    /**
+     * Somma i punti vittoria base forniti dagli edifici costruiti.
+     */
+    public int getTotalBuildingPoints() {
+        int points = 0;
+        for (Building b : buildings) {
+            points += b.getFinalPoints();
         }
         return points;
     }
 
-    public int ppInventors(){
-        int points=0;
-        for (Character c : characters){
-            if(c.getType() == CharacterType.INVENTORS){
-                points+=c.getPoints();
+    public int ppBuilders() {
+        int points = 0;
+        for (Character c : characters) {
+            // Controlla che il tipo sia quello corretto (Builder)
+            if (c.getType() == CharacterType.BUILDER) {
+                points += c.getBasePrestige(); // Usiamo il nome corretto del metodo in Character
             }
         }
         return points;
     }
 
-    public int ppArtists(){
-        int points=0;
-        for(Character c : characters){
-            if(c.getType()== CharacterType.ARTISTS){
-                points += c.getPoints();
+    public int ppInventors() {
+        int points = 0;
+        for (Character c : characters) {
+            if (c.getType() == CharacterType.INVENTOR) {
+                points += c.getBasePrestige();
             }
         }
         return points;
     }
 
-    public int ppBuildings(){
-        int points= 0;
-        for (Building b : buildings){
-            points+=b.getPoints();
+    public int ppArtists() {
+        int points = 0;
+        for (Character c : characters) {
+            if (c.getType() == CharacterType.ARTIST) {
+                points += c.getBasePrestige();
+            }
         }
         return points;
     }
 
-    public void addInventionIcon(int inventionIcon) {
+    public int ppBuildings() {
+        int points = 0;
+        for (Building b : buildings) {
+            points += b.getFinalPoints(); // Assicurati che Building abbia getFinalPoints()
+        }
+        return points;
     }
 
-    public void addShamanIcons(int shamanIcons) {
+    public List<Character> getCharacters() {
+        return characters;
     }
 
-    public void addHuntBonus(int huntBonus) {
-
+    public List<Building> getBuildings() {
+        return buildings;
     }
 
-    public void addCavePaintingScore(int cavePaintingScores) {
-    }
-
-    public void addEndGameSetBonus(int endGameSetBonus) {
+    public Player getPlayer() {
+        return player;
     }
 }
+
+
+
