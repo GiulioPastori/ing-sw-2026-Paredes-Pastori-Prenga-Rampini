@@ -8,9 +8,9 @@ import it.polimi.it.enums.Era;
 public class Inventor extends Character {
     private final int inventionIconId; //identifica l'invenzione
 
-    public Inventor(String name, Era era, int icon, int inventionIconId) {
+    public Inventor(String name, Era era, int icon, int inventionIconId, boolean totemIcon) {
         // basePrestige è 0 perché i punti dell'inventore si calcolano solo alla fine
-        super(name, era, CharacterType.INVENTOR, icon, 0);
+        super(name, era, CharacterType.INVENTOR, icon, 0, totemIcon);
         this.inventionIconId = inventionIconId;
     }
 

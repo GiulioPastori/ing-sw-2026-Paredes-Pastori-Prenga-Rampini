@@ -1,4 +1,4 @@
-package it.polimi.it.cards;
+package it.polimi.it.cards.events;
 
 
 import it.polimi.it.Player.Player;

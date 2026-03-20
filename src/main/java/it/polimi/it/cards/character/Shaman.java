@@ -8,8 +8,8 @@ import it.polimi.it.enums.Era;
 
 public class Shaman extends Character {
 
-    public Shaman(String name, Era era, CharacterType type, int shamanIcons, int basePrestige) {
-        super(name, era, CharacterType.SHAMAN,shamanIcons,basePrestige);
+    public Shaman(String name, Era era, CharacterType type, int shamanIcons, int basePrestige, boolean totemIcon) {
+        super(name, era, CharacterType.SHAMAN,shamanIcons,basePrestige, totemIcon);
     }
 
 

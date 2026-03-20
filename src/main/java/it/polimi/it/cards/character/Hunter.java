@@ -9,9 +9,9 @@ public class Hunter extends Character {
     private final int huntBonus;
     private final boolean hasIcon;
 
-    public Hunter(String name, Era era, int icon, int basePrestige, int huntBonus, boolean hasIcon) {
+    public Hunter(String name, Era era, int icon, int basePrestige, int huntBonus, boolean hasIcon, boolean totemIcon) {
         // Passiamo icon e basePrestige a  Character
-        super(name, era, CharacterType.HUNTER, icon, basePrestige);
+        super(name, era, CharacterType.HUNTER, icon, basePrestige, totemIcon);
         this.huntBonus = huntBonus;
         this.hasIcon = hasIcon;
     }

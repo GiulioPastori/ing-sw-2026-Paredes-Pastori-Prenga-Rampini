@@ -10,9 +10,9 @@ public class Builder extends Character {
     private final int buildingsDiscount;
     private final int endPrestigePoints;
 
-    public Builder(String name, Era era,CharacterType type, int buildingsDiscount, int endPrestigePoints) {
+    public Builder(String name, Era era,CharacterType type, int buildingsDiscount, int endPrestigePoints, boolean totemIcon) {
         // Passiamo endPrestigePoints come basePrestige alla classe madre
-        super(name, era, CharacterType.BUILDER, 0, endPrestigePoints);
+        super(name, era, CharacterType.BUILDER,0, endPrestigePoints, totemIcon);
         this.buildingsDiscount = buildingsDiscount;
         this.endPrestigePoints = endPrestigePoints;
     }

@@ -1,7 +1,6 @@
 package it.polimi.it.cards.events;
 
 import it.polimi.it.Player.Player;
-import it.polimi.it.cards.EventStrategy;
 import it.polimi.it.enums.CharacterType;
 import java.util.List;
 

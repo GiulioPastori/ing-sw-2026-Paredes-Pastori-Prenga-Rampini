@@ -10,16 +10,18 @@ public abstract class Character extends Card {
     protected CharacterType type;
     protected int icon; // Numero di icone (es. per Shaman o Inventor)
     protected int basePrestige;
+    protected final boolean totemIcon;
 
-    public Character(String name, Era era, CharacterType type, int icon, int basePrestige) {
+    public Character(String name, Era era, CharacterType type, int icon, int basePrestige, boolean totemIcon) {
         super(name, era);
         this.type = type;
         this.icon = icon;
         this.basePrestige = basePrestige;
+        this.totemIcon= totemIcon;
     }
 
     public CharacterType getType() {
-        return type;
+        return this.type;
     }
 
     public int getBasePrestige() {
@@ -45,6 +47,10 @@ public abstract class Character extends Card {
 
         // 3. Esegue l'effetto specifico (Hook)
         onAcquire(player, board);
+    }
+
+    public boolean hasTotemIcon() {
+        return totemIcon;
     }
 
     /**

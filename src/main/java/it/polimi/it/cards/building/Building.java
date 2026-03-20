@@ -1,22 +1,29 @@
-package it.polimi.it.cards;
+package it.polimi.it.cards.building;
 
 import it.polimi.it.Board;
 import it.polimi.it.Player.Player;
 import it.polimi.it.Player.Tribe;
+import it.polimi.it.cards.Card;
+import it.polimi.it.cards.events.ShamanicRitual;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.EventType;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class Building extends Card {
 
     protected int foodCost;
     protected int finalPoints;
     protected String effectDescription;
+    private List<BuildingStrategy> strategies;
 
-    public Building(String name, Era era, int foodCost, int finalPoints, String effectDescription) {
+    public Building(String name, Era era, int foodCost, int finalPoints, String effectDescription, List<BuildingStrategy> strategies) {
         super(name, era);
         this.foodCost = foodCost;
         this.finalPoints = finalPoints;
         this.effectDescription = effectDescription;
+        this.strategies = (strategies != null) ? strategies : new ArrayList<>();
     }
 
     /**
@@ -28,6 +35,11 @@ public class Building extends Card {
         return Math.max(0, finalCost); // Il costo non può essere negativo
     }
 
+    public void onNewCharacter(Player player, it.polimi.it.cards.character.Character c) {
+        for (BuildingStrategy s : strategies) {
+            s.onNewCharacter(player,c );
+        }
+    }
     /**
      * Effetto immediato all'acquisto (Hook sovrascritto dalla Factory).
      */
@@ -39,6 +51,15 @@ public class Building extends Card {
         player.getTribe().addBuilding(this);
     }
 
+    public void onRitual(Player player, ShamanicRitual event) {
+        for (BuildingStrategy s : strategies) {
+            s.onRitual(player, event);
+        }
+    }
+
+    public List<BuildingStrategy> getStrategies() {
+        return strategies;
+    }
     /**
      * Hook per effetti durante gli eventi (es. Bonus Caccia o Sostentamento).
      */
@@ -51,6 +72,15 @@ public class Building extends Card {
      */
     public int getFinalBonus(Player player) {
         return 0; // Sovrascritto dinamicamente
+    }
+
+    public int endGamePoints(Player player) {
+        int totalBonus = 0;
+        // Cicla su ogni strategia contenuta nella lista dell'edificio
+        for (BuildingStrategy s : strategies) {
+            totalBonus += s.endGamePoints(player);
+        }
+        return totalBonus;
     }
 
     // Getters

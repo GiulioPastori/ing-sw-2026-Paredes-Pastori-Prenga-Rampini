@@ -9,8 +9,8 @@ import it.polimi.it.enums.Era;
  public class Artists extends Character {
 
 
-    public Artists(String name, Era era) {
-        super(name, era, CharacterType.ARTIST,0,0);
+    public Artists(String name, Era era,boolean totemIcon) {
+        super(name, era, CharacterType.ARTIST,0,0, totemIcon);
     }
 
 

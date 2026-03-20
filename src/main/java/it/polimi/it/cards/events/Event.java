@@ -4,7 +4,6 @@ package it.polimi.it.cards.events;
 import it.polimi.it.Board;
 import it.polimi.it.Player.Player;
 import it.polimi.it.cards.Card;
-import it.polimi.it.cards.EventStrategy;
 import it.polimi.it.enums.Era;
 
 import java.util.List;
