@@ -2,8 +2,6 @@ package it.polimi.it.Player;
 
 import it.polimi.it.cards.building.Building;
 import it.polimi.it.cards.building.BuildingStrategy;
-import it.polimi.it.cards.building.ExtraShamanIconsStrategy;
-import it.polimi.it.cards.building.SustenanceDiscountStrategy;
 import it.polimi.it.cards.character.*;
 import it.polimi.it.cards.character.Character;
 import it.polimi.it.enums.CharacterType;
