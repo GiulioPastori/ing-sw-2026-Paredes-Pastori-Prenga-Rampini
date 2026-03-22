@@ -1,6 +1,6 @@
 package it.polimi.it.tiles;
 
-
+import it.polimi.it.Player.Player;
 import it.polimi.it.enums.TotemColour;
 
 import java.util.ArrayList;
@@ -17,50 +17,61 @@ public class TurnOrderTile {
     }
 
     /**
-    Bonus e malus del tabellone come da regolamento
+     * Bonus e malus del tabellone come da regolamento.
      */
     private void buildPositions(int n) {
-        for (int i = 1; i <= n; i++) {
-            int food    = (i == 1) ? 3 : (i == 2) ? 1 : 0;
-            int penalty = (i == n) ? -2 : 0;
-            positions.add(new TurnPosition(i, food, penalty));
+        for (int i = 0; i < n; i++) {
+            // i=0 è il 1° posto, i=n-1 è l'ultimo
+            int food    = (i == 0) ? 3 : (i == 1) ? 1 : 0;
+            int penalty = (i == n - 1) ? -2 : 0;
+            positions.add(new TurnPosition(i + 1, food, penalty));
         }
     }
 
     /**
-     * Places the player's totem in the first free space from the top,
-     * applies food bonus or last-place penalty immediately.
+     * Occupa il primo spazio libero dall'alto e applica bonus/malus.
      */
-    public TurnPosition placeTotem(Player player) {
+    public void placeTotem(Player player) {
         for (TurnPosition pos : positions) {
-            if (pos.freeisFree()) {
+            if (pos.isFree()) { // FIX: era freeisFree()
                 pos.place(player.getTotem());
+
+                // Aggiorna l'ordine di turno del giocatore per il prossimo round
                 player.setTurnOrder(pos.getPosition());
-                if (pos.getFoodTokens() > 0)
+
+                // Applica Bonus Cibo
+                if (pos.getFoodTokens() > 0) {
                     player.addFood(pos.getFoodTokens());
-                if (pos.getPenalties() < 0) {
-                    if (player.getFood() > 0) player.addFood(-1);
-                    else player.addPrestigePoint(pos.getPenalties());
                 }
-                return new SpaceTurn(pos);
+
+                // Applica Malus Ultimo Posto
+                if (pos.getPenalties() < 0) {
+                    // Se ha cibo perde 1 cibo, altrimenti perde punti prestigio
+                    if (player.getFood() > 0) {
+                        player.addFood(-1);
+                    } else {
+                        player.addPrestigePoint(pos.getPenalties());
+                    }
+                }
+                return; // Usciamo appena troviamo il primo posto libero
             }
         }
-        throw new IllegalStateException("No free space on Turn Order tile.");
+        throw new IllegalStateException("Nessun spazio libero sulla tessera Ordine di Turno.");
     }
 
-    /** Returns the ordered list of totems for next round's placement order. */
     public List<TotemColour> getOrder() {
         List<TotemColour> order = new ArrayList<>();
-        for (TurnPosition pos : positions)
+        for (TurnPosition pos : positions) {
             if (!pos.isFree()) order.add(pos.getPlacedTotem());
+        }
         return order;
     }
 
-    /** Clears all spaces at start of each round. */
     public void reset() {
-        for (TurnPosition pos : positions) pos.free();
+        for (TurnPosition pos : positions) {
+            pos.free();
+        }
     }
 
     public List<TurnPosition> getPositions() { return positions; }
-    public int                getNumPlayers() { return numPlayers; }
 }

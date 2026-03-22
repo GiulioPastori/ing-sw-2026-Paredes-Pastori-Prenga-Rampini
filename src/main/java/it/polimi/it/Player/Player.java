@@ -25,9 +25,12 @@ public class Player {
     //*metodo per acquisisre un personaggio*//
     public void takeCharacterCard(Character c, Board board) {
         if (c != null) {
+            tribe.addCharacter(c);
             c.applyEffect(this, board); // Hunter trigger icon fires immediately
         }
     }
+
+
 
     public boolean takeBuildingCard(Building b, Board board) {
         if (b==null) return false;
@@ -88,7 +91,11 @@ public class Player {
     public int    getPrestigePoint()     { return prestigePoint; }
     public int    getTurnOrder()         { return turnOrder; }
     public void   setTurnOrder(int o)    { this.turnOrder = o; }
-    public it.polimi.it.enums.Totem getTotem()             { return totem; }
+
+    public TotemColour getTotem() {
+        return totem;
+    }
+
     public Tribe  getTribe()             { return tribe; }
 
 

@@ -45,6 +45,12 @@ public class Game {
         endGame();
     }
 
+    /** Prepara i dati per l'inizio di un nuovo round */
+    public void startNewRound() {
+        currentRound++;
+        updateCurrentEra();
+    }
+
     public void nextRound() {
         currentRound++;
         updateCurrentEra();
@@ -63,14 +69,17 @@ public class Game {
         for (OfferTile tile : offerTrack) {
             if (tile.isFree()) continue;
 
-            // FIX: getPlayerByTotem deve accettare quello che tile.getPlacedTotem() restituisce
+            // Identifichiamo chi ha il totem su questa tessera
             Player acting = getPlayerByTotem(tile.getPlacedTotem());
-            resolveOfferAction(acting, tile);
 
-            tile.removeTotem();
+            if (acting != null) {
+                // Eseguiamo l'azione della tessera (ex "doAction")
+                resolveOfferAction(acting, tile);
 
-            // FIX: Passiamo l'oggetto Player 'acting' alla TurnOrderTile
-            board.getTurnOrderTile().placeTotem(acting);;
+                // Spostiamo il totem sulla tessera Ordine di Turno per il prossimo round
+                tile.removeTotem();
+                board.getTurnOrderTile().placeTotem(acting);
+            }
         }
 
         endOfRound();
@@ -99,13 +108,13 @@ public class Game {
         }
     }
 
-    private void takeCard(Player player, Card card) {
+    protected void takeCard(Player player, Card card) {
         if (card instanceof Building b) {
-            if (player.takeBuildingCard(b)) {
+            if (player.takeBuildingCard(b, board)) {
                 board.takeCard(b, player);
             }
         } else if (card instanceof Character c) {
-            player.takeCharacterCard(c);
+            player.takeCharacterCard(c, board);
             board.takeCard(card, player);
 
             for (Building b : player.getTribe().getBuildings()) {
@@ -114,7 +123,7 @@ public class Game {
         }
     }
 
-    private void endOfRound() {
+    protected void endOfRound() {
         if (currentRound == TOTAL_ROUNDS) {
             board.resolveEndOfGameEvents(players);
         } else {
@@ -148,14 +157,14 @@ public class Game {
     /**
      * Risolve il problema del TotemColour cercando il player che possiede quel colore.
      */
-    private Player getPlayerByTotem(Object totemId) {
+    protected Player getPlayerByTotem(Object totemId) {
         return players.stream()
                 .filter(p -> p.getTotem().equals(totemId))
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("Player non trovato per il totem: " + totemId));
     }
 
-    private List<Player> getPlacementOrder() {
+    protected List<Player> getPlacementOrder() {
         List<Player> ordered = new ArrayList<>(players);
         ordered.sort(Comparator.comparingInt(Player::getTurnOrder));
         return ordered;
@@ -177,6 +186,8 @@ public class Game {
     // Getters
     public List<Player> getPlayers()      { return players; }
     public Board        getBoard()        { return board; }
+
+    public Era getCurrentEra() {return currentEra;}
     public int          getCurrentRound() { return currentRound; }
     public Player       getCurrentPlayer(){ return players.get(currentPlayerIndex); }
 }

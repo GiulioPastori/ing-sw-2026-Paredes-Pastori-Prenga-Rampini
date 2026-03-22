@@ -1,13 +1,15 @@
 package it.polimi.it.tiles;
 
+import it.polimi.it.enums.TotemColour;
 
-import it.polimi.it.Player.Player;import it.polimi.it.enums.TotemColour;
-
+/**
+ * Rappresenta una singola posizione sulla tessera Ordine di Turno.
+ */
 public class TurnPosition {
     private final int position;
-    private final int foodTokens; // food bonus when landing here
-    private final int penalties;  // PP penalty if this is the last space (0 or -2)
-    private Player placedTotem;
+    private final int foodTokens;
+    private final int penalties;
+    private TotemColour placedTotem; // Salviamo solo il COLORE (Enum)
 
     public TurnPosition(int position, int foodTokens, int penalties) {
         this.position    = position;
@@ -16,12 +18,42 @@ public class TurnPosition {
         this.placedTotem = null;
     }
 
-    public boolean isFree()        { return placedTotem == null; }
-    public void    place(Player p)  { this.placedTotem = p; }
-    public Player   free()          { Player p = placedTotem; placedTotem = null; return p; }
+    /**
+     * Verifica se la posizione è libera.
+     */
+    public boolean isFree() {
+        return placedTotem == null;
+    }
 
-    public int   getPosition()    { return position; }
-    public int   getFoodTokens()  { return foodTokens; }
-    public int   getPenalties()   { return penalties; }
-    public Player getPlacedTotem() { return placedTotem; }
+    /**
+     * Piazza il colore del totem in questa posizione.
+     * Questo metodo risolve l'errore a riga 37 della TurnOrderTile.
+     */
+    public void place(TotemColour totem) {
+        this.placedTotem = totem;
+    }
+
+    /**
+     * Svuota la posizione a fine round.
+     */
+    public void free() {
+        this.placedTotem = null;
+    }
+
+    // --- Getters ---
+    public int getPosition() {
+        return position;
+    }
+
+    public int getFoodTokens() {
+        return foodTokens;
+    }
+
+    public int getPenalties() {
+        return penalties;
+    }
+
+    public TotemColour getPlacedTotem() {
+        return placedTotem;
+    }
 }

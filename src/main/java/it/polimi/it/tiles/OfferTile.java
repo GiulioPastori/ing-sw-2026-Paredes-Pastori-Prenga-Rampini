@@ -1,5 +1,7 @@
 package it.polimi.it.tiles;
 
+import it.polimi.it.enums.TotemColour;
+
 public class OfferTile {
 
     private final char letter;
@@ -9,7 +11,7 @@ public class OfferTile {
     private final int foodBonus;       // food taken when returning totem to Turn Order tile
     private final boolean isFoodOnly;  // true only for tile A (take 3 food, no card draw)
 
-    private Totem placedTotem;
+    private TotemColour placedTotem;
 
     public OfferTile(char letter, int minPlayers, int topRowCards, int bottomRowCards,
                      int foodBonus, boolean isFoodOnly) {
@@ -28,14 +30,14 @@ public class OfferTile {
         return placedTotem == null;
     }
 
-    public void placeTotem(Totem totem) {
+    public void placeTotem(TotemColour totem) {
         if (!isFree()) throw new IllegalStateException("Tile " + letter + " is already occupied.");
         this.placedTotem = totem;
     }
 
-    public Totem removeTotem() {
+    public TotemColour removeTotem() {
         if (isFree()) throw new IllegalStateException("Tile " + letter + " has no totem.");
-        Totem t = placedTotem;
+        TotemColour t = placedTotem;
         placedTotem = null;
         return t;
     }
@@ -48,5 +50,5 @@ public class OfferTile {
     public int     getBottomRowCards() { return bottomRowCards; }
     public int     getFoodBonus()      { return foodBonus; }
     public boolean isFoodOnly()        { return isFoodOnly; }
-    public Totem   getPlacedTotem()    { return placedTotem; }
+    public TotemColour   getPlacedTotem()    { return placedTotem; }
 }
