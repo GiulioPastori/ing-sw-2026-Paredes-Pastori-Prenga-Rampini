@@ -4,7 +4,7 @@ import it.polimi.it.cards.Card;
 import it.polimi.it.cards.character.Character;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.EventType;
-import it.polimi.it.Player.Player;
+import it.polimi.it.player.Player;
 import it.polimi.it.tiles.TurnPosition;
 
 /**

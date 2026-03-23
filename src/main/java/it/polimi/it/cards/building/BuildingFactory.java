@@ -1,12 +1,11 @@
 package it.polimi.it.cards.building;
 
 
-import it.polimi.it.Player.Player;
 import it.polimi.it.cards.events.ShamanicRitual;
 import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
 import java.util.Arrays; //
-import java.util.List;
+
 
 public class BuildingFactory {
 

@@ -1,12 +1,11 @@
 package it.polimi.it;
 
 
-import it.polimi.it.Player.Player;
+import it.polimi.it.player.Player;
 import it.polimi.it.cards.building.Building;
 import it.polimi.it.cards.Card;
 import it.polimi.it.cards.events.Event;
 import it.polimi.it.tiles.OfferTile;
-import it.polimi.it.enums.TotemColour;
 import it.polimi.it.enums.Era;
 import it.polimi.it.cards.character.Character;
 

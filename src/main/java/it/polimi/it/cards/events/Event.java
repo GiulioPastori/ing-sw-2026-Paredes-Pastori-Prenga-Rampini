@@ -3,7 +3,7 @@ package it.polimi.it.cards.events;
 import it.polimi.it.cards.Card;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.EventType;
-import it.polimi.it.Player.Player;
+import it.polimi.it.player.Player;
 
 import java.util.List;
 

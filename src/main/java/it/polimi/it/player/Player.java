@@ -1,6 +1,7 @@
 package it.polimi.it.player;
 
 import it.polimi.it.cards.Building;
+import it.polimi.it.cards.building.Building;
 import it.polimi.it.cards.character.Character;
 import it.polimi.it.enums.TotemColour;
 

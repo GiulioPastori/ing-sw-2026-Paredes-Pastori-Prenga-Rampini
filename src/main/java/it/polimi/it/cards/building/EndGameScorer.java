@@ -1,6 +1,6 @@
 package it.polimi.it.cards.building;
 
-import it.polimi.it.Player.Player;
+import it.polimi.it.player.Player;
 
 /**
  * Building effect that contributes to the player's final score.

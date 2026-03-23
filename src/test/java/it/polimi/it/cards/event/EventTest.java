@@ -4,7 +4,7 @@ import it.polimi.it.cards.events.Event;
 import it.polimi.it.cards.events.EventStrategy;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.EventType;
-import it.polimi.it.Player.Player;
+import it.polimi.it.player.Player;
 import it.polimi.it.enums.TotemColour;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class EventTest {
 
-    private it.polimi.it.Player.Player player1;
+    private it.polimi.it.player.Player player1;
     private Player player2;
     private List<Player> players;
 

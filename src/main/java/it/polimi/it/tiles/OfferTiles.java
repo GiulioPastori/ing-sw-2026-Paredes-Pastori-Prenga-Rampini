@@ -1,6 +1,6 @@
 package it.polimi.it.tiles;
 
-import it.polimi.it.Player.Player;
+import it.polimi.it.player.Player;
 
 import java.util.ArrayList;
 import java.util.List;
