@@ -1,9 +1,7 @@
-package it.polimi.it.Player;
+package it.polimi.it.player;
 
-import it.polimi.it.cards.building.Building;
-import it.polimi.it.cards.building.BuildingStrategy;
+import it.polimi.it.cards.Building;
 import it.polimi.it.cards.character.*;
-import it.polimi.it.cards.character.Character;
 import it.polimi.it.enums.CharacterType;
 
 import java.util.ArrayList;
@@ -11,256 +9,138 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * A player's tribe: the collection of character and building cards acquired
+ * during the game.
+ *
+ * Exposes counting and scoring methods used by events, buildings, and the
+ * final score calculation. Contains no game logic: it only answers queries
+ * about the current state.
+ */
 public class Tribe {
+
     private final List<Character> characters;
-    private final List<Building> buildings;
-    private final Player player;
+    private final List<Building>  buildings;
 
-    public Tribe(Player player) {
-        this.player = player;
+    public Tribe() {
         this.characters = new ArrayList<>();
-        this.buildings = new ArrayList<>();
+        this.buildings  = new ArrayList<>();
     }
 
+    // Card addition
 
-    /* Conta quanti tipi diversi di personaggi sono presenti nella tribù.
-            */
-    public int huniqueinventoricon() {
-        Set<CharacterType> distinctTypes = new HashSet<>();
-        for (Character c : characters) {
-            distinctTypes.add(c.getType());
-        }
-        return distinctTypes.size();
-    }
+    public void addCharacter(Character character) { characters.add(character); }
+    public void addBuilding(Building building)    { buildings.add(building); }
+
+    // Character queries
+
+    /** Returns the total number of characters in the tribe. */
+    public int getCharacterCount() { return characters.size(); }
 
     /**
-     * Verifica se esiste già un inventore con la stessa icona invenzione.
-     * Serve per l'edificio che regala cibo per le coppie uguali. [cite: 73, 87, 90]
+     * Counts the characters of the given type.
+     *
+     * @param type the type to count
+     * @return number of characters of that type
      */
-    public boolean hasDuplicateInventorIcon(Character newCharacter) {
-        if (!(newCharacter instanceof Inventor)) return false;
-
-        int newIconId = ((Inventor) newCharacter).getInventionIconId();
-
-        // Controlla se tra i personaggi già presenti c'è un altro inventore con la stessa icona
-        for (Character existing : characters) {
-            if (existing instanceof Inventor && existing != newCharacter) {
-                if (((Inventor) existing).getInventionIconId() == newIconId) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    public int getUniqueCharactersCount() {
-        // Usiamo un Set perché per definizione non accetta duplicati
-        // Inseriamo i tipi dei personaggi posseduti: il risultato sarà il numero di tipi unici
-        java.util.Set<it.polimi.it.enums.CharacterType> uniqueTypes = new java.util.HashSet<>();
-
-        for (it.polimi.it.cards.character.Character c : characters) {
-            uniqueTypes.add(c.getType());
-        }
-
-        return uniqueTypes.size();
-    }
-    /**
-     * Calcola quanti set completi da 6 personaggi diversi ha il giocatore.
-     * Fondamentale per gli edifici dell'Era III. [cite: 62, 66]
-     */
-    public int countFullSets() {
-        if (characters.isEmpty()) return 0;
-
-        // Per ogni tipo, contiamo quante carte abbiamo
-        int[] counts = new int[CharacterType.values().length];
-        for (Character c : characters) {
-            counts[c.getType().ordinal()]++;
-        }
-
-        // Il numero di set completi è limitato dal tipo di cui abbiamo meno copie
-        int min = Integer.MAX_VALUE;
-        for (int count : counts) {
-            if (count < min) min = count;
-        }
-        return min;
-    }
-
-
-    public void addCharacter(Character p) {
-        if (p != null) {
-            characters.add(p); //aggiunge personaggio
-
-            for (Building b : buildings) {
-                b.onNewCharacter(player, p);
-            }
-        }
-    }
-
-    public void addBuilding(Building b) {
-        if (b != null) {
-            buildings.add(b);//aggiunge edificio
-
-
-        }
-    }
-
-    public int countType(CharacterType type) {    //conta personaggi di un certo tipo
+    public int countByType(CharacterType type) {
         int count = 0;
         for (Character c : characters) {
-            if (c.getType() == type) {
-                count++;
-            }
+            if (c.getType() == type) count++;
         }
         return count;
     }
 
-    /* Somma tutte le icone sciamano presenti sulle carte Shaman.
+    /**
+     * Returns the total number of star icons across all shamans in the tribe.
+     * Does not include virtual bonuses from buildings (those are added by
+     * {@link it.polimi.it.cards.event.ShamanicRitual}).
      */
-    public int getTotalShamanIcons() {
+    public int totalShamanIcons() {
         int total = 0;
         for (Character c : characters) {
-            if (c instanceof Shaman) {
-                total += ((Shaman) c).getShamanIcons();
-            }
-        }
-        // 2. Somma icone bonus dagli edifici (ExtraShamanIconsStrategy)
-        for (Building b : buildings) {
-            for (BuildingStrategy s : b.getStrategies()) {
-                if (s instanceof ExtraShamanIconsStrategy) {
-                    total += ((ExtraShamanIconsStrategy) s).getExtraIcons();
-                }
-            }
+            if (c instanceof Shaman s) total += s.getStarIcons();
         }
         return total;
     }
 
     /**
-     * Conta quante icone invenzione UNICHE ha il giocatore (per il calcolo finale).
+     * Returns the number of distinct invention icons across all inventors.
+     * Used for the inventor end-game scoring.
      */
-    public int getUniqueInventorIconsCount() {
-        Set<Integer> uniqueIcons = new HashSet<>();
+    public int countUniqueInventorIcons() {
+        Set<String> icons = new HashSet<>();
         for (Character c : characters) {
-            if (c instanceof Inventor) {
-                uniqueIcons.add(((Inventor) c).getInventionIconId());
-            }
+            if (c instanceof Inventor inv) icons.add(inv.getInventionIcon());
         }
-        return uniqueIcons.size();
+        return icons.size();
     }
 
-
     /**
-     * Calcola lo sconto totale per la costruzione di edifici (fornito dai Builder).
+     * Returns the total food discount on building acquisition provided by all
+     * builders in the tribe. Discounts stack; the effective cost never goes
+     * below 0 (enforced in {@link it.polimi.it.cards.Building#getEffectiveCost}).
      */
-    public int getBuildingDiscount() {
-        int totalDiscount = 0;
+    public int totalBuildingDiscount() {
+        int discount = 0;
         for (Character c : characters) {
-            if (c instanceof Builder) {
-                totalDiscount += ((Builder) c).getBuildingsDiscount();
-            }
+            if (c instanceof Builder b) discount += b.getBuildingDiscount();
         }
-        return totalDiscount;
+        return discount;
     }
 
-    /**
-     * Calcola lo sconto totale di cibo (fornito dai Gatherer) per l'evento Sustenance.
-     */
-    public int getSustenanceDiscount() {
-        int total = 0;
+    // End-of-game scoring by character type
+
+    /** Returns the total prestige points contributed by all builders. */
+    public int computeBuilderPoints() {
+        int points = 0;
         for (Character c : characters) {
-            if (c instanceof Gatherer) {
-                total += ((Gatherer) c).getSustenanceDiscount();
-            }
+            if (c instanceof Builder b) points += b.getEndGamePoints();
         }
-        return total;
+        return points;
     }
 
     /**
-     * Calcola il costo totale del sostentamento (1 cibo per personaggio)
-     * applicando gli sconti dei Gatherer e degli Edifici (SustenanceDiscountStrategy).
+     * Returns the total prestige points contributed by all inventors.
+     * Formula: (inventor count) × (distinct invention icon count).
+     * There are 10 different invention icons in the full game (rulebook p.7).
      */
-    public int getSustenanceCost() {
-        // 1. Costo base: ogni personaggio consuma 1 cibo
-        int baseRequirement = characters.size();
-
-        // 2. Sconto base dai Gatherer
-        int totalDiscount = getSustenanceDiscount();
-
-        // 3. Sconto extra dagli Edifici
-        for (Building b : buildings) {
-            for (BuildingStrategy s : b.getStrategies()) {
-                // Se la strategia è quella dello sconto cibo
-                if (s instanceof SustenanceDiscountStrategy ads) {
-                    // Usiamo i tuoi metodi: getType() e getDiscountPerCard()
-                    int countForType = countType(ads.getType());
-                    totalDiscount += (countForType * ads.getDiscountPerCard());
-                }
-            }
-        }
-
-        return Math.max(0, baseRequirement - totalDiscount);
+    public int computeInventorPoints() {
+        return countByType(CharacterType.INVENTOR) * countUniqueInventorIcons();
     }
 
     /**
-     * Somma i punti vittoria base forniti dagli edifici costruiti.
+     * Returns the total prestige points contributed by all artists.
+     * Formula: 10 PP for every pair of artists (integer division by 2).
+     * Rulebook p.7.
      */
-    public int getTotalBuildingPoints() {
+    public int computeArtistPoints() {
+        return (countByType(CharacterType.ARTIST) / 2) * 10;
+    }
+
+    /**
+     * Returns the total prestige points contributed by all buildings:
+     * fixed points plus any special end-game bonuses.
+     * Receives the full player so scorers can inspect both tribe and resources.
+     *
+     * @param player the player who owns this tribe
+     */
+    public int computeBuildingPoints(Player player) {
         int points = 0;
         for (Building b : buildings) {
             points += b.getFinalPoints();
+            points += b.computeEndGameBonus(player);
         }
         return points;
     }
 
-    public int ppBuilders() {
-        int points = 0;
-        for (Character c : characters) {
-            // Controlla che il tipo sia quello corretto (Builder)
-            if (c.getType() == CharacterType.BUILDER) {
-                points += c.getBasePrestige(); // Usiamo il nome corretto del metodo in Character
-            }
-        }
-        return points;
-    }
+    // Unmodifiable views
 
-    public int ppInventors() {
-        int points = 0;
-        for (Character c : characters) {
-            if (c.getType() == CharacterType.INVENTOR) {
-                points += c.getBasePrestige();
-            }
-        }
-        return points;
-    }
+    /** Returns an unmodifiable view of the characters in the tribe. */
+    public List<Character> getCharacters() { return List.copyOf(characters); }
 
-    public int ppArtists() {
-        int points = 0;
-        for (Character c : characters) {
-            if (c.getType() == CharacterType.ARTIST) {
-                points += c.getBasePrestige();
-            }
-        }
-        return points;
-    }
-
-    public int ppBuildings() {
-        int points = 0;
-        for (Building b : buildings) {
-            points += b.getFinalPoints(); // Assicurati che Building abbia getFinalPoints()
-        }
-        return points;
-    }
-
-    public List<Character> getCharacters() {
-        return characters;
-    }
-
-    public List<Building> getBuildings() {
-        return buildings;
-    }
-
-    public Player getPlayer() {
-        return player;
-    }
+    /** Returns an unmodifiable view of the buildings in the tribe. */
+    public List<Building>  getBuildings()  { return List.copyOf(buildings); }
 }
 
 

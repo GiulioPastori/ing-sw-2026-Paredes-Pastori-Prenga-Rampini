@@ -1,65 +1,99 @@
 package it.polimi.it.tiles;
 
-import it.polimi.it.Player.Player;
 import it.polimi.it.enums.TotemColour;
+import it.polimi.it.player.Player;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Turn Order Tile.
+ *
+ * Contains one space per player. After resolving their offer tile action,
+ * each player places their totem in the first free space from the top and
+ * immediately receives the space's bonus (or pays the penalty).
+ *
+ * Space bonuses and penalties (rulebook p.4):
+ * - 1st space: +3 food
+ * - 2nd space: +1 food
+ * - middle spaces: no bonus
+ * - last space: pay 1 food; if none available, lose 2 PP
+ *
+ * The order of totems at the end of a round determines who places first
+ * on the Offer Track in the next round.
+ *
+ * After totem placement, buildings with a TurnHook are notified
+ * (e.g. building 104: +1 food when landing on a food-bonus space).
+ */
 public class TurnOrderTile {
+
+    private static final int LAST_PLACE_PP_PENALTY = -2;
+
     private final List<TurnPosition> positions;
     private final int numPlayers;
 
+    /**
+     * @param numPlayers number of players (= number of spaces, 2–5)
+     */
     public TurnOrderTile(int numPlayers) {
         this.numPlayers = numPlayers;
         this.positions  = new ArrayList<>();
         buildPositions(numPlayers);
     }
 
-    /**
-     * Bonus e malus del tabellone come da regolamento.
-     */
     private void buildPositions(int n) {
-        for (int i = 0; i < n; i++) {
-            // i=0 è il 1° posto, i=n-1 è l'ultimo
-            int food    = (i == 0) ? 3 : (i == 1) ? 1 : 0;
-            int penalty = (i == n - 1) ? -2 : 0;
-            positions.add(new TurnPosition(i + 1, food, penalty));
+        for (int i = 1; i <= n; i++) {
+            int     foodBonus      = (i == 1) ? 3 : (i == 2) ? 1 : 0;
+            boolean isLastPosition = (i == n);
+            positions.add(new TurnPosition(i, foodBonus, isLastPosition));
         }
     }
 
     /**
-     * Occupa il primo spazio libero dall'alto e applica bonus/malus.
+     * Places the player's totem in the first free space from the top, applies
+     * the space's bonus or penalty immediately, then notifies buildings with
+     * a TurnHook.
+     *
+     * Last-space penalty: the player pays 1 food if available, otherwise loses 2 PP.
+     *
+     * @param player the player repositioning their totem
+     * @return the space that was occupied
+     * @throws IllegalStateException if no free space is available
      */
-    public void placeTotem(Player player) {
+    public TurnPosition placeTotem(Player player) {
         for (TurnPosition pos : positions) {
-            if (pos.isFree()) { // FIX: era freeisFree()
-                pos.place(player.getTotem());
-
-                // Aggiorna l'ordine di turno del giocatore per il prossimo round
+            if (pos.isFree()) {
+                pos.place(player.getTotemColour());
                 player.setTurnOrder(pos.getPosition());
 
-                // Applica Bonus Cibo
-                if (pos.getFoodTokens() > 0) {
-                    player.addFood(pos.getFoodTokens());
+                if (pos.getFoodBonus() > 0) {
+                    player.addFood(pos.getFoodBonus());
                 }
 
-                // Applica Malus Ultimo Posto
-                if (pos.getPenalties() < 0) {
-                    // Se ha cibo perde 1 cibo, altrimenti perde punti prestigio
+                if (pos.isLastPosition()) {
                     if (player.getFood() > 0) {
-                        player.addFood(-1);
+                        player.spendFood(1);
                     } else {
-                        player.addPrestigePoint(pos.getPenalties());
+                        player.addPrestigePoints(LAST_PLACE_PP_PENALTY);
                     }
                 }
-                return; // Usciamo appena troviamo il primo posto libero
+
+                // Notify buildings with a TurnHook (e.g. building 104)
+                player.getTribe().getBuildings().stream()
+                        .filter(b -> b.getEffect().hasTurnHook())
+                        .forEach(b -> b.applyTurnHook(player, pos));
+
+                return pos;
             }
         }
-        throw new IllegalStateException("Nessun spazio libero sulla tessera Ordine di Turno.");
+        throw new IllegalStateException("No free space on the Turn Order Tile.");
     }
 
-    public List<TotemColour> getOrder() {
+    /**
+     * Returns the totem colours in order (top to bottom, spaces 1 to n).
+     * Free spaces are skipped. Used to determine placement order for the next round.
+     */
+    public List<TotemColour> getTotemOrder() {
         List<TotemColour> order = new ArrayList<>();
         for (TurnPosition pos : positions) {
             if (!pos.isFree()) order.add(pos.getPlacedTotem());
@@ -67,11 +101,13 @@ public class TurnOrderTile {
         return order;
     }
 
+    /** Clears all spaces. Called at the start of each round. */
     public void reset() {
         for (TurnPosition pos : positions) {
-            pos.free();
+            if (!pos.isFree()) pos.free();
         }
     }
 
-    public List<TurnPosition> getPositions() { return positions; }
+    public List<TurnPosition> getPositions() { return List.copyOf(positions); }
+    public int                getNumPlayers() { return numPlayers; }
 }

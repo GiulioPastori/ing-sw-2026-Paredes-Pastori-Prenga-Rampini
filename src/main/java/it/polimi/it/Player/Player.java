@@ -1,7 +1,6 @@
-package it.polimi.it.Player;
+package it.polimi.it.player;
 
-import it.polimi.it.Player.Tribe;
-import it.polimi.it.cards.building.Building;
+import it.polimi.it.cards.Building;
 import it.polimi.it.cards.character.Character;
 import it.polimi.it.enums.TotemColour;
 
@@ -126,7 +125,7 @@ public class Player {
     public int         getFood()           { return food; }
     public int         getPrestigePoints() { return prestigePoints; }
     public int         getTurnOrder()      { return turnOrder; }
-    public Tribe getTribe()          { return tribe; }
+    public Tribe       getTribe()          { return tribe; }
 
     /**
      * Sets the turn order position for the next round.
@@ -141,3 +140,4 @@ public class Player {
         return name + " [food=" + food + ", PP=" + prestigePoints
                 + ", turnOrder=" + turnOrder + "]";
     }
+}
