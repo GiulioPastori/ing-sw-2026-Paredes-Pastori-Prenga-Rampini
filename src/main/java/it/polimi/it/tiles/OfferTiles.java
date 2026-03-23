@@ -22,10 +22,18 @@ public class OfferTiles {
 
     public void placeTotem(Player player, OfferTile tile) {
         if (tile.isFree()) {
-            tile.placeTotem(player.getTotem());
+            tile.occupy();
+            turnOrderTiles.placeTotem(player);
         }
     }
 
+    public void doAction(Player player) {
+        for (OfferTile tile : card) {
+            if (!tile.isFree()) {
+                player.addFood(tile.getFoodReward());
+            }
+        }
+    }
 
     public List<OfferTile> getFreeTile() {
         List<OfferTile> free = new ArrayList<>();
@@ -41,7 +49,7 @@ public class OfferTiles {
 
     public void reset() {
         for (OfferTile tile : card) {
-            tile.isFree();
+            tile.free();
         }
         turnOrderTiles.reset();
     }
