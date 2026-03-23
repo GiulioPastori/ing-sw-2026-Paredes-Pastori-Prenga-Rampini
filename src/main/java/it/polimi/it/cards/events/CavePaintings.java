@@ -1,52 +1,55 @@
 package it.polimi.it.cards.events;
 
-
-import it.polimi.it.Player.Player;
+import it.polimi.it.cards.events.EventStrategy;
 import it.polimi.it.enums.CharacterType;
+import it.polimi.it.enums.EventType;
+import it.polimi.it.player.Player;
+
 import java.util.List;
 
+/**
+ * Strategy for the Cave Paintings event.
+ *
+ * Base rule: if the player has fewer than minArtistsForBonus artists,
+ * they lose penaltyPoints PP. Otherwise they gain prestigePerArtist PP for
+ * each artist in their tribe.
+ *
+ * Building effects that modify this event:
+ * - Building 204: takes 1 food for each artist in the tribe
+ *   (regardless of the PP bonus/penalty, always fires)
+ */
 public class CavePaintings implements EventStrategy {
 
-    private final int threshold;        // Numero minimo di artisti richiesto
-    private final int penalty;          // PP persi se sotto soglia
-    private final int rewardPerArtist;  // PP guadagnati per ogni artista se sopra soglia
+    private final int minArtistsForBonus;
+    private final int penaltyPoints;
+    private final int prestigePerArtist;
 
-    /**
-     * Costruttore basato sulla carta Evento di Mesos.
-     * @param threshold Il numero minimo di artisti per non subire la penalità.
-     * @param penalty I punti da sottrarre se non si raggiunge la soglia.
-     * @param rewardPerArtist I punti da assegnare per OGNI artista se si è raggiunta la soglia.
-     */
-    public CavePaintings(int threshold, int penalty, int rewardPerArtist) {
-        this.threshold = threshold;
-        this.penalty = penalty;
-        this.rewardPerArtist = rewardPerArtist;
+    public CavePaintings(int minArtistsForBonus, int penaltyPoints, int prestigePerArtist) {
+        this.minArtistsForBonus = minArtistsForBonus;
+        this.penaltyPoints      = penaltyPoints;
+        this.prestigePerArtist  = prestigePerArtist;
     }
 
     @Override
     public void apply(List<Player> players) {
-        // L'evento viene risolto per ogni giocatore nella lista
-        for (Player p : players) {
-            applyEffect(p);
+        for (Player player : players) {
+            int artistCount = player.getTribe().countByType(CharacterType.ARTIST);
+
+            // Base effect PP
+            if (artistCount < minArtistsForBonus) {
+                player.addPrestigePoints(-penaltyPoints);
+            } else {
+                player.addPrestigePoints(artistCount * prestigePerArtist);
+            }
+
+            // Building 204: +1 food for each artist (always fires, even with 0 artists)
+            player.getTribe().getBuildings().stream()
+                    .filter(b -> b.triggersOnEvent(EventType.CAVE_PAINTINGS))
+                    .forEach(b -> b.applyEventHook(player, EventType.CAVE_PAINTINGS));
         }
     }
 
-    @Override
-    public void applyEffect(Player player) {
-        // 1. Contiamo quanti Artisti ha il giocatore nella sua tribù
-        int artistCount = player.getTribe().countType(CharacterType.ARTIST);
-
-        // 2. Controllo della soglia indicata sulla carta
-        if (artistCount < threshold) {
-            // CASO A: Sotto la soglia
-            // Esempio: "se avete zero o un Artista perdete 3 PP"
-            player.addPrestigePoint(-penalty);
-
-        } else {
-            // CASO B: Raggiunta o superata la soglia
-            int totalBonus = artistCount * rewardPerArtist;
-            player.addPrestigePoint(totalBonus);
-
-        }
-    }
+    public int getMinArtistsForBonus() { return minArtistsForBonus; }
+    public int getPenaltyPoints()      { return penaltyPoints; }
+    public int getPrestigePerArtist()  { return prestigePerArtist; }
 }

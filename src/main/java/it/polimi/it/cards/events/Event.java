@@ -1,66 +1,38 @@
 package it.polimi.it.cards.events;
 
-
-import it.polimi.it.Board;
-import it.polimi.it.Player.Player;
 import it.polimi.it.cards.Card;
 import it.polimi.it.enums.Era;
+import it.polimi.it.enums.EventType;
+import it.polimi.it.Player.Player;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
- * Classe Event aggiornata per essere compatibile con i vincoli di 'Card'.
+ * Event card.
+ *
+ * There are 4 event types (Sustenance, Hunt, Shamanic Ritual, Cave Paintings),
+ * one per type per era (12 event cards total in the tribe deck).
+ * Event cards can never be taken by players (rulebook p.4).
+ * Resolution logic is delegated to an EventStrategy.
  */
 public class Event extends Card {
 
-    private final String eventName;
-    private final EventStrategy strategy;
+    private final EventType     type;
+    private final int           value;
+    private final it.polimi.it.cards.event.EventStrategy strategy;
 
-    /**
-     * Il costruttore ora passa 2 argomenti a super() come richiesto da Card.
-     */
-    public Event(String eventName, Era era, EventStrategy strategy) {
-        super(eventName, era);
-
-        this.eventName = Objects.requireNonNull(eventName);
-        this.strategy = Objects.requireNonNull(strategy);
+    public Event(int id, Era era, EventType type, int value, it.polimi.it.cards.event.EventStrategy strategy) {
+        super(id, era);
+        this.type     = type;
+        this.value    = value;
+        this.strategy = strategy;
     }
 
-    @Override
-    public void applyEffect(Player player, Board board) {
-        if (strategy != null && player != null) {
-            // Applichiamo l'effetto al singolo giocatore delegando alla strategia
-            strategy.applyEffect(player);
-        }
+    /** Resolves this event by applying the strategy to all players. */
+    public void resolve(List<Player> players) {
+        strategy.apply(players);
     }
 
-    /**
-     * Metodo specifico per gli eventi di fine Era che colpiscono tutti i giocatori.
-     */
-    public void trigger(List<Player> players) {
-        if (players != null && !players.isEmpty() && strategy != null) {
-            System.out.println("\n--- [ESECUZIONE EVENTO: " + eventName.toUpperCase() + "] ---");
-            strategy.apply(players);
-        }
-    }
-
-    // --- GETTER ---
-
-    public String getEventName() {
-        return eventName;
-    }
-
-    public EventStrategy getStrategy() {
-        return strategy;
-    }
-
-
-    @Override
-    public String toString() {
-        return "Event{" +
-                "name='" + eventName + '\'' +
-                ", strategy=" + strategy.getClass().getSimpleName() +
-                '}';
-    }
+    public EventType getType()  { return type; }
+    public int       getValue() { return value; }
 }

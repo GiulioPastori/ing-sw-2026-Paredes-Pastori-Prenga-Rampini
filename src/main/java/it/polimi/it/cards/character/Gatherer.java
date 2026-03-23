@@ -6,7 +6,7 @@ import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
 
 public class Gatherer extends Character {
-    private final int sustenanceDiscount;
+    private static int sustenanceDiscount;
 
     public Gatherer(String name, Era era, int icon, int basePrestige, int sustenanceDiscount, boolean totemIcon) {
         // Passiamo i parametri. Il tipo è GATHERER

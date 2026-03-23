@@ -1,42 +1,29 @@
 package it.polimi.it.cards.character;
 
-import it.polimi.it.Board;
-import it.polimi.it.Player.Player;
-import it.polimi.it.Player.Tribe;
 import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
+import it.polimi.it.Player.Player;
 
+/**
+ * Character card: Builder.
+ *
+ * During the game: reduces the food cost of every building acquired.
+ * End of game: contributes fixed prestige points (rulebook p.7).
+ */
 public class Builder extends Character {
-    private final int buildingsDiscount;
-    private final int endPrestigePoints;
 
-    public Builder(String name, Era era,CharacterType type, int buildingsDiscount, int endPrestigePoints, boolean totemIcon) {
-        // Passiamo endPrestigePoints come basePrestige alla classe madre
-        super(name, era, CharacterType.BUILDER,0, endPrestigePoints, totemIcon);
-        this.buildingsDiscount = buildingsDiscount;
-        this.endPrestigePoints = endPrestigePoints;
+    private final int buildingDiscount;
+    private final int endGamePoints;
+
+    public Builder(int id, Era era, int buildingDiscount, int endGamePoints) {
+        super(id, era, CharacterType.BUILDER, 0);
+        this.buildingDiscount = buildingDiscount;
+        this.endGamePoints    = endGamePoints;
     }
 
-    public int getBuildingsDiscount() {
-
-        return buildingsDiscount;
-    }
-
+    public int getBuildingDiscount() { return buildingDiscount; }
+    public int getEndGamePoints()    { return endGamePoints; }
 
     @Override
-    protected void onAcquire(Player player, Board board) {
-        // nessun effetto immediato
-    }
-
-    /**
-     * I punti di fine partita sono già memorizzati in basePrestige,
-     * sovrascrivo
-     */
-    @Override
-    public int calculateFinalPoints(Player player) {
-
-        return 0;
-    }
-
-
+    public void applyImmediateEffect(Player player) { /* no immediate effect */ }
 }
