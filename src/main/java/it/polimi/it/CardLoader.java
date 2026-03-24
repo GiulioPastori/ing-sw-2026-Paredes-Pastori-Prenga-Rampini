@@ -3,6 +3,7 @@ package it.polimi.it;
 
 import it.polimi.it.cards.Card;
 import it.polimi.it.cards.building.Building;
+import it.polimi.it.cards.building.BuildingEffectRegistry;
 import it.polimi.it.cards.character.*;
 import it.polimi.it.cards.character.Character;
 import it.polimi.it.cards.events.*;
