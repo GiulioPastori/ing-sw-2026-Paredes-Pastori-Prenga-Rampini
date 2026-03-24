@@ -2,6 +2,7 @@ package it.polimi.it.cards.building;
 
 import it.polimi.it.cards.building.modifier.SustenanceModifier;
 import it.polimi.it.cards.events.Sustenance;
+import it.polimi.it.enums.CharacterType;
 import it.polimi.it.player.Player;
 import it.polimi.it.cards.events.CavePaintings;
 import it.polimi.it.cards.events.Hunt;
@@ -14,8 +15,6 @@ public interface BuildingStrategy {
     default void onSustenance(Player player, Sustenance events) {}
     default void onRitual(Player player, ShamanicRitual events) {}
     default void onCavePainting(Player player, CavePaintings events) {}
-
-
     default void onNewCharacter(Player player, it.polimi.it.cards.character.Character c) {}
 
     // Ritorna i punti bonus calcolati a fine partita
