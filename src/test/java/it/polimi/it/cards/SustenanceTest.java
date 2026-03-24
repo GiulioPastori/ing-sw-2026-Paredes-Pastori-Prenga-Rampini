@@ -1,4 +1,4 @@
-package it.polimi.it.cards.event;
+package it.polimi.it.cards;
 
 import it.polimi.it.cards.character.Gatherer;
 import it.polimi.it.cards.character.Hunter;
