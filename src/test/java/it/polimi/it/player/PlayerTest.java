@@ -1,6 +1,6 @@
 package it.polimi.it.player;
 
-import it.polimi.it.cards.Building;
+import it.polimi.it.cards.building.Building;
 import it.polimi.it.cards.character.Builder;
 import it.polimi.it.cards.character.Hunter;
 import it.polimi.it.cards.character.Inventor;
