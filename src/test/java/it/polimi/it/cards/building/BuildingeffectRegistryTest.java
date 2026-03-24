@@ -1,6 +1,6 @@
 package it.polimi.it.cards.building;
 
-import it.polimi.it.cards.Building;
+import it.polimi.it.cards.building.Building;
 import it.polimi.it.cards.character.*;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.TotemColour;

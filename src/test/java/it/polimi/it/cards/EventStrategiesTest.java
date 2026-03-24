@@ -4,6 +4,7 @@ import it.polimi.it.cards.character.Hunter;
 import it.polimi.it.cards.character.Shaman;
 import it.polimi.it.cards.character.Artist;
 import it.polimi.it.cards.events.CavePaintings;
+import it.polimi.it.cards.events.Hunt;
 import it.polimi.it.cards.events.ShamanicRitual;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.TotemColour;
