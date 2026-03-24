@@ -1,8 +1,9 @@
 package it.polimi.it;
 
-import it.polimi.it.cards.Building;
+import it.polimi.it.cards.building.*;
 import it.polimi.it.cards.Card;
 import it.polimi.it.cards.character.*;
+import it.polimi.it.cards.events.*;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.EventType;
 import it.polimi.it.enums.TotemColour;
