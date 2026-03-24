@@ -7,6 +7,7 @@ import it.polimi.it.cards.events.Event;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.EventType;
 import it.polimi.it.player.Player;
+import it.polimi.it.tiles.OfferTile;
 import it.polimi.it.tiles.TurnOrderTile;
 
 import java.util.ArrayList;
@@ -63,7 +64,7 @@ public class Board {
     private final Map<Era, Deque<Building>> buildingDecks;
 
     /** The Offer Track with the active tiles for this game. */
-    private final OfferTiles offerTiles;
+    private final OfferTile offerTiles;
 
     /** The Turn Order Tile for this game. */
     private final TurnOrderTile turnOrderTile;
@@ -73,7 +74,7 @@ public class Board {
 
     public Board(Deque<Card> tribeDeck,
                  Map<Era, Deque<Building>> buildingDecks,
-                 OfferTiles offerTiles,
+                 OfferTile offerTiles,
                  TurnOrderTile turnOrderTile) {
         this.tribeDeck     = tribeDeck;
         this.buildingDecks = buildingDecks;
@@ -293,7 +294,7 @@ public class Board {
     /** Returns the number of cards remaining in the tribe deck. */
     public int getTribeDeckSize() { return tribeDeck.size(); }
 
-    public OfferTiles    getOfferTiles()    { return offerTiles; }
+    public OfferTile getOfferTiles()    { return offerTiles; }
     public TurnOrderTile getTurnOrderTile() { return turnOrderTile; }
     public Era           getCurrentEra()    { return currentEra; }
 }

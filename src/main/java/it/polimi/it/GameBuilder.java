@@ -1,14 +1,14 @@
 package it.polimi.it;
 
-import it.polimi.it.cards.Building;
+import it.polimi.it.cards.building.Building;
 import it.polimi.it.cards.Card;
-import it.polimi.it.cards.event.Event;
-import it.polimi.it.cards.event.FinalEvent;
+import it.polimi.it.cards.events.Event;
+import it.polimi.it.cards.events.FinalEvent;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.TotemColour;
 import it.polimi.it.player.Player;
 import it.polimi.it.tiles.OfferTile;
-import it.polimi.it.tiles.OfferTiles;
+import it.polimi.it.tiles.OfferTile;
 import it.polimi.it.tiles.TurnOrderTile;
 
 import java.util.*;
@@ -79,7 +79,7 @@ public class GameBuilder {
         Map<Era, Deque<Building>> buildingDecks  = buildBuildingDecks(n);
 
         // 3. Build the Offer Track for this player count
-        OfferTiles    offerTiles    = buildOfferTiles(n);
+        OfferTile    offerTiles    = buildOfferTiles(n);
         TurnOrderTile turnOrderTile = new TurnOrderTile(n);
 
         // 4. Assemble the Board
@@ -207,7 +207,7 @@ public class GameBuilder {
      * - F: 2 bottom, 2 top  (4P+)
      * - G: 3 bottom, 2 top  (5P+)
      */
-    private OfferTiles buildOfferTiles(int numPlayers) {
+    private OfferTile buildOfferTiles(int numPlayers) {
         List<OfferTile> tiles = new ArrayList<>();
         if (numPlayers >= 5) tiles.add(new OfferTile('A', 5, 0, 0, true));
         if (numPlayers >= 2) tiles.add(new OfferTile('B', 2, 1, 0, false));
@@ -216,7 +216,7 @@ public class GameBuilder {
         if (numPlayers >= 3) tiles.add(new OfferTile('E', 3, 1, 2, false));
         if (numPlayers >= 4) tiles.add(new OfferTile('F', 4, 2, 2, false));
         if (numPlayers >= 5) tiles.add(new OfferTile('G', 5, 2, 3, false));
-        return new OfferTiles(tiles);
+        return new OfferTile(tiles);
     }
 
     // Initial turn order
