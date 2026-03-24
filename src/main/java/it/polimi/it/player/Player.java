@@ -42,7 +42,7 @@ public class Player {
      * @param character the character being acquired
      */
     public void takeCharacterCard(Character character) {
-        tribe.addCharacter(Character);
+        tribe.addCharacter(character);
         character.applyImmediateEffect(this);
         tribe.getBuildings().stream()
                 .filter(b -> b.getEffect().hasAcquisitionHook())
