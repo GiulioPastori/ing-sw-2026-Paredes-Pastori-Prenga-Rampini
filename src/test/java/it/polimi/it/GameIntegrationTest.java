@@ -49,7 +49,7 @@ class GameIntegrationTest {
         cards = buildMinimalCardSet();
         builder = new GameBuilder()
                 .withPlayers(List.of("Alice", "Bob"),
-                        List.of(TotemColour.RED, TotemColour.BLUE))
+                             List.of(TotemColour.RED, TotemColour.BLUE))
                 .withCards(cards)
                 .withRandom(new Random(SEED));
     }
@@ -109,8 +109,8 @@ class GameIntegrationTest {
         new GameController(game, new FirstChoiceView()).startGame();
         for (Player p : game.getPlayers()) {
             assertTrue(p.getTribe().getCharacterCount() > 0
-                            || !p.getTribe().getBuildings().isEmpty(),
-                    p.getName() + " must have acquired at least one card");
+                       || !p.getTribe().getBuildings().isEmpty(),
+                       p.getName() + " must have acquired at least one card");
         }
     }
 
@@ -246,8 +246,8 @@ class GameIntegrationTest {
         @Override public void showTotemReturnedToTurnOrder(PlayerSnapshot p, int pos) {}
         @Override public void showPostRoundStarted(List<PlayerSnapshot> wt,
                                                    List<CardSnapshot> cards) {}
-        @Override public void showEventResolved(int eventId, it.polimi.it.enums.Era era, it.polimi.it.enums.EventType type) {}
-        @Override public void showEraChanged(it.polimi.it.enums.Era era) {}
+        @Override public void showEventResolved(int eventId, Era era, EventType type) {}
+        @Override public void showEraChanged(Era era) {}
         @Override public void showRoundEnded(int round) {}
         @Override public void showInvalidAction(String player, String reason) {}
         @Override public void showGameEnded(List<PlayerSnapshot> winners,
