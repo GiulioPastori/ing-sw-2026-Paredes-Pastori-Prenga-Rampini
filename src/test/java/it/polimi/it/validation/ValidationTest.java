@@ -105,14 +105,14 @@ class ActionValidatorTest {
         @DisplayName("acting player in top row returns Ok")
         void validTopRowReturnsOk() {
             assertTrue(ActionValidator.validate(
-                    new TakeCardAction("Alice", "Hunter1", true), alice, stateForAlice).isOk());
+                    new TakeCardAction("Alice", 1, true), alice, stateForAlice).isOk());
         }
 
         @Test
         @DisplayName("wrong player returns Fail")
         void wrongPlayerReturnsFail() {
             assertFalse(ActionValidator.validate(
-                    new TakeCardAction("Alice", "Hunter1", true), bob, stateForAlice).isOk());
+                    new TakeCardAction("Alice", 1, true), bob, stateForAlice).isOk());
         }
 
         @Test
@@ -120,7 +120,7 @@ class ActionValidatorTest {
         void topSlotExhaustedReturnsFail() {
             stateForAlice.consumeTopSlot();
             assertFalse(ActionValidator.validate(
-                    new TakeCardAction("Alice", "Hunter1", true), alice, stateForAlice).isOk());
+                    new TakeCardAction("Alice", 1, true), alice, stateForAlice).isOk());
         }
 
         @Test
@@ -128,7 +128,7 @@ class ActionValidatorTest {
         void bottomSlotExhaustedReturnsFail() {
             stateForAlice.consumeBottomSlot();
             assertFalse(ActionValidator.validate(
-                    new TakeCardAction("Alice", "Hunter1", false), alice, stateForAlice).isOk());
+                    new TakeCardAction("Alice", 1, false), alice, stateForAlice).isOk());
         }
     }
 
@@ -159,21 +159,21 @@ class ActionValidatorTest {
         @DisplayName("player in pending list returns Ok")
         void validPostRoundReturnsOk() {
             assertTrue(ActionValidator.validate(
-                    new PostRoundAction("Alice", "Building1"), alice, List.of(alice)).isOk());
+                    new PostRoundAction("Alice", 101), alice, List.of(alice)).isOk());
         }
 
         @Test
         @DisplayName("player not in pending list returns Fail")
         void notInPendingListReturnsFail() {
             assertFalse(ActionValidator.validate(
-                    new PostRoundAction("Alice", "Building1"), alice, List.of(bob)).isOk());
+                    new PostRoundAction("Alice", 101), alice, List.of(bob)).isOk());
         }
 
         @Test
         @DisplayName("null card name (decline) returns Ok")
         void nullCardDeclineReturnsOk() {
             assertTrue(ActionValidator.validate(
-                    new PostRoundAction("Alice", null), alice, List.of(alice)).isOk());
+                    new PostRoundAction("Alice", 0), alice, List.of(alice)).isOk());
         }
     }
 }
