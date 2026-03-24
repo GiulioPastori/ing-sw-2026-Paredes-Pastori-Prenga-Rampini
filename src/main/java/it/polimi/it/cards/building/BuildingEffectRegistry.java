@@ -200,7 +200,7 @@ public final class BuildingEffectRegistry {
 
         // 301: end of game → 25 fixed PP
         REGISTRY.put(301, new BuildingEffect.Builder()
-                .atEndGame(player -> 25)
+                .atEndGame(player -> 25)  // da rimuovere!!!! json: punti finali = 25
                 .build());
 
         // 302: end of game → PP per character of indicated type
