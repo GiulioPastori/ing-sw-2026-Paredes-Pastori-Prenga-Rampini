@@ -32,24 +32,33 @@
     { "id": 1027, "era": "ERA_I",  "type": "ARTIST" },  //4+
 
 
-    { "id": 1101, "era": "ERA_II", "type": "HUNTER",   "hasTriggerIcon": true  },
-    { "id": 1102, "era": "ERA_II", "type": "HUNTER",   "hasTriggerIcon": true  },
+
+    { "id": 11, "era": "ERA_II", "type": "HUNTER",   "hasTriggerIcon": true }, //4+
+    { "id": 1102, "era": "ERA_II", "type": "HUNTER",   "hasTriggerIcon": true },//3+
+    { "id": 1103, "era": "ERA_II", "type": "HUNTER",   "hasTriggerIcon": true },
+    { "id": 1104, "era": "ERA_II", "type": "HUNTER",   "hasTriggerIcon": false }, //5
     { "id": 1103, "era": "ERA_II", "type": "HUNTER",   "hasTriggerIcon": false },
     { "id": 1104, "era": "ERA_II", "type": "HUNTER",   "hasTriggerIcon": false },
-    { "id": 1105, "era": "ERA_II", "type": "GATHERER" },
-    { "id": 1106, "era": "ERA_II", "type": "GATHERER" },
+    { "id": 1105, "era": "ERA_II", "type": "GATHERER" }, //4+
+    { "id": 1106, "era": "ERA_II", "type": "GATHERER" },//3+
     { "id": 1107, "era": "ERA_II", "type": "GATHERER" },
-    { "id": 1108, "era": "ERA_II", "type": "SHAMAN",   "starIcons": 1 },
-    { "id": 1109, "era": "ERA_II", "type": "SHAMAN",   "starIcons": 2 },
-    { "id": 1110, "era": "ERA_II", "type": "SHAMAN",   "starIcons": 3 },
+    { "id": 1108, "era": "ERA_II", "type": "SHAMAN",   "starIcons": 1 }, //5
+    { "id": 1109, "era": "ERA_II", "type": "SHAMAN",   "starIcons": 2 }, //5
+    { "id": 1110, "era": "ERA_II", "type": "SHAMAN",   "starIcons": 2 },
+    { "id": 1108, "era": "ERA_II", "type": "SHAMAN",   "starIcons": 2 },
     { "id": 1111, "era": "ERA_II", "type": "BUILDER",  "buildingDiscount": 1, "endGamePoints": 4 },
-    { "id": 1112, "era": "ERA_II", "type": "BUILDER",  "buildingDiscount": 2, "endGamePoints": 2 },
-    { "id": 1113, "era": "ERA_II", "type": "INVENTOR",  "inventionIcon": "pottery" },
-    { "id": 1114, "era": "ERA_II", "type": "INVENTOR",  "inventionIcon": "net"     },
-    { "id": 1115, "era": "ERA_II", "type": "INVENTOR",  "inventionIcon": "spear"   },
-    { "id": 1116, "era": "ERA_II", "type": "INVENTOR",  "inventionIcon": "shelter" },
-    { "id": 1117, "era": "ERA_II", "type": "ARTIST" },
+    { "id": 1112, "era": "ERA_II", "type": "BUILDER",  "buildingDiscount": 1, "endGamePoints": 2 }, //3+
+    { "id": 1111, "era": "ERA_II", "type": "BUILDER",  "buildingDiscount": 2, "endGamePoints": 1 },
+    { "id": 1112, "era": "ERA_II", "type": "BUILDER",  "buildingDiscount": 2, "endGamePoints": 3 },
+    { "id": 1113, "era": "ERA_II", "type": "INVENTOR",  "inventionIcon": "puppet" },
+    { "id": 1114, "era": "ERA_II", "type": "INVENTOR",  "inventionIcon": "hook"     }, //4+
+    { "id": 1115, "era": "ERA_II", "type": "INVENTOR",  "inventionIcon": "leather"   },
+    { "id": 1116, "era": "ERA_II", "type": "INVENTOR",  "inventionIcon": "rope" },
+    { "id": 1115, "era": "ERA_II", "type": "INVENTOR",  "inventionIcon": "flute"   },
+    { "id": 1116, "era": "ERA_II", "type": "INVENTOR",  "inventionIcon": "bowl" },
+    { "id": 1117, "era": "ERA_II", "type": "ARTIST" }, //3+
     { "id": 1118, "era": "ERA_II", "type": "ARTIST" },
+    { "id": 1119, "era": "ERA_II", "type": "ARTIST" },
     { "id": 1119, "era": "ERA_II", "type": "ARTIST" },
 
     { "id": 1201, "era": "ERA_III", "type": "HUNTER",   "hasTriggerIcon": true  },
