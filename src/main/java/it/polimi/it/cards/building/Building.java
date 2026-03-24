@@ -1,5 +1,6 @@
 package it.polimi.it.cards.building;
 
+import it.polimi.it.player.Tribe;
 import it.polimi.it.cards.Card;
 import it.polimi.it.cards.character.Character;
 import it.polimi.it.enums.Era;
