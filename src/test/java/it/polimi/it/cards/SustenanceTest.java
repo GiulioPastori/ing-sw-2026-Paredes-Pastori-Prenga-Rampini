@@ -2,6 +2,7 @@ package it.polimi.it.cards;
 
 import it.polimi.it.cards.character.Gatherer;
 import it.polimi.it.cards.character.Hunter;
+import it.polimi.it.cards.events.Sustenance;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.TotemColour;
 import it.polimi.it.player.Player;
