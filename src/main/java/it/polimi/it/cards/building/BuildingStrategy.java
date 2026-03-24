@@ -1,6 +1,7 @@
 package it.polimi.it.cards.building;
 
 import it.polimi.it.cards.building.modifier.SustenanceModifier;
+import it.polimi.it.cards.events.Sustenance;
 import it.polimi.it.player.Player;
 import it.polimi.it.cards.events.CavePaintings;
 import it.polimi.it.cards.events.Hunt;

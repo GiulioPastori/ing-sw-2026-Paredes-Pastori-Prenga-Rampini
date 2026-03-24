@@ -2,7 +2,9 @@ package it.polimi.it.player;
 
 import it.polimi.it.cards.building.Building;
 import it.polimi.it.cards.character.*;
+import it.polimi.it.cards.character.Character;
 import it.polimi.it.enums.CharacterType;
+import it.polimi.it.cards.events.ShamanicRitual;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -54,7 +56,7 @@ public class Tribe {
     /**
      * Returns the total number of star icons across all shamans in the tribe.
      * Does not include virtual bonuses from buildings (those are added by
-     * {@link it.polimi.it.cards.event.ShamanicRitual}).
+     * {@link it.polimi.it.cards.events.ShamanicRitual}).
      */
     public int totalShamanIcons() {
         int total = 0;
@@ -79,7 +81,7 @@ public class Tribe {
     /**
      * Returns the total food discount on building acquisition provided by all
      * builders in the tribe. Discounts stack; the effective cost never goes
-     * below 0 (enforced in {@link it.polimi.it.cards.Building#getEffectiveCost}).
+     * below 0 (enforced in {@link it.polimi.it.cards.building.Building#getEffectiveCost}).
      */
     public int totalBuildingDiscount() {
         int discount = 0;
