@@ -3,6 +3,7 @@ package it.polimi.it.cards.event;
 import it.polimi.it.cards.character.Hunter;
 import it.polimi.it.cards.character.Shaman;
 import it.polimi.it.cards.character.Artist;
+import it.polimi.it.cards.events.*;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.TotemColour;
 import it.polimi.it.player.Player;
