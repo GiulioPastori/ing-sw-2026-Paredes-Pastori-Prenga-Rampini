@@ -1,8 +1,8 @@
 package it.polimi.it.validation;
 
 import it.polimi.it.TileResolutionState;
-import it.polimi.it.actions;
-import it.polimi.it.Player.Player;
+import it.polimi.it.actions.*;
+import it.polimi.it.player.Player;
 import it.polimi.it.tiles.OfferTile;
 
 import java.util.List;

@@ -7,6 +7,7 @@ import it.polimi.it.cards.events.Hunt;
 import it.polimi.it.cards.events.ShamanicRitual;
 
 
+
 public interface BuildingStrategy {
     default void onHunt(Player player, Hunt events) {}
     default void onSustenance(Player player, Sustenance events) {}

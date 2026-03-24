@@ -1,43 +1,47 @@
 package it.polimi.it.cards.events;
 
-import it.polimi.it.player.Player;
 import it.polimi.it.enums.CharacterType;
+import it.polimi.it.enums.EventType;
+import it.polimi.it.player.Player;
+import it.polimi.it.cards.events.EventStrategy;
+
 import java.util.List;
 
+/**
+ * Strategy for the Hunt event.
+ *
+ * Base rule: for each hunter in the tribe the player takes 1 food
+ * and gains the PP shown on the event card.
+ *
+ * Building effects that modify this event:
+ * - Building 202/306: for each hunter, +1 food and +1 PP additional
+ *   (stacks with base effect, giving +2 food total and base PP+1 per hunter)
+ */
 public class Hunt implements EventStrategy {
 
-    private final int ppPerHunter;
+    private final int prestigePerHunter;
 
-    /**
-     * @param ppPerHunter Il valore di Punti Prestigio indicato sulla carta Evento (es. 2 PP).
-     */
-    public Hunt(int ppPerHunter) {
-        this.ppPerHunter = ppPerHunter;
+    public Hunt(int prestigePerHunter) {
+        this.prestigePerHunter = prestigePerHunter;
     }
 
     @Override
     public void apply(List<Player> players) {
-        for (Player p : players) {
-            applyEffect(p);
+        for (Player player : players) {
+            int hunters = player.getTribe().countByType(CharacterType.HUNTER);
+            if (hunters == 0) continue;
+
+            // Base effect
+            player.addFood(hunters);
+            player.addPrestigePoints(hunters * prestigePerHunter);
+
+            // Buildings 202/306: +1 food and +1 PP for each hunter
+            player.getTribe().getBuildings().stream()
+                    .filter(b -> b.triggersOnEvent(EventType.HUNT))
+                    .forEach(b -> b.applyEventHook(player, EventType.HUNT));
         }
     }
 
-    @Override
-    public void applyEffect(Player player) {
-        // 1. Contiamo quanti cacciatori ci sono nella tribù
-        int hunterCount = player.getTribe().countType(CharacterType.HUNTER);
-
-        // 2. REGOLA: "Un cibo per ogni cacciatore che hai nella tua tribù"
-        player.addFood(hunterCount);
-
-        // 3. REGOLA: "Guadagnate i PP indicati sulla carta per ogni cacciatore"
-        int totalPP = hunterCount * ppPerHunter;
-        player.addPrestigePoint(totalPP);
-
-        // Log di controllo
-        System.out.println("[EVENTO CACCIA] " + player.getName() +
-                ": Cacciatori: " + hunterCount +
-                " -> +" + hunterCount + " Cibo, +" + totalPP + " PP.");
-    }
+    public int getPrestigePerHunter() { return prestigePerHunter; }
 }
 

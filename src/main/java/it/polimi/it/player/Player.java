@@ -1,6 +1,6 @@
 package it.polimi.it.player;
 
-import it.polimi.it.cards.Building;
+import it.polimi.it.cards.building.Building;
 import it.polimi.it.cards.character.Character;
 import it.polimi.it.enums.TotemColour;
 
@@ -42,7 +42,7 @@ public class Player {
      * @param character the character being acquired
      */
     public void takeCharacterCard(Character character) {
-        tribe.addCharacter(character);
+        tribe.addCharacter(Character);
         character.applyImmediateEffect(this);
         tribe.getBuildings().stream()
                 .filter(b -> b.getEffect().hasAcquisitionHook())

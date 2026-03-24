@@ -2,6 +2,7 @@ package it.polimi.it.cards.building;
 
 import it.polimi.it.cards.building.modifier.ShamanicModifier;
 import it.polimi.it.cards.building.modifier.SustenanceModifier;
+import it.polimi.it.cards.character.Inventor;
 import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.EventType;
 
