@@ -1,4 +1,4 @@
-package it.polimi.it.cards.event;
+package it.polimi.it.cards.events;
 
 import it.polimi.it.cards.character.Gatherer;
 import it.polimi.it.cards.events.EventStrategy;
@@ -57,35 +57,35 @@ public class Sustenance implements EventStrategy {
     public int getPenaltyPerUnfedCharacter() { return penaltyPerUnfedCharacter; }
 }
 
-    @Override
-    public void applyEffect(Player player) {
-        // 1. "Pagate 1 Cibo per ogni carta Personaggio nella vostra tribù"
-        int totalCharacters = player.getTribe().getCharacters().size();
+@Override
+public void applyEffect(Player player) {
+    // 1. "Pagate 1 Cibo per ogni carta Personaggio nella vostra tribù"
+    int totalCharacters = player.getTribe().getCharacters().size();
 
-        // 2. "Ogni Raccoglitore fornisce uno sconto di 3 Cibo"
-        int gatherers = player.getTribe().countType(CharacterType.GATHERER);
-        int totalDiscount = gatherers * 3;
+    // 2. "Ogni Raccoglitore fornisce uno sconto di 3 Cibo"
+    int gatherers = player.getTribe().countType(CharacterType.GATHERER);
+    int totalDiscount = gatherers * 3;
 
-        // 3. Calcolo del cibo effettivamente richiesto
-        int foodRequired = Math.max(0, totalCharacters - totalDiscount);
-        int currentFood = player.getFood();
+    // 3. Calcolo del cibo effettivamente richiesto
+    int foodRequired = Math.max(0, totalCharacters - totalDiscount);
+    int currentFood = player.getFood();
 
-        // 4. "Non si può scegliere di perdere PP per non pagare Cibo"
-        // Il giocatore paga tutto quello che può, fino a esaurimento scorte
-        int foodPaid = Math.min(foodRequired, currentFood);
-        player.spendFood(foodPaid);
+    // 4. "Non si può scegliere di perdere PP per non pagare Cibo"
+    // Il giocatore paga tutto quello che può, fino a esaurimento scorte
+    int foodPaid = Math.min(foodRequired, currentFood);
+    player.spendFood(foodPaid);
 
-        // 5. Calcolo dei personaggi rimasti affamati
-        int unfedCharacters = foodRequired - foodPaid;
+    // 5. Calcolo dei personaggi rimasti affamati
+    int unfedCharacters = foodRequired - foodPaid;
 
-        // 6. Applicazione della penalità
-        if (unfedCharacters > 0) {
-            int totalPenalty = unfedCharacters * penaltyPerMissingFood;
-            player.addPrestigePoint(-totalPenalty);
+    // 6. Applicazione della penalità
+    if (unfedCharacters > 0) {
+        int totalPenalty = unfedCharacters * penaltyPerMissingFood;
+        player.addPrestigePoint(-totalPenalty);
 
-            System.out.println("[EVENTO SOSTENTAMENTO] " + player.getName() +
-                    " non ha sfamato " + unfedCharacters +
-                    " personaggi. Penalità: -" + totalPenalty + " PP.");
-        }
+        System.out.println("[EVENTO SOSTENTAMENTO] " + player.getName() +
+                " non ha sfamato " + unfedCharacters +
+                " personaggi. Penalità: -" + totalPenalty + " PP.");
     }
+}
 }
