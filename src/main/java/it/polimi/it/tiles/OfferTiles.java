@@ -23,7 +23,7 @@ public class OfferTiles {
     public void placeTotem(Player player, OfferTile tile) {
         if (tile.isFree()) {
             tile.occupy();
-            turnOrderTiles.placeTotem(player);
+            turnOrderTiles.placeTotem(Player);
         }
     }
 

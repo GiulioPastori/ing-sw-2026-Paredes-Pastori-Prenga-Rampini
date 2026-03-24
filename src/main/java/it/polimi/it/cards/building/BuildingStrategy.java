@@ -1,10 +1,11 @@
 package it.polimi.it.cards.building;
 
+import it.polimi.it.cards.building.modifier.SustenanceModifier;
 import it.polimi.it.player.Player;
 import it.polimi.it.cards.events.CavePaintings;
 import it.polimi.it.cards.events.Hunt;
 import it.polimi.it.cards.events.ShamanicRitual;
-import it.polimi.it.cards.events.Sustenance;
+
 
 public interface BuildingStrategy {
     default void onHunt(Player player, Hunt events) {}

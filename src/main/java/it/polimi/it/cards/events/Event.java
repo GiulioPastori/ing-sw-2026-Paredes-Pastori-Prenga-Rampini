@@ -21,7 +21,7 @@ public class Event extends Card {
     private final int           value;
     private final it.polimi.it.cards.event.EventStrategy strategy;
 
-    public Event(int id, Era era, EventType type, int value, it.polimi.it.cards.event.EventStrategy strategy) {
+    public Event(int id, Era era, EventType type, int value, EventStrategy strategy) {
         super(id, era);
         this.type     = type;
         this.value    = value;

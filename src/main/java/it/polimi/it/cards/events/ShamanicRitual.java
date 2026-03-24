@@ -1,7 +1,7 @@
-package it.polimi.it.cards.event;
+package it.polimi.it.cards.events;
 
 import it.polimi.it.cards.building.modifier.ShamanicModifier;
-import it.polimi.it.player.Player;
+import it.polimi.it.Player.Player;
 
 import java.util.List;
 

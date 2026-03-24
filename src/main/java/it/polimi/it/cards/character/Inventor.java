@@ -2,7 +2,7 @@ package it.polimi.it.cards.character;
 
 import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
-import it.polimi.it.player.Player;
+import it.polimi.it.Player.Player;
 
 /**
  * Character card: Inventor.
