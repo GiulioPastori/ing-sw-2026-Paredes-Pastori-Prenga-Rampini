@@ -1,155 +1,104 @@
 package it.polimi.it;
 
-import it.polimi.it.player.Player;
-import it.polimi.it.cards.Card;
-import it.polimi.it.cards.building.Building;
-import it.polimi.it.tiles.OfferTile;
-import java.util.List;
-import java.util.Scanner;
-import java.util.stream.Collectors;
+import it.polimi.it.actions.PlayerAction;
+import it.polimi.it.observer.GameEvent;
+import it.polimi.it.observer.GameEventListener;
+import it.polimi.it.validation.ValidationResult;
+import it.polimi.it.view.GameView;
 
-public class GameController {
-    private final Game game;
-    private final Scanner scanner;
+/**
+ * Game controller (Controller role in MVC).
+ *
+ * In the client-server architecture, the server instantiates one
+ * GameController per game. Player actions arrive as messages over the
+ * network (socket or RMI), are forwarded to {@link #handle(PlayerAction)},
+ * and the resulting GameEvents are published to all registered listeners
+ * (which include the network layer that broadcasts them to the clients).
+ *
+ * The controller is deliberately thin:
+ * - It does not build actions itself (those come from the network).
+ * - It does not interpret events (the view on each client does that).
+ * - It validates and forwards, and shows error feedback via the view
+ *   if a local view is present (e.g. for single-player or testing).
+ */
+public class GameController implements GameEventListener {
 
-    public GameController(Game game) {
+    private final Game     game;
+    private final GameView view;
+
+    /**
+     * @param game the game model this controller drives
+     * @param view the view for local feedback (may be a stub in pure server mode)
+     */
+    public GameController(Game game, GameView view) {
         this.game = game;
-        this.scanner = new Scanner(System.in);
+        this.view = view;
+        game.addListener(this);
     }
 
-    public void run() {
-        game.setup();
-        System.out.println("--- INIZIO PARTITA A MESOS ---");
+    // ── Startup ───────────────────────────────────────────────────────────────
 
-        while (game.getCurrentRound() < 10) {
-            game.startNewRound();
-            printRoundHeader();
+    /** Starts the game. Called once setup is complete and all players have joined. */
+    public void startGame() {
+        game.start();
+    }
 
-            // 1. PIAZZAMENTO (Strategico: chi è primo decide dove mettersi)
-            handlePlacementPhase();
+    // ── Action handling ───────────────────────────────────────────────────────
 
-            // 2. RISOLUZIONE (Meccanico: si segue il tracciato da A a E)
-            handleResolutionPhase();
-
-            // 3. MANUTENZIONE (Sostentamento ed Eventi)
-            game.endOfRound();
+    /**
+     * Receives a player action (from the network or from a local view) and
+     * applies it to the model.
+     *
+     * Returns the validation outcome so the caller (server layer) can send
+     * an error message back to the client if the action was rejected.
+     *
+     * @param action the action sent by a player
+     * @return Ok if applied; Fail with a reason string if rejected
+     */
+    public ValidationResult handle(PlayerAction action) {
+        ValidationResult result = game.execute(action);
+        if (!result.isOk()) {
+            view.showInvalidAction(
+                    action.playerName(),
+                    ((ValidationResult.Fail) result).reason());
         }
-
-        showFinalResults();
+        return result;
     }
 
-    private void handlePlacementPhase() {
-        System.out.println("\n[FASE 1] PIAZZAMENTO TOTEM");
-        List<Player> order = game.getPlacementOrder();
+    // ── GameEventListener ─────────────────────────────────────────────────────
 
-        for (Player p : order) {
-            List<OfferTile> available = game.getBoard().getAvailableOfferTiles();
-            System.out.println("\n> " + p.getName() + " (" + p.getFood() + " Cibo), scegli dove piazzarti:");
-
-            for (int i = 0; i < available.size(); i++) {
-                OfferTile t = available.get(i);
-                System.out.printf("[%d] Tessera %s (Sotto: %d, Sopra: %d, Cibo: %d)%n",
-                        i, t.getLetter(), t.getBottomRowCards(), t.getTopRowCards(), t.getFoodBonus());
-            }
-
-            int choice = getIntInput(0, available.size() - 1);
-            game.getBoard().placeTotem(p.getTotem(), available.get(choice));
-        }
-    }
-
-    private void handleResolutionPhase() {
-        System.out.println("\n[FASE 2] RISOLUZIONE AZIONI");
-        // Ordiniamo le tessere per lettera (A, B, C...) per sicurezza
-        List<OfferTile> track = game.getBoard().getOfferTrack();
-
-        for (OfferTile tile : track) {
-            if (tile.isFree()) continue;
-
-            Player acting = game.getPlayerByTotem(tile.getPlacedTotem());
-            System.out.println("\n--- Risoluzione Tessera " + tile.getLetter() + " per " + acting.getName() + " ---");
-
-            // A. Bonus Cibo (Eseguito prima di tutto)
-            if (tile.getFoodBonus() > 0) {
-                acting.addFood(tile.getFoodBonus());
-                System.out.println("+ Ricevuti " + tile.getFoodBonus() + " cibo.");
-            }
-
-            // B. Draft Carte (Se non è la tessera A "Solo Cibo")
-            if (!tile.isFoodOnly()) {
-                // Regola: prima si pesca dalla riga sotto, poi da quella sopra
-                processDraft(acting, tile.getBottomRowCards(), game.getBoard().getBottomRow(), "INFERIORE");
-                processDraft(acting, tile.getTopRowCards(), game.getBoard().getTopRow(), "SUPERIORE");
-            }
-
-            // C. Turn Order: Il totem si sposta sulla tessera ordine di turno
-            tile.removeTotem();
-            game.getBoard().getTurnOrderTile().placeTotem(acting);
-            System.out.println("> Totem spostato per l'ordine di turno del prossimo round.");
+    /**
+     * Forwards game events to the local view.
+     *
+     * In the full client-server setup, a separate network listener (registered
+     * alongside this controller) serialises and broadcasts these same events to
+     * all connected clients. This controller only handles local display.
+     */
+    @Override
+    public void onEvent(GameEvent event) {
+        switch (event) {
+            case GameEvent.RoundStarted             e ->
+                    view.showRoundStarted(e.round(), e.turnOrder());
+            case GameEvent.TotemPlaced              e ->
+                    view.showTotemPlaced(e.player(), e.tileLetter());
+            case GameEvent.CardSlotReady            e ->
+                    view.showCardSlotReady(e.player(), e.isTopRow(), e.availableCards());
+            case GameEvent.CardAcquired             e ->
+                    view.showCardAcquired(e.player(), e.card());
+            case GameEvent.CardAcquisitionFailed    e ->
+                    view.showCardAcquisitionFailed(e.player(), e.card(), e.missingFood());
+            case GameEvent.TotemReturnedToTurnOrder e ->
+                    view.showTotemReturnedToTurnOrder(e.player(), e.position());
+            case GameEvent.PostRoundStarted         e ->
+                    view.showPostRoundStarted(e.watchtowerPlayers(), e.availableCards());
+            case GameEvent.EventResolved            e ->
+                    view.showEventResolved(e.eventId(), e.era(), e.type());
+            case GameEvent.EraChanged               e -> view.showEraChanged(e.newEra());
+            case GameEvent.RoundEnded               e -> view.showRoundEnded(e.round());
+            case GameEvent.GameEnded                e ->
+                    view.showGameEnded(e.winners(), e.finalScores());
         }
     }
 
-    private void processDraft(Player p, int count, List<Card> row, String label) {
-        for (int i = 0; i < count; i++) {
-            // Filtriamo solo le carte che non sono eventi (gli eventi si attivano nella board)
-            List<Card> draftable = row.stream()
-                    .filter(c -> !(c instanceof it.polimi.it.cards.events.Event))
-                    .collect(Collectors.toList());
-
-            if (draftable.isEmpty()) {
-                System.out.println("Nessuna carta disponibile nella riga " + label);
-                break;
-            }
-
-            System.out.println("\nScegli carta da riga " + label + " (" + (i+1) + "/" + count + "):");
-            for (int j = 0; j < draftable.size(); j++) {
-                System.out.println("[" + j + "] " + draftable.get(j).toString());
-            }
-            System.out.println("[" + draftable.size() + "] PASSA (non prendere nulla)");
-
-            int choice = getIntInput(0, draftable.size());
-
-            if (choice < draftable.size()) {
-                Card selected = draftable.get(choice);
-                // Controllo Cibo per Edifici
-                if (selected instanceof Building b) {
-                    int cost = b.getFoodCost(); // Qui dovresti considerare gli sconti della Tribe
-                    if (p.getFood() < cost) {
-                        System.out.println("! Cibo insufficiente (" + p.getFood() + "/" + cost + "). Scegli altro.");
-                        i--; // Ripeti il draft per questa posizione
-                        continue;
-                    }
-                }
-                game.takeCard(p, selected);
-            }
-        }
-    }
-
-    // --- HELPER METHODS ---
-
-    private void printRoundHeader() {
-        System.out.println("\n========================================");
-        System.out.println("   ROUND " + game.getCurrentRound() + " - ERA: " + game.getCurrentEra());
-        System.out.println("========================================");
-    }
-
-    private int getIntInput(int min, int max) {
-        while (true) {
-            try {
-                System.out.print("> Selezione: ");
-                int val = Integer.parseInt(scanner.nextLine());
-                if (val >= min && val <= max) return val;
-                System.out.println("Scelta fuori range.");
-            } catch (NumberFormatException e) {
-                System.out.println("Inserisci un numero valido.");
-            }
-        }
-    }
-
-    private void showFinalResults() {
-        System.out.println("\n PUNTEGGI FINALI ");
-        game.endGame();
-        game.getPlayers().stream()
-                .sorted((p1, p2) -> Integer.compare(p2.getPrestigePoint(), p1.getPrestigePoint()))
-                .forEach(p -> System.out.println("- " + p.getName() + ": " + p.getPrestigePoint() + " PP"));
-    }
+    public Game getGame() { return game; }
 }
