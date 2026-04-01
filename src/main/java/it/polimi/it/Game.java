@@ -48,6 +48,7 @@ public class Game {
 
     private int     currentRound;
     private boolean gameOver;
+    private boolean testMode = false; // when true, endRound() does not auto-start next round
     private Phase   currentPhase;
 
     private TileResolutionState currentTileState;
@@ -135,7 +136,9 @@ public class Game {
                 action.tileLetter(),
                 remaining));
 
-        if (remaining.isEmpty()) {
+        long placedTotems = board.getOfferTiles().getAllTiles().stream()
+                .filter(t -> !t.isFree()).count();
+        if (placedTotems == players.size()) {
             beginActionPhase();
         }
         return ValidationResult.ok();
@@ -343,7 +346,7 @@ public class Game {
 
         if (isLastRound) {
             endGame();
-        } else {
+        } else if (!testMode) {
             beginRound();
         }
     }
@@ -437,6 +440,24 @@ public class Game {
                 .filter(c -> c.getId() == cardId)
                 .findFirst()
                 .orElse(null);
+    }
+
+
+    // Package-private: when true, endRound() stops after each round instead of auto-starting the next.
+    void setTestMode(boolean testMode) { this.testMode = testMode; }
+
+    // Package-private: manually starts the next round (only used in test mode).
+    void nextRound() { if (!gameOver) beginRound(); }
+
+    // Package-private: used by GameIntegrationTest.
+    Phase getCurrentPhase() { return currentPhase; }
+
+    // Package-private: used by GameIntegrationTest.
+    Board getBoard() { return board; }
+
+    // Package-private: used by GameIntegrationTest.
+    List<OfferTile> getFreeTiles() {
+        return board.getOfferTiles().getFreeTiles();
     }
 
     // Package-private: used by tests.

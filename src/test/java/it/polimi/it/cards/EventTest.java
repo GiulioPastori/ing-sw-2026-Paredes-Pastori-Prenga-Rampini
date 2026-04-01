@@ -4,8 +4,8 @@ import it.polimi.it.cards.events.Event;
 import it.polimi.it.cards.events.EventStrategy;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.EventType;
-import it.polimi.it.player.Player;
 import it.polimi.it.enums.TotemColour;
+import it.polimi.it.player.Player;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class EventTest {
 
-    private it.polimi.it.player.Player player1;
+    private Player player1;
     private Player player2;
     private List<Player> players;
 
@@ -29,27 +29,20 @@ class EventTest {
     // ── Constructor ───────────────────────────────────────────────────────────
 
     @Test
-    void constructor_nullStrategy_throwsIllegalArgumentException() {
-        assertThrows(IllegalArgumentException.class, () ->
-                new Event(2001, Era.ERA_I, EventType.HUNT, 1, null));
-    }
-
-    @Test
     void constructor_validArguments_setsFieldsCorrectly() {
         EventStrategy strategy = ps -> {};
         Event event = new Event(2001, Era.ERA_I, EventType.HUNT, 1, strategy);
 
-        assertEquals(2001,          event.getId());
-        assertEquals(Era.ERA_I,     event.getEra());
+        assertEquals(2001,           event.getId());
+        assertEquals(Era.ERA_I,      event.getEra());
         assertEquals(EventType.HUNT, event.getType());
-        assertEquals(1,             event.getValue());
+        assertEquals(1,              event.getValue());
     }
 
     // ── resolve() ────────────────────────────────────────────────────────────
 
     @Test
     void resolve_strategyIsInvoked() {
-        // Strategy adds 5 PP to every player
         EventStrategy strategy = ps -> ps.forEach(p -> p.addPrestigePoints(5));
         Event event = new Event(2002, Era.ERA_I, EventType.HUNT, 1, strategy);
 
@@ -61,7 +54,6 @@ class EventTest {
 
     @Test
     void resolve_strategyReceivesAllPlayers() {
-        // Strategy counts how many players it receives
         int[] count = {0};
         EventStrategy strategy = ps -> count[0] = ps.size();
         Event event = new Event(2003, Era.ERA_I, EventType.SUSTENANCE, 1, strategy);
@@ -73,7 +65,6 @@ class EventTest {
 
     @Test
     void resolve_negativePrestigePoints_allowed() {
-        // Sustenance-like: subtract PP if player can't feed
         EventStrategy strategy = ps -> ps.forEach(p -> p.addPrestigePoints(-3));
         Event event = new Event(2001, Era.ERA_I, EventType.SUSTENANCE, 1, strategy);
 

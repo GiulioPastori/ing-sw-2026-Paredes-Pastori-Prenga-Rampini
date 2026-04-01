@@ -1,6 +1,5 @@
 package it.polimi.it.cards.building;
 
-import it.polimi.it.cards.building.Building;
 import it.polimi.it.cards.character.*;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.TotemColour;
@@ -12,17 +11,9 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Unit tests for building effects via BuildingEffectRegistry.
- *
- * Each nested class focuses on one building ID.
- * Tests are integration-style within the model layer: they build a real
- * Player/Tribe and verify the observable effects of acquiring cards.
- */
 @DisplayName("BuildingEffectRegistry")
 class BuildingEffectRegistryTest {
 
-    // Helper: build a cheap building that costs 0 food
     private static Building freeBuilding(int id) {
         return new Building(id, Era.ERA_I, 0, 1, "");
     }
@@ -38,7 +29,6 @@ class BuildingEffectRegistryTest {
         @BeforeEach
         void setUp() {
             player = new Player("Alice", TotemColour.RED);
-            player.addFood(0);
             assertTrue(player.takeBuildingCard(freeBuilding(101)));
         }
 
@@ -50,49 +40,46 @@ class BuildingEffectRegistryTest {
             player.takeCharacterCard(new Shaman(2002, Era.ERA_I, 1));
             player.takeCharacterCard(new Builder(2003, Era.ERA_I, 1, 2));
             player.takeCharacterCard(new Inventor(2004, Era.ERA_I, "fire"));
-            // 5 of 6 types present, no Artist yet
+            // 5 of 6 types, no Artist yet
             assertEquals(0, player.getFood());
         }
 
         @Test
-        @DisplayName("+5 food when the 6th type is added to complete the set")
+        @DisplayName("+5 food when the 6th type completes the set")
         void bonusOnSixthType() {
             player.takeCharacterCard(new Hunter(2005, Era.ERA_I, false));
             player.takeCharacterCard(new Gatherer(5002, Era.ERA_I));
             player.takeCharacterCard(new Shaman(2006, Era.ERA_I, 1));
             player.takeCharacterCard(new Builder(2007, Era.ERA_I, 1, 2));
             player.takeCharacterCard(new Inventor(2008, Era.ERA_I, "fire"));
-            player.takeCharacterCard(new Artist(7001, Era.ERA_I)); // completes the set
+            player.takeCharacterCard(new Artist(7001, Era.ERA_I));
             assertEquals(5, player.getFood());
         }
 
         @Test
         @DisplayName("+5 food again when a second complete set is formed")
         void bonusOnSecondSet() {
-            // First complete set
             player.takeCharacterCard(new Hunter(2009, Era.ERA_I, false));
             player.takeCharacterCard(new Gatherer(5003, Era.ERA_I));
             player.takeCharacterCard(new Shaman(2010, Era.ERA_I, 1));
             player.takeCharacterCard(new Builder(2011, Era.ERA_I, 1, 2));
             player.takeCharacterCard(new Inventor(2012, Era.ERA_I, "fire"));
-            player.takeCharacterCard(new Artist(7002, Era.ERA_I)); // set 1 complete
+            player.takeCharacterCard(new Artist(7002, Era.ERA_I)); // set 1
             assertEquals(5, player.getFood());
 
-            // Add 5 more types before the 6th to form second set
             player.takeCharacterCard(new Hunter(2013, Era.ERA_I, false));
             player.takeCharacterCard(new Gatherer(5004, Era.ERA_I));
             player.takeCharacterCard(new Shaman(2014, Era.ERA_I, 2));
             player.takeCharacterCard(new Builder(2015, Era.ERA_I, 1, 2));
             player.takeCharacterCard(new Inventor(2016, Era.ERA_I, "arrow"));
-            assertEquals(5, player.getFood()); // still 5, second set not yet complete
-            player.takeCharacterCard(new Artist(7003, Era.ERA_I)); // set 2 complete
+            assertEquals(5, player.getFood()); // still 5, second set not complete
+            player.takeCharacterCard(new Artist(7003, Era.ERA_I)); // set 2
             assertEquals(10, player.getFood());
         }
 
         @Test
-        @DisplayName("not retroactive: bonus not given for sets present when building was acquired")
+        @DisplayName("not retroactive: no bonus for sets present before building")
         void notRetroactive() {
-            // Acquire all 6 types BEFORE buying the building
             Player p2 = new Player("Bob", TotemColour.BLUE);
             p2.takeCharacterCard(new Hunter(2017, Era.ERA_I, false));
             p2.takeCharacterCard(new Gatherer(5005, Era.ERA_I));
@@ -100,8 +87,7 @@ class BuildingEffectRegistryTest {
             p2.takeCharacterCard(new Builder(2019, Era.ERA_I, 1, 2));
             p2.takeCharacterCard(new Inventor(2020, Era.ERA_I, "fire"));
             p2.takeCharacterCard(new Artist(7004, Era.ERA_I));
-            // Set already complete; now buy building 101
-            p2.addFood(0);
+            // set already complete; now buy building 101
             assertTrue(p2.takeBuildingCard(freeBuilding(101)));
             assertEquals(0, p2.getFood()); // no retroactive bonus
         }
@@ -149,7 +135,7 @@ class BuildingEffectRegistryTest {
         void thirdSameIconNoFood() {
             player.takeCharacterCard(new Inventor(2026, Era.ERA_I, "fire"));
             player.takeCharacterCard(new Inventor(2027, Era.ERA_I, "fire")); // +3
-            player.takeCharacterCard(new Inventor(2028, Era.ERA_I, "fire")); // odd count, no bonus
+            player.takeCharacterCard(new Inventor(2028, Era.ERA_I, "fire")); // odd, no bonus
             assertEquals(3, player.getFood());
         }
 
@@ -183,7 +169,8 @@ class BuildingEffectRegistryTest {
             Player player = new Player("Alice", TotemColour.RED);
             player.addPrestigePoints(10);
             assertTrue(player.takeBuildingCard(freeBuilding(301)));
-            assertEquals(35, player.calculateFinalScore()); // 10 in-game + 25 building
+            // 10 in-game + 25 endGameScorer + 1 finalPoints = 36
+            assertEquals(36, player.calculateFinalScore());
         }
     }
 
@@ -199,18 +186,35 @@ class BuildingEffectRegistryTest {
             Player player = new Player("Alice", TotemColour.RED);
             player.takeCharacterCard(new Builder(2034, Era.ERA_I, 0, 6)); // 6 PP normally
             assertTrue(player.takeBuildingCard(freeBuilding(203)));
-            // Base: 6 PP from builder + 6 PP from building 203 (doubles it) + 1 finalPoints
-            // computeBuilderPoints() = 6, building 203 endGameScorer = 6 again, finalPoints = 1
-            assertEquals(6 + 6 + 1, player.calculateFinalScore());
+            // builder: 6 PP, building 203: endGameScorer = computeBuilderPoints() = 6,
+            // finalPoints = 1 -> total = 6 + 6 + 1 = 13
+            assertEquals(13, player.calculateFinalScore());
         }
     }
 
-    // ── NONE: unknown building ID returns NONE effect ─────────────────────────
+    // ── overrideEndGameScorer ─────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("overrideEndGameScorer replaces EndGameScorer correctly")
+    void overrideEndGameScorerWorks() {
+        BuildingEffectRegistry.overrideEndGameScorer(206, player -> 42);
+        BuildingEffect effect = BuildingEffectRegistry.get(206);
+        Player player = new Player("Alice", TotemColour.RED);
+        assertEquals(42, effect.getEndGameScorer().compute(player));
+    }
+
+    @Test
+    @DisplayName("overrideEndGameScorer with unknown ID throws")
+    void overrideUnknownIdThrows() {
+        assertThrows(IllegalArgumentException.class, () ->
+                BuildingEffectRegistry.overrideEndGameScorer(9999, p -> 0));
+    }
+
+    // ── NONE ──────────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("unknown building ID returns BuildingEffect.NONE")
     void unknownIdReturnsNone() {
-        BuildingEffect effect = BuildingEffectRegistry.get(9999);
-        assertSame(BuildingEffect.NONE, effect);
+        assertSame(BuildingEffect.NONE, BuildingEffectRegistry.get(9999));
     }
 }
