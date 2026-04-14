@@ -54,6 +54,7 @@ public class Game {
     private TileResolutionState currentTileState;
     private List<Player>        pendingPostRound;
 
+
     // Package-private: the state machine is an internal implementation detail.
     enum Phase { WAITING, PLACING_TOTEMS, RESOLVING_ACTIONS, POST_ROUND, ENDED }
 
