@@ -48,12 +48,12 @@ public class Game {
 
     private int     currentRound;
     private boolean gameOver;
+    private final Set<String> disconnectedPlayers = new HashSet<>();
     private boolean testMode = false; // when true, endRound() does not auto-start next round
     private Phase   currentPhase;
 
     private TileResolutionState currentTileState;
     private List<Player>        pendingPostRound;
-
 
     // Package-private: the state machine is an internal implementation detail.
     enum Phase { WAITING, PLACING_TOTEMS, RESOLVING_ACTIONS, POST_ROUND, ENDED }
@@ -137,9 +137,7 @@ public class Game {
                 action.tileLetter(),
                 remaining));
 
-        long placedTotems = board.getOfferTiles().getAllTiles().stream()
-                .filter(t -> !t.isFree()).count();
-        if (placedTotems == players.size()) {
+        if (remaining.isEmpty()) {
             beginActionPhase();
         }
         return ValidationResult.ok();
@@ -396,6 +394,7 @@ public class Game {
                 .map(OfferTileSnapshot::of).toList();
 
         publish(new GameEvent.RoundStarted(currentRound, order, freeTiles));
+        autoPlaceDisconnectedTotems();
     }
 
     // ── Winner calculation ────────────────────────────────────────────────────
@@ -456,16 +455,71 @@ public class Game {
     // Package-private: used by GameIntegrationTest.
     Board getBoard() { return board; }
 
-    // Package-private: used by GameIntegrationTest.
-    List<OfferTile> getFreeTiles() {
-        return board.getOfferTiles().getFreeTiles();
-    }
-
     // Package-private: used by tests.
     List<Player> getPlacementOrder() {
         List<Player> ordered = new ArrayList<>(players);
         ordered.sort(Comparator.comparingInt(Player::getTurnOrder));
         return ordered;
+    }
+
+
+    // ── Resilience: disconnect/reconnect support ──────────────────────────────
+
+    /**
+     * Marks a player as disconnected.
+     * Their turns will be automatically skipped until they reconnect.
+     */
+    public void markDisconnected(String nickname) {
+        disconnectedPlayers.add(nickname);
+        if (currentPhase == Phase.RESOLVING_ACTIONS
+                && currentTileState != null
+                && currentTileState.getActingPlayer().getName().equals(nickname)) {
+            while (!currentTileState.isExhausted()) {
+                boolean fromTop = currentTileState.remainingTopCards() > 0;
+                if (fromTop) currentTileState.consumeTopSlot();
+                else         currentTileState.consumeBottomSlot();
+            }
+            returnTotemToTurnOrder(currentTileState.getActingPlayer(),
+                    currentTileState.getTile());
+            currentTileState = null;
+            advanceToNextOccupiedTile();
+        } else if (currentPhase == Phase.POST_ROUND && pendingPostRound != null) {
+            pendingPostRound.removeIf(p -> p.getName().equals(nickname));
+            if (pendingPostRound.isEmpty()) endRound();
+        }
+    }
+
+    /** Marks a player as reconnected — their turns will no longer be skipped. */
+    public void markReconnected(String nickname) {
+        disconnectedPlayers.remove(nickname);
+    }
+
+    /** Returns true if the given player is currently disconnected. */
+    public boolean isDisconnected(String nickname) {
+        return disconnectedPlayers.contains(nickname);
+    }
+
+    /**
+     * Places totems automatically for all disconnected players at round start.
+     */
+    private void autoPlaceDisconnectedTotems() {
+        for (Player p : getPlacementOrder()) {
+            if (!disconnectedPlayers.contains(p.getName())) continue;
+            List<OfferTile> free = board.getOfferTiles().getFreeTiles();
+            if (free.isEmpty()) break;
+            OfferTile tile = free.get(0);
+            board.getOfferTiles().placeTotem(p, tile);
+            List<OfferTileSnapshot> remaining = board.getOfferTiles().getFreeTiles()
+                    .stream().map(OfferTileSnapshot::of).toList();
+            publish(new GameEvent.TotemPlaced(
+                    PlayerSnapshot.of(p), tile.getLetter(), remaining));
+            long placed = board.getOfferTiles().getAllTiles().stream()
+                    .filter(t -> !t.isFree()).count();
+            if (placed == players.size()) {
+                beginActionPhase();
+                return;
+            }
+        }
     }
 
     // ── Public getters ────────────────────────────────────────────────────────

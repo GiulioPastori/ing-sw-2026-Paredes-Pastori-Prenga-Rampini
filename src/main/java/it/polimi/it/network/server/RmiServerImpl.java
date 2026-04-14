@@ -26,7 +26,7 @@ import java.util.logging.Logger;
 public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
 
     private static final Logger LOG           = Logger.getLogger(RmiServerImpl.class.getName());
-    static final         String REGISTRY_NAME = "MesosServer";
+    public static final         String REGISTRY_NAME = "MesosServer";
 
     private final LobbyServer                   lobby;
     private final Map<String, RmiClientHandler> handlers       = new ConcurrentHashMap<>();
