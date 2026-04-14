@@ -3,16 +3,14 @@ package it.polimi.it.observer;
 import it.polimi.it.enums.TotemColour;
 import it.polimi.it.player.Player;
 
+import java.io.Serial;
+import java.io.Serializable;
+
 /**
  * Immutable snapshot of a player's visible state at a specific moment.
  *
- * GameEvents carry PlayerSnapshot instead of Player for two reasons:
- * - Listeners cannot modify the model by reading an event
- * - The snapshot represents the state at the exact moment of the event,
- *   not the current state (which may already have changed by the time
- *   a listener processes it)
- *
- * Only contains the fields the View needs to display in response to an event.
+ * Implements Serializable so it can be passed inside Message objects
+ * over RMI and via Java object serialisation over sockets.
  */
 public record PlayerSnapshot(
         String      name,
@@ -20,7 +18,9 @@ public record PlayerSnapshot(
         int         food,
         int         prestigePoints,
         int         turnOrder
-) {
+) implements Serializable {
+    @Serial private static final long serialVersionUID = 1L;
+
     /** Creates a snapshot of the player in their current state. */
     public static PlayerSnapshot of(Player player) {
         return new PlayerSnapshot(

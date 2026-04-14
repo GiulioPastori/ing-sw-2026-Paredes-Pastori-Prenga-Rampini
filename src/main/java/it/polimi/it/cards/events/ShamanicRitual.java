@@ -57,7 +57,9 @@ public class ShamanicRitual implements EventStrategy {
                 player.addPrestigePoints(reward);
             }
 
-            if (icons == min) {
+            // Penalty applies only when max != min; if all players are tied
+            // they all gain the reward above — no one loses (rulebook p.6).
+            if (max != min && icons == min) {
                 boolean immune = player.getTribe().getBuildings().stream()
                         .anyMatch(b -> b.getEffect().hasShamanicModifier()
                                 && b.getEffect().getShamanicModifier().isImmuneToMinPenalty(player));

@@ -6,16 +6,14 @@ import it.polimi.it.cards.character.Character;
 import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
 
+import java.io.Serial;
+import java.io.Serializable;
+
 /**
  * Immutable snapshot of a card, carried by GameEvents and sent over the network.
  *
- * Cards in the physical game have no printed name, so the integer {@code id}
- * is the natural identifier. It is compact for serialisation and unambiguous.
- *
- * The {@code type} field discriminates the card kind:
- * - CHARACTER: {@code characterType} is set
- * - BUILDING:  {@code foodCost} and {@code finalPoints} are set
- * - EVENT:     not selectable by players
+ * Implements Serializable so it can be passed inside Message objects
+ * over RMI and via Java object serialisation over sockets.
  */
 public record CardSnapshot(
         int           id,
@@ -25,8 +23,13 @@ public record CardSnapshot(
         int           foodCost,
         int           finalPoints,
         String        effectDescription
-) {
-    public enum Type { CHARACTER, BUILDING, EVENT }
+) implements Serializable {
+    @Serial private static final long serialVersionUID = 1L;
+
+    public enum Type implements Serializable {
+        CHARACTER, BUILDING, EVENT;
+        @Serial private static final long serialVersionUID = 1L;
+    }
 
     /** Creates a snapshot from a concrete card. */
     public static CardSnapshot of(Card card) {

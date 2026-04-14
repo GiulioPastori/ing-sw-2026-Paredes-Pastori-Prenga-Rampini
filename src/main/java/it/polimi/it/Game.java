@@ -31,12 +31,12 @@ import java.util.*;
  *
  * Does not know the controller, the view, or the network layer.
  *
- * Actions carry string identifiers (player name, card name, tile letter)
- * rather than direct object references, so they are naturally serialisable
- * for network transport. Game resolves identifiers to objects internally.
- *
  * Internal state machine (Phase):
  * WAITING -> PLACING_TOTEMS -> RESOLVING_ACTIONS -> POST_ROUND -> (loop | ENDED)
+ *
+ * Offer Track note: the number of tiles is always players+1 (one tile is never
+ * used each round). The action phase starts when placed totems == players.size(),
+ * not when no free tiles remain.
  */
 public class Game {
 
@@ -49,7 +49,7 @@ public class Game {
     private int     currentRound;
     private boolean gameOver;
     private final Set<String> disconnectedPlayers = new HashSet<>();
-    private boolean testMode = false; // when true, endRound() does not auto-start next round
+    private boolean testMode = false;
     private Phase   currentPhase;
 
     private TileResolutionState currentTileState;
@@ -78,7 +78,6 @@ public class Game {
 
     // ── Startup ───────────────────────────────────────────────────────────────
 
-    /** Starts the first round. */
     public void start() {
         if (currentPhase != Phase.WAITING) {
             throw new IllegalStateException("Game already started.");
@@ -86,21 +85,8 @@ public class Game {
         beginRound();
     }
 
-    // ── Action execution ─────────────────────────────────────────────────────
+    // ── Action execution ──────────────────────────────────────────────────────
 
-    /**
-     * Validates and applies a player action.
-     *
-     * Actions carry string identifiers (player name, card name, tile letter)
-     * so they can be built from network messages without holding references
-     * to model objects. Game resolves identifiers internally.
-     *
-     * Returns ValidationResult.ok() if applied, Fail with a readable message
-     * otherwise. Never throws for invalid user input.
-     *
-     * @param action the action sent by the player
-     * @return validation outcome
-     */
     public ValidationResult execute(PlayerAction action) {
         Player player;
         try {
@@ -122,6 +108,29 @@ public class Game {
         if (currentPhase != Phase.PLACING_TOTEMS) {
             return ValidationResult.fail("Not the time to place a totem.");
         }
+
+        // Bug fix 1: enforce turn order (rulebook p.4).
+        // Players place in Turn Order Tile sequence (top to bottom).
+        // Disconnected players are skipped — they were placed automatically
+        // by autoPlaceDisconnectedTotems() at round start.
+        long alreadyPlaced = board.getOfferTiles().getAllTiles().stream()
+                .filter(t -> !t.isFree()).count();
+        List<Player> connectedOrder = getPlacementOrder().stream()
+                .filter(p -> !disconnectedPlayers.contains(p.getName()))
+                .toList();
+        long connectedPlaced = board.getOfferTiles().getAllTiles().stream()
+                .filter(t -> !t.isFree())
+                .map(t -> getPlayerByTotem(t.getPlacedTotem()))
+                .filter(p -> !disconnectedPlayers.contains(p.getName()))
+                .count();
+        if ((int) connectedPlaced < connectedOrder.size()) {
+            Player expected = connectedOrder.get((int) connectedPlaced);
+            if (!expected.equals(player)) {
+                return ValidationResult.fail("It is " + expected.getName()
+                        + "'s turn to place a totem, not " + player.getName() + ".");
+            }
+        }
+
         List<OfferTile> free = board.getOfferTiles().getFreeTiles();
         ValidationResult v = ActionValidator.validate(action, player, free);
         if (!v.isOk()) return v;
@@ -137,7 +146,12 @@ public class Game {
                 action.tileLetter(),
                 remaining));
 
-        if (remaining.isEmpty()) {
+        // Bug fix 2: the Offer Track always has players+1 tiles, so one tile is
+        // always left free. The action phase starts when all PLAYERS have placed,
+        // not when all tiles are occupied.
+        long totalPlaced = board.getOfferTiles().getAllTiles().stream()
+                .filter(t -> !t.isFree()).count();
+        if (totalPlaced == players.size()) {
             beginActionPhase();
         }
         return ValidationResult.ok();
@@ -200,11 +214,11 @@ public class Game {
         ValidationResult v = ActionValidator.validate(action, player, currentTileState);
         if (!v.isOk()) return v;
 
-        // Resolve card name to the concrete object
         List<Card> row = action.fromTopRow() ? board.getTopRow() : board.getBottomRow();
         Card card = findCardInRow(action.cardId(), row);
         if (card == null) {
-            return ValidationResult.fail("Card ID " + action.cardId() + " not found in the indicated row.");
+            return ValidationResult.fail("Card ID " + action.cardId()
+                    + " not found in the indicated row.");
         }
         if (card instanceof Event) {
             return ValidationResult.fail("Event cards cannot be acquired by players.");
@@ -218,7 +232,6 @@ public class Game {
                     CardSnapshot.of(card)));
             consumeSlot(action.fromTopRow());
         } else {
-            // Building not affordable
             int cost    = ((Building) card).getEffectiveCost(player.getTribe());
             int missing = cost - player.getFood();
 
@@ -236,7 +249,8 @@ public class Game {
                     alternatives));
 
             return ValidationResult.fail(
-                    "Insufficient food: need " + missing + " more for card ID " + card.getId());
+                    "Insufficient food: need " + missing
+                            + " more for card ID " + card.getId());
         }
         return ValidationResult.ok();
     }
@@ -260,7 +274,8 @@ public class Game {
             currentTileState.consumeBottomSlot();
         }
         if (currentTileState.isExhausted()) {
-            returnTotemToTurnOrder(currentTileState.getActingPlayer(), currentTileState.getTile());
+            returnTotemToTurnOrder(
+                    currentTileState.getActingPlayer(), currentTileState.getTile());
             currentTileState = null;
             advanceToNextOccupiedTile();
         } else {
@@ -280,7 +295,8 @@ public class Game {
     private void beginPostRoundPhase() {
         pendingPostRound = new ArrayList<>();
         for (Player p : players) {
-            if (p.getTribe().getBuildings().stream().anyMatch(Building::hasPostRoundAction)) {
+            if (p.getTribe().getBuildings().stream()
+                    .anyMatch(Building::hasPostRoundAction)) {
                 pendingPostRound.add(p);
             }
         }
@@ -330,10 +346,12 @@ public class Game {
 
         if (isLastRound) {
             board.resolveAllVisibleEvents(players)
-                    .forEach(e -> publish(new GameEvent.EventResolved(e.getId(), e.getEra(), e.getType())));
+                    .forEach(e -> publish(new GameEvent.EventResolved(
+                            e.getId(), e.getEra(), e.getType())));
         } else {
             board.resolveBottomRowEvents(players)
-                    .forEach(e -> publish(new GameEvent.EventResolved(e.getId(), e.getEra(), e.getType())));
+                    .forEach(e -> publish(new GameEvent.EventResolved(
+                            e.getId(), e.getEra(), e.getType())));
             board.clearBottomRowExceptBuildings();
             board.moveTopToBottom();
             boolean eraChanged = board.refillTopRow(players.size());
@@ -360,6 +378,17 @@ public class Game {
     private void endGame() {
         currentPhase = Phase.ENDED;
         gameOver     = true;
+
+        // Bug fix 3: apply end-of-game bonuses BEFORE taking snapshots and
+        // determining the winner, so the final scoreboard is correct (rulebook p.7).
+        for (Player p : players) {
+            int endBonus = p.getTribe().computeBuilderPoints()
+                    + p.getTribe().computeInventorPoints()
+                    + p.getTribe().computeArtistPoints()
+                    + p.getTribe().computeBuildingPoints(p);
+            p.addPrestigePoints(endBonus);
+        }
+
         List<Player> winners = getWinners();
         publish(new GameEvent.GameEnded(
                 winners.stream().map(PlayerSnapshot::of).toList(),
@@ -400,13 +429,16 @@ public class Game {
     // ── Winner calculation ────────────────────────────────────────────────────
 
     /**
-     * Returns the winner(s): highest final score; tiebreaker is most food;
-     * absolute tie means shared victory (rulebook p.7).
+     * Returns the winner(s) based on prestigePoints (which include end-game
+     * bonuses after endGame() has applied them).
+     * Tiebreaker: most food. Absolute tie: shared victory (rulebook p.7).
+     * Must only be called from endGame().
      */
     public List<Player> getWinners() {
-        int maxScore = players.stream().mapToInt(Player::calculateFinalScore).max().orElse(0);
+        int maxScore = players.stream()
+                .mapToInt(Player::getPrestigePoints).max().orElse(0);
         List<Player> top = players.stream()
-                .filter(p -> p.calculateFinalScore() == maxScore).toList();
+                .filter(p -> p.getPrestigePoints() == maxScore).toList();
         if (top.size() == 1) return top;
         int maxFood = top.stream().mapToInt(Player::getFood).max().orElse(0);
         return top.stream().filter(p -> p.getFood() == maxFood).toList();
@@ -418,21 +450,24 @@ public class Game {
         return players.stream()
                 .filter(p -> p.getName().equals(name))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Player not found: " + name));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Player not found: " + name));
     }
 
     private Player getPlayerByTotem(TotemColour totem) {
         return players.stream()
                 .filter(p -> p.getTotemColour() == totem)
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException("No player with totem: " + totem));
+                .orElseThrow(() -> new IllegalStateException(
+                        "No player with totem: " + totem));
     }
 
     private OfferTile findTile(char letter) {
         return board.getOfferTiles().getAllTiles().stream()
                 .filter(t -> t.getLetter() == letter)
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Tile not found: " + letter));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Tile not found: " + letter));
     }
 
     private Card findCardInRow(int cardId, List<Card> row) {
@@ -442,33 +477,20 @@ public class Game {
                 .orElse(null);
     }
 
+    // Package-private: used by tests
+    void  setTestMode(boolean testMode) { this.testMode = testMode; }
+    void  nextRound()                   { if (!gameOver) beginRound(); }
+    Phase getCurrentPhase()             { return currentPhase; }
+    Board getBoard()                    { return board; }
 
-    // Package-private: when true, endRound() stops after each round instead of auto-starting the next.
-    void setTestMode(boolean testMode) { this.testMode = testMode; }
-
-    // Package-private: manually starts the next round (only used in test mode).
-    void nextRound() { if (!gameOver) beginRound(); }
-
-    // Package-private: used by GameIntegrationTest.
-    Phase getCurrentPhase() { return currentPhase; }
-
-    // Package-private: used by GameIntegrationTest.
-    Board getBoard() { return board; }
-
-    // Package-private: used by tests.
     List<Player> getPlacementOrder() {
         List<Player> ordered = new ArrayList<>(players);
         ordered.sort(Comparator.comparingInt(Player::getTurnOrder));
         return ordered;
     }
 
-
     // ── Resilience: disconnect/reconnect support ──────────────────────────────
 
-    /**
-     * Marks a player as disconnected.
-     * Their turns will be automatically skipped until they reconnect.
-     */
     public void markDisconnected(String nickname) {
         disconnectedPlayers.add(nickname);
         if (currentPhase == Phase.RESOLVING_ACTIONS
@@ -479,8 +501,8 @@ public class Game {
                 if (fromTop) currentTileState.consumeTopSlot();
                 else         currentTileState.consumeBottomSlot();
             }
-            returnTotemToTurnOrder(currentTileState.getActingPlayer(),
-                    currentTileState.getTile());
+            returnTotemToTurnOrder(
+                    currentTileState.getActingPlayer(), currentTileState.getTile());
             currentTileState = null;
             advanceToNextOccupiedTile();
         } else if (currentPhase == Phase.POST_ROUND && pendingPostRound != null) {
@@ -489,19 +511,14 @@ public class Game {
         }
     }
 
-    /** Marks a player as reconnected — their turns will no longer be skipped. */
     public void markReconnected(String nickname) {
         disconnectedPlayers.remove(nickname);
     }
 
-    /** Returns true if the given player is currently disconnected. */
     public boolean isDisconnected(String nickname) {
         return disconnectedPlayers.contains(nickname);
     }
 
-    /**
-     * Places totems automatically for all disconnected players at round start.
-     */
     private void autoPlaceDisconnectedTotems() {
         for (Player p : getPlacementOrder()) {
             if (!disconnectedPlayers.contains(p.getName())) continue;
@@ -524,7 +541,7 @@ public class Game {
 
     // ── Public getters ────────────────────────────────────────────────────────
 
-    public boolean      isGameOver()    { return gameOver; }
+    public boolean      isGameOver()      { return gameOver; }
     public int          getCurrentRound() { return currentRound; }
-    public List<Player> getPlayers()    { return List.copyOf(players); }
+    public List<Player> getPlayers()      { return List.copyOf(players); }
 }

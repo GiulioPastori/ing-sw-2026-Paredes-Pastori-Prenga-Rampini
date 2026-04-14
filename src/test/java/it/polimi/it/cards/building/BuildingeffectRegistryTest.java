@@ -14,11 +14,15 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("BuildingEffectRegistry")
 class BuildingEffectRegistryTest {
 
+    /**
+     * Creates a building with the given ID, zero food cost and 1 final PP,
+     * so it can be acquired for free in every test.
+     */
     private static Building freeBuilding(int id) {
         return new Building(id, Era.ERA_I, 0, 1, "");
     }
 
-    // ── ID 101: complete set of 6 distinct types -> +5 food ──────────────────
+    // ── ID 101: complete set of 6 distinct types → +5 food ───────────────────
 
     @Nested
     @DisplayName("ID 101 – complete-set bonus")
@@ -59,21 +63,23 @@ class BuildingEffectRegistryTest {
         @Test
         @DisplayName("+5 food again when a second complete set is formed")
         void bonusOnSecondSet() {
+            // First set
             player.takeCharacterCard(new Hunter(2009, Era.ERA_I, false));
             player.takeCharacterCard(new Gatherer(5003, Era.ERA_I));
             player.takeCharacterCard(new Shaman(2010, Era.ERA_I, 1));
             player.takeCharacterCard(new Builder(2011, Era.ERA_I, 1, 2));
             player.takeCharacterCard(new Inventor(2012, Era.ERA_I, "fire"));
-            player.takeCharacterCard(new Artist(7002, Era.ERA_I)); // set 1
+            player.takeCharacterCard(new Artist(7002, Era.ERA_I));
             assertEquals(5, player.getFood());
 
+            // Second set — incomplete until Artist
             player.takeCharacterCard(new Hunter(2013, Era.ERA_I, false));
             player.takeCharacterCard(new Gatherer(5004, Era.ERA_I));
             player.takeCharacterCard(new Shaman(2014, Era.ERA_I, 2));
             player.takeCharacterCard(new Builder(2015, Era.ERA_I, 1, 2));
             player.takeCharacterCard(new Inventor(2016, Era.ERA_I, "arrow"));
             assertEquals(5, player.getFood()); // still 5, second set not complete
-            player.takeCharacterCard(new Artist(7003, Era.ERA_I)); // set 2
+            player.takeCharacterCard(new Artist(7003, Era.ERA_I));
             assertEquals(10, player.getFood());
         }
 
@@ -93,7 +99,7 @@ class BuildingEffectRegistryTest {
         }
     }
 
-    // ── ID 105: inventor pair with same icon -> +3 food ───────────────────────
+    // ── ID 105: inventor pair with same icon → +3 food ───────────────────────
 
     @Nested
     @DisplayName("ID 105 – inventor pair bonus")
@@ -135,7 +141,7 @@ class BuildingEffectRegistryTest {
         void thirdSameIconNoFood() {
             player.takeCharacterCard(new Inventor(2026, Era.ERA_I, "fire"));
             player.takeCharacterCard(new Inventor(2027, Era.ERA_I, "fire")); // +3
-            player.takeCharacterCard(new Inventor(2028, Era.ERA_I, "fire")); // odd, no bonus
+            player.takeCharacterCard(new Inventor(2028, Era.ERA_I, "fire")); // odd count, no bonus
             assertEquals(3, player.getFood());
         }
 
@@ -164,13 +170,28 @@ class BuildingEffectRegistryTest {
     class Id301FixedPP {
 
         @Test
-        @DisplayName("building 301 contributes 25 PP to final score")
+        @DisplayName("building 301 contributes exactly 25 PP via finalPoints (no scorer)")
         void fixedPPContributed() {
+            // Building 301 has finalPoints=25 from JSON and NO EndGameScorer.
+            // freeBuilding(301) uses finalPoints=1 to stay self-contained,
+            // so the expected score is: 10 in-game + 1 finalPoints + 0 scorer = 11.
+            // To test the real building we create it with finalPoints=25:
+            Building building301 = new Building(301, Era.ERA_III, 0, 25, "");
             Player player = new Player("Alice", TotemColour.RED);
             player.addPrestigePoints(10);
-            assertTrue(player.takeBuildingCard(freeBuilding(301)));
-            // 10 in-game + 25 endGameScorer + 1 finalPoints = 36
-            assertEquals(36, player.calculateFinalScore());
+            assertTrue(player.takeBuildingCard(building301));
+            // 10 in-game PP + 25 finalPoints + 0 endGameScorer = 35
+            assertEquals(35, player.calculateFinalScore());
+        }
+
+        @Test
+        @DisplayName("building 301 has no EndGameScorer (would double-count with finalPoints)")
+        void noEndGameScorer() {
+            // Verify the registry entry for 301 has no scorer.
+            BuildingEffect effect = BuildingEffectRegistry.get(301);
+            assertFalse(effect.hasEndGameScorer(),
+                    "Building 301 must not have an EndGameScorer — its 25 PP " +
+                            "are already in finalPoints from the JSON");
         }
     }
 
@@ -186,9 +207,72 @@ class BuildingEffectRegistryTest {
             Player player = new Player("Alice", TotemColour.RED);
             player.takeCharacterCard(new Builder(2034, Era.ERA_I, 0, 6)); // 6 PP normally
             assertTrue(player.takeBuildingCard(freeBuilding(203)));
-            // builder: 6 PP, building 203: endGameScorer = computeBuilderPoints() = 6,
-            // finalPoints = 1 -> total = 6 + 6 + 1 = 13
+            // builder: 6 PP
+            // building 203: endGameScorer = computeBuilderPoints() = 6, finalPoints = 1
+            // total = 6 (builder) + 6 (scorer) + 1 (finalPoints) = 13
             assertEquals(13, player.calculateFinalScore());
+        }
+    }
+
+    // ── ID 302: Watchtower → post-round action ────────────────────────────────
+
+    @Nested
+    @DisplayName("ID 302 – Watchtower post-round action")
+    class Id302Watchtower {
+
+        @Test
+        @DisplayName("building 302 has post-round action flag")
+        void hasPostRoundAction() {
+            Building building302 = new Building(302, Era.ERA_III, 0, 3, "");
+            Player player = new Player("Alice", TotemColour.RED);
+            assertTrue(player.takeBuildingCard(building302));
+            assertTrue(player.getTribe().getBuildings().stream()
+                            .anyMatch(Building::hasPostRoundAction),
+                    "Building 302 must have the post-round action flag");
+        }
+
+        @Test
+        @DisplayName("building 302 has no EndGameScorer")
+        void noEndGameScorer() {
+            BuildingEffect effect = BuildingEffectRegistry.get(302);
+            assertFalse(effect.hasEndGameScorer(),
+                    "Building 302 is a Watchtower — it has no end-game scoring");
+        }
+    }
+
+    // ── ID 303-308: PP per character of indicated type ────────────────────────
+
+    @Nested
+    @DisplayName("ID 303-308 – PP per character type (overridden by CardLoader)")
+    class Id303To308PerCharacterType {
+
+        @Test
+        @DisplayName("placeholders return 0 before CardLoader overrides them")
+        void placeholderReturnsZero() {
+            Player player = new Player("Alice", TotemColour.RED);
+            for (int id = 303; id <= 308; id++) {
+                BuildingEffect effect = BuildingEffectRegistry.get(id);
+                assertEquals(0, effect.getEndGameScorer().compute(player),
+                        "Building " + id + " placeholder scorer should return 0");
+            }
+        }
+
+        @Test
+        @DisplayName("after override, scorer uses the injected formula")
+        void afterOverrideScorerWorks() {
+            // Simulate what CardLoader does for e.g. building 303 (3 PP per Hunter)
+            BuildingEffectRegistry.overrideEndGameScorer(303,
+                    p -> p.getTribe().countByType(it.polimi.it.enums.CharacterType.HUNTER) * 3);
+
+            Player player = new Player("Alice", TotemColour.RED);
+            player.takeCharacterCard(new Hunter(9001, Era.ERA_I, false));
+            player.takeCharacterCard(new Hunter(9002, Era.ERA_I, false));
+
+            Building b303 = new Building(303, Era.ERA_III, 0, 8, "");
+            assertTrue(player.takeBuildingCard(b303));
+
+            // 2 hunters × 3 PP = 6 from scorer, + 8 finalPoints = 14 building PP
+            assertEquals(14, player.calculateFinalScore());
         }
     }
 
@@ -204,13 +288,13 @@ class BuildingEffectRegistryTest {
     }
 
     @Test
-    @DisplayName("overrideEndGameScorer with unknown ID throws")
+    @DisplayName("overrideEndGameScorer with unknown ID throws IllegalArgumentException")
     void overrideUnknownIdThrows() {
         assertThrows(IllegalArgumentException.class, () ->
                 BuildingEffectRegistry.overrideEndGameScorer(9999, p -> 0));
     }
 
-    // ── NONE ──────────────────────────────────────────────────────────────────
+    // ── BuildingEffect.NONE ───────────────────────────────────────────────────
 
     @Test
     @DisplayName("unknown building ID returns BuildingEffect.NONE")

@@ -1,7 +1,6 @@
 package it.polimi.it.network.client;
 
 import it.polimi.it.network.message.*;
-        import it.polimi.it.observer.CardSnapshot;
 import it.polimi.it.observer.OfferTileSnapshot;
 import it.polimi.it.observer.PlayerSnapshot;
 import it.polimi.it.view.GameView;
@@ -18,12 +17,19 @@ import java.util.logging.Logger;
  * asks the view for input with request* calls, then sends the resulting
  * action message back to the server via the proxy.
  *
- * The controller is driven entirely by incoming server messages — it never
- * polls or initiates actions on its own.
+ * Bug fix: totem placement now works for all players (not only position 0).
  *
- * Thread safety: onMessage() is called from the proxy reader thread.
- * View.show* calls are safe to call from any thread (TUI prints to stdout,
- * GUI dispatches to EDT). View.request* calls block until input is ready.
+ * Original problem: handleRoundStarted asked for placement only if the player
+ * was first in turnOrder. Players in positions 1..N-1 never received the
+ * prompt and the game would hang waiting for their PlaceTotemMessage.
+ *
+ * Fix: a boolean flag {@code placedThisRound} tracks whether this client has
+ * already placed in the current round. It is reset to false on every
+ * RoundStarted. On every TotemPlaced broadcast (which carries the remaining
+ * free tiles), if the flag is still false and there are free tiles left, it
+ * means it is now this player's turn to place — so the prompt is shown.
+ * The server enforces strict placement order, so receiving a TotemPlaced
+ * with remaining tiles while not yet placed unambiguously means "my turn".
  */
 public class ClientController {
 
@@ -35,6 +41,9 @@ public class ClientController {
 
     /** Released when the game ends or the connection drops. */
     private final CountDownLatch gameLatch = new CountDownLatch(1);
+
+    /** True once this client has placed its totem in the current round. */
+    private volatile boolean placedThisRound = false;
 
     public ClientController(ServerProxy proxy, GameView view, String myNickname) {
         this.proxy      = proxy;
@@ -56,12 +65,6 @@ public class ClientController {
 
     // ── Incoming message dispatch ─────────────────────────────────────────────
 
-    /**
-     * Called by the proxy reader thread for every inbound message.
-     * Routes to the appropriate handler.
-     *
-     * @param message the message received from the server
-     */
     public void onMessage(Message message) {
         switch (message) {
             case LobbyUpdateMessage m           -> handleLobbyUpdate(m);
@@ -78,7 +81,7 @@ public class ClientController {
             case RoundEndedMessage m            -> handleRoundEnded(m);
             case GameEndedMessage m             -> handleGameEnded(m);
             case PlayerDisconnectedMessage m    -> handlePlayerDisconnected(m);
-            case PingMessage ignored            -> {} // handled by proxy
+            case PingMessage ignored            -> {} // handled by the proxy
             case PongMessage ignored            -> {}
             default -> LOG.warning("Unknown message: " + message.getClass().getSimpleName());
         }
@@ -102,31 +105,39 @@ public class ClientController {
     }
 
     private void handleRoundStarted(RoundStartedMessage m) {
+        placedThisRound = false; // reset for the new round
         view.showRoundStarted(m.round(), m.turnOrder());
 
-        // If I am first in the placement order, request my tile choice
+        // If I am first in the placement order, it is already my turn.
         if (!m.turnOrder().isEmpty()
                 && m.turnOrder().get(0).name().equals(myNickname)) {
             requestAndSendTotemPlacement(m.availableTiles());
         }
     }
 
+    /**
+     * Called after every totem placement (including other players').
+     *
+     * The server sends this to all clients each time a totem is placed.
+     * {@code remainingTiles} contains tiles still free after this placement.
+     *
+     * If there are still free tiles AND I have not placed yet, it means it is
+     * now my turn (the server enforces strict turn order, so I am next).
+     */
     private void handleTotemPlaced(TotemPlacedMessage m) {
         view.showTotemPlaced(m.player(), m.tileLetter());
 
-        // If there are still free tiles and I haven't placed yet, ask me
-        if (!m.remainingTiles().isEmpty()) {
-            boolean iAlreadyPlaced = m.remainingTiles().stream()
-                    .noneMatch(t -> false); // server drives the order;
-            // The server will send CardSlotReady when it is my turn to act.
-            // We only need to place if we receive a RoundStarted with our name first.
+        if (!placedThisRound
+                && !m.remainingTiles().isEmpty()
+                && !m.player().name().equals(myNickname)) {
+            requestAndSendTotemPlacement(m.remainingTiles());
         }
     }
 
     private void handleCardSlotReady(CardSlotReadyMessage m) {
         view.showCardSlotReady(m.player(), m.isTopRow(), m.availableCards());
 
-        if (!m.player().name().equals(myNickname)) return; // not my turn
+        if (!m.player().name().equals(myNickname)) return;
 
         int chosen = view.requestCardChoice(m.player(), m.availableCards());
         if (chosen == -1) {
@@ -145,7 +156,6 @@ public class ClientController {
 
         if (!m.player().name().equals(myNickname)) return;
 
-        // Ask to choose an alternative or pass
         int chosen = view.requestCardChoice(m.player(), m.alternatives());
         if (chosen == -1) {
             proxy.send(new PassMessage(myNickname));
@@ -197,14 +207,10 @@ public class ClientController {
 
     // ── Totem placement ───────────────────────────────────────────────────────
 
-    /**
-     * Asks the view for a tile choice and sends it to the server.
-     * Called when RoundStarted indicates it is my turn to place first.
-     */
     private void requestAndSendTotemPlacement(List<OfferTileSnapshot> freeTiles) {
-        // Find my snapshot (first in turn order)
-        PlayerSnapshot me = new PlayerSnapshot(myNickname,
-                null, 0, 0, 1); // lightweight snapshot just for the view call
+        placedThisRound = true;
+        // Build a minimal snapshot — the view only needs the name for display
+        PlayerSnapshot me = new PlayerSnapshot(myNickname, null, 0, 0, 0);
         char chosen = view.requestOfferTileChoice(me, freeTiles);
         proxy.send(new PlaceTotemMessage(myNickname, chosen));
     }
