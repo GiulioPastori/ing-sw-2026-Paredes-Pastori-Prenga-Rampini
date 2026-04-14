@@ -37,4 +37,25 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
         @JsonSubTypes.Type(value = PingMessage.class,                    name = "PING"),
         @JsonSubTypes.Type(value = PongMessage.class,                    name = "PONG"),
 })
-public sealed interface Message permits CardAcquiredMessage, CardAcquisitionFailedMessage, CardSlotReadyMessage, EraChangedMessage, ErrorMessage, EventResolvedMessage, GameEndedMessage, JoinMessage, LobbyUpdateMessage, PassMessage, PingMessage, PlaceTotemMessage, PlayerDisconnectedMessage, PongMessage, PostRoundMessage, PostRoundStartedMessage, RoundEndedMessage, RoundStartedMessage, TakeCardMessage, TotemPlacedMessage, TotemReturnedMessage {}
+public sealed interface Message permits
+        CardAcquiredMessage,
+        CardAcquisitionFailedMessage,
+        CardSlotReadyMessage,
+        EraChangedMessage,
+        ErrorMessage,
+        EventResolvedMessage,
+        GameEndedMessage,
+        JoinMessage,
+        LobbyUpdateMessage,
+        PassMessage,
+        PingMessage,
+        PlaceTotemMessage,
+        PlayerDisconnectedMessage,
+        PongMessage,
+        PostRoundMessage,
+        PostRoundStartedMessage,
+        RoundEndedMessage,
+        RoundStartedMessage,
+        TakeCardMessage,
+        TotemPlacedMessage,
+        TotemReturnedMessage {}
