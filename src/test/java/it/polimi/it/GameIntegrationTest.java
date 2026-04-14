@@ -28,8 +28,15 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("Game - full game integration")
 class GameIntegrationTest {
 
+    private final Board board;
+
     private static final long SEED = 12345L;
     private static final AtomicInteger TEST_ID = new AtomicInteger(9000);
+
+    GameIntegrationTest(Board board) {
+        this.board = board;
+    }
+
     private static int nextId() { return TEST_ID.incrementAndGet(); }
 
     private GameBuilder builder;
@@ -188,7 +195,7 @@ class GameIntegrationTest {
                                    PostRoundState[] postState) {
         // Phase 1: place all totems
         while (game.getCurrentPhase() == Game.Phase.PLACING_TOTEMS) {
-            List<OfferTile> free = game.getFreeTiles();
+            List<OfferTile> free = board.getOfferTiles().getFreeTiles();
             if (free.isEmpty()) break;
 
             boolean placed = false;

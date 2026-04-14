@@ -2,6 +2,7 @@ package it.polimi.it.network.client;
 
 import it.polimi.it.view.GameView;
 import it.polimi.it.view.gui.GuiView;
+import it.polimi.it.view.tui.TuiView;
 
 import java.io.IOException;
 import java.rmi.RemoteException;
