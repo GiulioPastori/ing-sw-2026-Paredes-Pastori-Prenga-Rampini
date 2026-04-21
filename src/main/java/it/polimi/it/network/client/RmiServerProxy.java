@@ -37,7 +37,6 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
         this.rmiPort = rmiPort;
     }
 
-    // ── ServerProxy ───────────────────────────────────────────────────────────
 
     @Override public void setOnMessage(Consumer<Message> l)  { this.onMessage    = l; }
     @Override public void setOnDisconnect(Runnable l)        { this.onDisconnect  = l; }

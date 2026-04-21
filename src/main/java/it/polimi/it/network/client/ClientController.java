@@ -100,7 +100,7 @@ public class ClientController {
 
 
 
-    // ── Handlers ──────────────────────────────────────────────────────────────
+    // ── Handlers
 
     private void handleRoundStarted(Message msg) {
         totemPlacedCount = 0;

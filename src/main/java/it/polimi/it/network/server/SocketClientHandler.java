@@ -14,8 +14,8 @@ import java.util.logging.Logger;
 public class SocketClientHandler implements ClientConnection, Runnable {
 
     private static final Logger LOG              = Logger.getLogger(SocketClientHandler.class.getName());
-    private static final long   PING_INTERVAL_MS = 5_000;
-    private static final long   PONG_TIMEOUT_MS  = 10_000;
+    private static final long   PING_INTERVAL_MS = 1000_000;
+    private static final long   PONG_TIMEOUT_MS  = 1800_000;
 
     private final Socket                 socket;
     private final String                 nickname;

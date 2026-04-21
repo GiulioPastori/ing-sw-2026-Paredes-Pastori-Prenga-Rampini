@@ -26,19 +26,19 @@ public class ClientApp2 {
 
             System.out.println("=== MESOS ===");
 
-            // ── 1. Interface ──────────────────────────────────────────────────────
+            // ── 1. Interface
             System.out.println("Choose interface:  1) TUI   2) GUI");
             System.out.print("> ");
             String uiChoice = scanner.nextLine().trim().toLowerCase();
             boolean useGui = uiChoice.equals("2") || uiChoice.equals("gui");
 
-            // ── 2. Transport ──────────────────────────────────────────────────────
+            // ── 2. Transport
             System.out.println("Choose connection: 1) Socket (TCP)   2) RMI");
             System.out.print("> ");
             String netChoice = scanner.nextLine().trim().toLowerCase();
             boolean useRmi = netChoice.equals("2") || netChoice.equals("rmi");
 
-            // ── 3. Nickname ───────────────────────────────────────────────────────
+            // ── 3. Nickname
             System.out.print("Your nickname: ");
             String nickname = scanner.nextLine().trim();
             while (nickname.isBlank()) {
@@ -46,17 +46,17 @@ public class ClientApp2 {
                 nickname = scanner.nextLine().trim();
             }
 
-            // ── 4. Number of players ──────────────────────────────────────────────
+            // ── 4. Number of players
             System.out.print("Number of players (2-5): ");
             int numPlayers = 2;
             try { numPlayers = Integer.parseInt(scanner.nextLine().trim()); }
             catch (NumberFormatException ignored) {}
             numPlayers = Math.max(2, Math.min(5, numPlayers));
 
-            // ── 5. Build view ─────────────────────────────────────────────────────
+            // ── 5. Build view
             GameView view = useGui ? new GuiView() : new TuiView(scanner);
 
-            // ── 6. Build proxy ────────────────────────────────────────────────────
+            // ── 6. Build proxy
             ServerProxy proxy;
             if (useRmi) {
                 try {
@@ -72,12 +72,12 @@ public class ClientApp2 {
                 System.out.println("Using Socket on port " + socketPort);
             }
 
-            // ── 7. Build controller ───────────────────────────────────────────────
+            // ── 7. Build controller
             ClientController controller = new ClientController(proxy, view, nickname);
             proxy.setOnMessage(controller::onMessage);
             proxy.setOnDisconnect(controller::onDisconnect);
 
-            // ── 8. Connect ────────────────────────────────────────────────────────
+            // ── 8. Connect
             int connectPort = useRmi ? rmiPort : socketPort;
             try {
                 proxy.connect(nickname, numPlayers);

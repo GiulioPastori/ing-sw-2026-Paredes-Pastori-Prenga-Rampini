@@ -19,7 +19,7 @@ import java.util.logging.Logger;
 public class GameSession implements GameEventListener {
 
     private static final Logger LOG             = Logger.getLogger(GameSession.class.getName());
-    private static final long   TIMEOUT_SECONDS = 60;
+    private static final long   TIMEOUT_SECONDS = 1000;
 
     private final int                           expectedPlayers;
     private final List<ClientConnection>        clients   = new CopyOnWriteArrayList<>();
