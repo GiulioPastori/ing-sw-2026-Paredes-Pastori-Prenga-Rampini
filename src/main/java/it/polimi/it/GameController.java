@@ -9,17 +9,27 @@ import it.polimi.it.view.GameView;
 /**
  * Game controller (Controller role in MVC).
  *
- * In the client-server architecture, the server instantiates one
- * GameController per game. Player actions arrive as messages over the
- * network (socket or RMI), are forwarded to {@link #handle(PlayerAction)},
- * and the resulting GameEvents are published to all registered listeners
- * (which include the network layer that broadcasts them to the clients).
+ * <p>In the client-server architecture, the server instantiates one
+ * {@code GameController} per game session (inside {@link it.polimi.it.network.server.GameSession}).
+ * Player actions arrive as messages over the network (socket or RMI), are
+ * forwarded here via {@link #handle(PlayerAction)}, and the resulting
+ * {@link GameEvent}s are published to all registered listeners.
  *
- * The controller is deliberately thin:
- * - It does not build actions itself (those come from the network).
- * - It does not interpret events (the view on each client does that).
- * - It validates and forwards, and shows error feedback via the view
- *   if a local view is present (e.g. for single-player or testing).
+ * <p>Two listeners are registered on the model:
+ * <ol>
+ *   <li>This controller — handles local view feedback (validation errors, logging).</li>
+ *   <li>{@link it.polimi.it.network.server.GameSession} — serialises events and
+ *       broadcasts them to connected clients.</li>
+ * </ol>
+ *
+ * <p>The controller is deliberately thin:
+ * <ul>
+ *   <li>It does not build actions itself (those come from the network layer).</li>
+ *   <li>It does not interpret events for remote clients (the network layer does that).</li>
+ *   <li>It validates, executes, and shows error feedback via the view if a local
+ *       view is present (e.g. {@link it.polimi.it.view.StubGameView} on the server,
+ *       or a real TUI/GUI in single-player mode).</li>
+ * </ul>
  */
 public class GameController implements GameEventListener {
 
@@ -28,7 +38,8 @@ public class GameController implements GameEventListener {
 
     /**
      * @param game the game model this controller drives
-     * @param view the view for local feedback (may be a stub in pure server mode)
+     * @param view the view for local feedback (use {@link it.polimi.it.view.StubGameView}
+     *             in pure server mode)
      */
     public GameController(Game game, GameView view) {
         this.game = game;
@@ -46,14 +57,15 @@ public class GameController implements GameEventListener {
     // ── Action handling ───────────────────────────────────────────────────────
 
     /**
-     * Receives a player action (from the network or from a local view) and
+     * Receives a player action (from the network layer or from a local view) and
      * applies it to the model.
      *
-     * Returns the validation outcome so the caller (server layer) can send
-     * an error message back to the client if the action was rejected.
+     * <p>Returns the validation outcome so the network layer can send an error
+     * message back to the client if the action was rejected.
      *
      * @param action the action sent by a player
-     * @return Ok if applied; Fail with a reason string if rejected
+     * @return {@link ValidationResult.Ok} if applied;
+     *         {@link ValidationResult.Fail} with a reason string if rejected
      */
     public ValidationResult handle(PlayerAction action) {
         ValidationResult result = game.execute(action);
@@ -70,9 +82,9 @@ public class GameController implements GameEventListener {
     /**
      * Forwards game events to the local view.
      *
-     * In the full client-server setup, a separate network listener (registered
-     * alongside this controller) serialises and broadcasts these same events to
-     * all connected clients. This controller only handles local display.
+     * <p>In the full client-server setup, {@link it.polimi.it.network.server.GameSession}
+     * is registered as a second listener and handles broadcasting to remote clients.
+     * This method is responsible only for local display/logging.
      */
     @Override
     public void onEvent(GameEvent event) {
@@ -100,5 +112,10 @@ public class GameController implements GameEventListener {
         }
     }
 
+    /**
+     * Exposes the underlying game model.
+     * Intended for use by the server layer (e.g. {@link it.polimi.it.network.server.GameSession})
+     * for reconnection and disconnection checks only — not for executing actions.
+     */
     public Game getGame() { return game; }
 }

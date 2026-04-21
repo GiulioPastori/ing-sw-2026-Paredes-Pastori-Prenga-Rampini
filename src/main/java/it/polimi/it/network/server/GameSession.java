@@ -1,12 +1,14 @@
 package it.polimi.it.network.server;
 
-import it.polimi.it.Game;
 import it.polimi.it.GameBuilder;
+import it.polimi.it.GameController;
 import it.polimi.it.actions.*;
 import it.polimi.it.enums.TotemColour;
 import it.polimi.it.network.message.Message;
 import it.polimi.it.observer.GameEvent;
 import it.polimi.it.observer.GameEventListener;
+import it.polimi.it.validation.ValidationResult;
+import it.polimi.it.view.StubGameView;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -14,7 +16,17 @@ import java.util.logging.Logger;
 
 /**
  * One active game session on the server.
- * Uses Message (org.json) instead of typed record messages.
+ *
+ * <p>Responsible only for the <em>network</em> layer:
+ * managing connections, routing messages to the controller, and
+ * broadcasting GameEvents (received from the model via the controller)
+ * to all connected clients.
+ *
+ * <p>All game logic passes through {@link GameController}, which is the
+ * proper MVC controller. This class registers itself as a
+ * {@link GameEventListener} <em>alongside</em> the controller so it can
+ * serialise and broadcast events; the controller handles local view feedback
+ * (validation errors, logging via {@link StubGameView}).
  */
 public class GameSession implements GameEventListener {
 
@@ -25,7 +37,9 @@ public class GameSession implements GameEventListener {
     private final List<ClientConnection>        clients   = new CopyOnWriteArrayList<>();
     private final Map<String, ClientConnection> clientMap = new ConcurrentHashMap<>();
 
-    private Game    game;
+    /** The MVC controller — the single point of entry for all game actions. */
+    private GameController controller;
+
     private boolean started    = false;
     private boolean terminated = false;
     private boolean suspended  = false;
@@ -59,7 +73,7 @@ public class GameSession implements GameEventListener {
         clients.add(c);
         clientMap.put(nick, c);
         if (timeoutFuture != null) { timeoutFuture.cancel(false); timeoutFuture = null; }
-        if (game != null) game.markReconnected(nick);
+        if (controller != null) controller.getGame().markReconnected(nick);
         suspended = false;
         LOG.info("'" + nick + "' reconnected.");
         c.send(Message.error("Welcome back, " + nick + "! Game resumed."));
@@ -83,14 +97,24 @@ public class GameSession implements GameEventListener {
                 names.add(clients.get(i).getNickname());
                 colours.add(all[i]);
             }
-            game = new GameBuilder()
+
+            var game = new GameBuilder()
                     .withPlayers(names, colours)
                     .withCards(ServerApp.getCardList())
                     .build();
-            game.addListener(this);
+
+            // Build the MVC controller with a StubGameView for server-side
+            // feedback (validation error logs). Register this session as a
+            // SECOND listener so it can broadcast events over the network.
+            controller = new GameController(game, new StubGameView());
+            game.addListener(this); // network broadcaster
+
             started = true;
             LOG.info("Game started with " + expectedPlayers + " players.");
-            game.start();
+
+            // Start via the controller, not directly on the game.
+            controller.startGame();
+
         } catch (Exception e) {
             LOG.severe("Failed to start: " + e.getMessage());
             terminate("Server error starting the game.");
@@ -99,27 +123,52 @@ public class GameSession implements GameEventListener {
 
     // ── Message handling ──────────────────────────────────────────────────────
 
+    /**
+     * Routes an incoming client message to the {@link GameController}.
+     *
+     * <p>If the action is rejected (invalid), the controller already logs it
+     * via the {@link StubGameView}; we additionally send an error message back
+     * to the client that sent the bad action.
+     */
     public synchronized void handleMessage(Message msg, ClientConnection sender) {
-        if (!started || terminated || suspended) return;
-        switch (msg.getType()) {
+        if (!started || terminated || suspended || controller == null) return;
+
+        PlayerAction action = switch (msg.getType()) {
             case Message.PLACE_TOTEM ->
-                    game.execute(new PlaceTotemAction(
-                            msg.str("playerName"), msg.ch("tileLetter")));
+                    new PlaceTotemAction(msg.str("playerName"), msg.ch("tileLetter"));
             case Message.TAKE_CARD ->
-                    game.execute(new TakeCardAction(
-                            msg.str("playerName"), msg.num("cardId"), msg.bool("fromTopRow")));
+                    new TakeCardAction(msg.str("playerName"), msg.num("cardId"), msg.bool("fromTopRow"));
             case Message.PASS ->
-                    game.execute(new PassAction(msg.str("playerName")));
+                    new PassAction(msg.str("playerName"));
             case Message.POST_ROUND ->
-                    game.execute(new PostRoundAction(
-                            msg.str("playerName"), msg.num("cardId")));
-            case Message.PONG -> {}
-            default -> sender.send(Message.error("Unexpected: " + msg.getType()));
+                    new PostRoundAction(msg.str("playerName"), msg.num("cardId"));
+            case Message.PONG -> null;
+            default -> {
+                sender.send(Message.error("Unexpected: " + msg.getType()));
+                yield null;
+            }
+        };
+
+        if (action == null) return;
+
+        // Delegate entirely to the controller — it validates, executes, and
+        // calls the view if something went wrong.
+        ValidationResult result = controller.handle(action);
+        if (!result.isOk()) {
+            // Also notify the client directly over the network.
+            sender.send(Message.error(((ValidationResult.Fail) result).reason()));
         }
     }
 
-    // ── GameEventListener ─────────────────────────────────────────────────────
+    // ── GameEventListener (network broadcaster) ───────────────────────────────
 
+    /**
+     * Converts model events to network messages and broadcasts them to all clients.
+     *
+     * <p>This listener is registered on the game <em>in addition to</em> the
+     * controller's own listener. The controller handles local view feedback;
+     * this method handles network serialisation.
+     */
     @Override
     public void onEvent(GameEvent event) {
         Message msg = switch (event) {
@@ -160,10 +209,10 @@ public class GameSession implements GameEventListener {
         if (terminated) return;
         LOG.warning("'" + nick + "' disconnected.");
         broadcast(Message.playerDisconnected(nick + " disconnected."));
-        if (!started) { terminate("Player left before game started."); return; }
-        game.markDisconnected(nick);
+        if (!started || controller == null) { terminate("Player left before game started."); return; }
+        controller.getGame().markDisconnected(nick);
         long active = clients.stream()
-                .filter(c -> !game.isDisconnected(c.getNickname())).count();
+                .filter(c -> !controller.getGame().isDisconnected(c.getNickname())).count();
         if (active == 0) {
             terminate("All players disconnected.");
         } else if (active == 1) {
@@ -174,7 +223,7 @@ public class GameSession implements GameEventListener {
                 synchronized (GameSession.this) {
                     if (terminated || !suspended) return;
                     clients.stream()
-                            .filter(c -> !game.isDisconnected(c.getNickname()))
+                            .filter(c -> !controller.getGame().isDisconnected(c.getNickname()))
                             .findFirst()
                             .ifPresent(w -> {
                                 broadcast(Message.error(w.getNickname() + " wins by default."));
