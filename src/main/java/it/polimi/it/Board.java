@@ -110,7 +110,7 @@ public class Board {
 
     /**
      * Draws cards from the tribe deck to form the initial top row
-     * (players + 4 cards, rulebook p.2 point 5).
+     * (players + 4 cards)
      * Accounts for event cards already in the top row from setupBottomRow.
      *
      * @param numPlayers number of players
@@ -135,7 +135,7 @@ public class Board {
 
     /**
      * Removes all character and event cards from the bottom row.
-     * Buildings remain (rulebook p.6 point 2).
+     * Buildings remain
      */
     public void clearBottomRowExceptBuildings() {
         bottomRow.removeIf(card -> !(card instanceof Building));
@@ -143,7 +143,7 @@ public class Board {
 
     /**
      * Moves character and event cards from the top row to the bottom row.
-     * Buildings remain in the top row (rulebook p.6 point 3).
+     * Buildings remain in the top row
      */
     public void moveTopToBottom() {
         List<Card> toMove = new ArrayList<>();

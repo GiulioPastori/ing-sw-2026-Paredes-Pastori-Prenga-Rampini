@@ -198,14 +198,14 @@ public class GameBuilder {
 
     /**
      * Builds the Offer Track with tiles active for the given player count.
-     * Tile configuration (rulebook p.4):
+     * Tile configuration
      * - A (5P only): 3 food, no card draws
-     * - B: 0 bottom, 1 top  (2P+)
-     * - C: 1 bottom, 0 top  (2P+)
-     * - D: 1 bottom, 1 top  (3P+)
-     * - E: 2 bottom, 1 top  (3P+)
-     * - F: 2 bottom, 2 top  (4P+)
-     * - G: 3 bottom, 2 top  (5P+)
+     * - B: 1 bottom, 0 top  (2P+)
+     * - C: 0 bottom, 1 top  (2P+)
+     * - D: 2 bottom, 0 top  (3P+)
+     * - E: 1 bottom, 1 top  (3P+)
+     * - F: 0 bottom, 2 top  (4P+)
+     * - G: 1 bottom, 2 top  (5P+)
      */
     private OfferTiles buildOfferTiles(int numPlayers) {
         List<OfferTile> tiles = new ArrayList<>();
@@ -236,7 +236,7 @@ public class GameBuilder {
 
     /**
      * Assigns a random initial turn order. Bonuses and penalties of the
-     * Turn Order Tile do not apply during setup (rulebook p.3).
+     * Turn Order Tile do not apply during setup
      */
     private void assignInitialTurnOrder(List<Player> players) {
         List<Player> shuffled = new ArrayList<>(players);
