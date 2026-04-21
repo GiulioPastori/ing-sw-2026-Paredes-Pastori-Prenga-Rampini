@@ -4,6 +4,7 @@ import it.polimi.it.network.message.Message;
 
 import java.io.*;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
@@ -11,18 +12,25 @@ import java.util.logging.Logger;
 /**
  * TCP lobby server.
  *
- * Accepts incoming connections and routes each player to the appropriate
- * GameSession. Supports multiple concurrent sessions and reconnections.
+ * <p>Accepts incoming Socket connections and routes each player to the
+ * appropriate {@link GameSession}.  The {@link RmiServerImpl} delegates
+ * nickname management here so that Socket and RMI players share a single
+ * authority on unique nicknames — eliminating the collision bug where an RMI
+ * player could join with the same name as an already-connected Socket player.
+ *
+ *
  */
 public class LobbyServer {
 
     private static final Logger LOG = Logger.getLogger(LobbyServer.class.getName());
 
     private final int             socketPort;
-    private final ExecutorService threadPool     = Executors.newCachedThreadPool();
+    private final ExecutorService threadPool      = Executors.newCachedThreadPool();
     private final List<GameSession> waitingSessions = new ArrayList<>();
     private final List<GameSession> activeSessions  = new ArrayList<>();
-    private final Set<String>       takenNicknames  = ConcurrentHashMap.newKeySet();
+
+    /** Single authoritative set — shared with RmiServerImpl via claimNickname/releaseNickname. */
+    private final Set<String> takenNicknames = ConcurrentHashMap.newKeySet();
 
     private volatile boolean running = false;
 
@@ -49,14 +57,32 @@ public class LobbyServer {
 
     public void stop() { running = false; }
 
+    // ── Nickname authority (used by RmiServerImpl) ────────────────────────────
+
+    /**
+     * Atomically claims the nickname.
+     *
+     * @return {@code true} if the nickname was free and is now reserved;
+     *         {@code false} if it was already taken.
+     */
+    public synchronized boolean claimNickname(String nick) {
+        return takenNicknames.add(nick);
+    }
+
+    /** Releases a nickname so it can be reused after the player fully disconnects. */
+    public synchronized void releaseNickname(String nick) {
+        takenNicknames.remove(nick);
+    }
+
     // ── New connection handshake ──────────────────────────────────────────────
 
     private void handleNewConnection(Socket socket) {
         try {
+            // FIX #2: explicit UTF-8
             BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(socket.getInputStream()));
+                    new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
             PrintWriter    writer = new PrintWriter(
-                    new OutputStreamWriter(socket.getOutputStream()), true);
+                    new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true);
 
             String firstLine = reader.readLine();
             if (firstLine == null) { socket.close(); return; }
@@ -77,22 +103,19 @@ public class LobbyServer {
                 return;
             }
 
-            // Check reconnection first
+            // Reconnection check first (nickname already taken but in an active session)
             GameSession reconnectTarget = findSessionForReconnection(nickname);
             if (reconnectTarget != null) {
                 handleReconnection(socket, nickname, reconnectTarget);
                 return;
             }
 
-            // Normal join — check uniqueness
-            synchronized (this) {
-                if (takenNicknames.contains(nickname)) {
-                    writer.println(Message.error(
-                            "Nickname '" + nickname + "' is already taken.").encode());
-                    socket.close();
-                    return;
-                }
-                takenNicknames.add(nickname);
+            // FIX #1: unified claim via the single authority
+            if (!claimNickname(nickname)) {
+                writer.println(Message.error(
+                        "Nickname '" + nickname + "' is already taken.").encode());
+                socket.close();
+                return;
             }
 
             GameSession session = getOrCreateSession(numPlayers);
@@ -101,11 +124,17 @@ public class LobbyServer {
                 @Override public void close() {
                     super.close();
                     if (session.isTerminated())
-                        takenNicknames.remove(nickname);
+                        releaseNickname(nickname);
                 }
             };
 
             session.addClient(handler);
+            // FIX #3: move out of waiting list once the session is full
+            if (!session.hasRoom()) {
+                synchronized (LobbyServer.this) {
+                    waitingSessions.remove(session);
+                }
+            }
             threadPool.submit(handler);
             LOG.info("Player '" + nickname + "' connected via Socket.");
 
@@ -120,7 +149,7 @@ public class LobbyServer {
             @Override public void close() {
                 super.close();
                 if (session.isTerminated())
-                    takenNicknames.remove(nickname);
+                    releaseNickname(nickname);
             }
         };
         session.reconnectClient(handler);
@@ -131,8 +160,8 @@ public class LobbyServer {
     // ── Session management ────────────────────────────────────────────────────
 
     /**
-     * Finds a started session that contains a disconnected player with the
-     * given nickname. Used for reconnection logic.
+     * Finds a started, non-terminated session that contains a player with the
+     * given nickname.  Used for the reconnection flow.
      */
     public synchronized GameSession findSessionForReconnection(String nickname) {
         return activeSessions.stream()
@@ -141,10 +170,16 @@ public class LobbyServer {
                 .orElse(null);
     }
 
-    /** Returns an existing waiting session or creates a new one. */
+    /**
+     * Returns an existing waiting session or creates a new one.
+     *
+     * <p>Terminated and started sessions are pruned from {@code waitingSessions}
+     * to keep the list bounded.
+     */
     public synchronized GameSession getOrCreateSession(int requestedPlayers) {
+        // FIX #3: also remove started sessions from the waiting list
         activeSessions.removeIf(GameSession::isTerminated);
-        waitingSessions.removeIf(GameSession::isTerminated);
+        waitingSessions.removeIf(s -> s.isTerminated() || s.isStarted());
 
         for (GameSession s : waitingSessions) {
             if (s.hasRoom()) return s;

@@ -4,12 +4,20 @@ import it.polimi.it.network.message.Message;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Logger;
 
 /**
- * Server-side TCP client handler. Uses Message (org.json).
+ * Server-side TCP client handler.
+ *
+ * <p>Each connected client runs three threads:
+ * <ul>
+ *   <li><b>reader</b> – the thread calling {@link #run()}, reads incoming lines.</li>
+ *   <li><b>writer</b> – drains the outbound {@link BlockingQueue}.</li>
+ *   <li><b>ping</b>   – sends periodic PINGs and closes the connection on timeout.</li>
+ * </ul>
  */
 public class SocketClientHandler implements ClientConnection, Runnable {
 
@@ -36,18 +44,24 @@ public class SocketClientHandler implements ClientConnection, Runnable {
     @Override
     public void run() {
         try {
-            reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
+            // FIX #2: explicit UTF-8 charset on both streams
+            reader = new BufferedReader(
+                    new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+            writer = new PrintWriter(
+                    new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true);
+
             new Thread(this::writeLoop, "writer-" + nickname).start();
             new Thread(this::pingLoop,  "ping-"   + nickname).start();
             readLoop();
         } catch (IOException e) {
-            if (!closed) LOG.warning("Error for '" + nickname + "': " + e.getMessage());
+            if (!closed) LOG.warning("Read error for '" + nickname + "': " + e.getMessage());
         } finally {
             close();
             session.onPlayerDisconnected(nickname);
         }
     }
+
+    // ── Read ──────────────────────────────────────────────────────────────────
 
     private void readLoop() throws IOException {
         String line;
@@ -65,6 +79,8 @@ public class SocketClientHandler implements ClientConnection, Runnable {
         }
     }
 
+    // ── Write ─────────────────────────────────────────────────────────────────
+
     private void writeLoop() {
         while (!closed) {
             try {
@@ -78,15 +94,18 @@ public class SocketClientHandler implements ClientConnection, Runnable {
         }
     }
 
+    // ── Ping ──────────────────────────────────────────────────────────────────
+
     private void pingLoop() {
         while (!closed) {
             try {
                 Thread.sleep(PING_INTERVAL_MS);
+                if (closed) return;
                 send(Message.ping());
                 Thread.sleep(PONG_TIMEOUT_MS);
-                if (System.currentTimeMillis() - lastPongTime > PONG_TIMEOUT_MS) {
-                    close();
-                    session.onPlayerDisconnected(nickname);
+                if (!closed && System.currentTimeMillis() - lastPongTime > PONG_TIMEOUT_MS) {
+                    LOG.warning("Ping timeout for '" + nickname + "' — closing connection.");
+                    close(); // readLoop will notice and notify session via run()'s finally
                     return;
                 }
             } catch (InterruptedException e) {
@@ -96,11 +115,22 @@ public class SocketClientHandler implements ClientConnection, Runnable {
         }
     }
 
-    @Override public String  getNickname() { return nickname; }
-    @Override public void    send(Message m) { if (!closed) outbound.offer(m); }
-    @Override public void    close() {
+    // ── ClientConnection ──────────────────────────────────────────────────────
+
+    @Override
+    public String getNickname() { return nickname; }
+
+    @Override
+    public void send(Message m) {
+        if (!closed) outbound.offer(m);
+    }
+
+    @Override
+    public void close() {
         if (closed) return;
         closed = true;
-        try { socket.close(); } catch (IOException ignored) {}
+        try { if (reader != null) reader.close(); } catch (IOException ignored) {}
+        try { if (writer != null) writer.close(); } catch (Exception ignored) {}
+        try { socket.close(); }                     catch (IOException ignored) {}
     }
 }

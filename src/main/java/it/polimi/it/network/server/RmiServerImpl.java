@@ -9,19 +9,19 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 /**
  * Server-side RMI implementation.
  *
- * Exported to the RMI registry under "MesosServer".
- * Shares LobbyServer session management with the Socket server,
+ * <p>Exported to the RMI registry under {@value #REGISTRY_NAME}.
+ * Shares {@link LobbyServer} session management with the Socket server,
  * allowing mixed Socket + RMI games.
  *
- * Each RMI client is wrapped in an RmiClientHandler that implements
- * ClientConnection, making it transparent to GameSession.
+ * <p>Each RMI client is wrapped in an {@link RmiClientHandler} that implements
+ * {@link ClientConnection}, making it transparent to {@link GameSession}.
+ *
  */
 public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
 
@@ -29,8 +29,9 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
     public  static final String REGISTRY_NAME = "MesosServer";
 
     private final LobbyServer                   lobby;
-    private final Map<String, RmiClientHandler> handlers       = new ConcurrentHashMap<>();
-    private final Set<String>                   takenNicknames = ConcurrentHashMap.newKeySet();
+    private final Map<String, RmiClientHandler> handlers = new ConcurrentHashMap<>();
+
+    // NOTE: the old "takenNicknames" field is GONE — LobbyServer is the authority now.
 
     public RmiServerImpl(LobbyServer lobby, int rmiPort) throws RemoteException {
         super();
@@ -50,22 +51,26 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
             client.receiveMessage(Message.error("Nickname must not be blank.").encode());
             return;
         }
-        if (takenNicknames.contains(nickname)) {
-            client.receiveMessage(
-                    Message.error("Nickname '" + nickname + "' is already taken.").encode());
-            return;
-        }
-        takenNicknames.add(nickname);
 
-        // Check reconnection
+        // Reconnection check: if the nickname already belongs to an active session,
+        // re-use it without reclaiming.
         GameSession reconnectTarget = lobby.findSessionForReconnection(nickname);
+
+        if (reconnectTarget == null) {
+            // FIX: delegate to the single-authority method in LobbyServer
+            if (!lobby.claimNickname(nickname)) {
+                client.receiveMessage(
+                        Message.error("Nickname '" + nickname + "' is already taken.").encode());
+                return;
+            }
+        }
 
         RmiClientHandler handler = new RmiClientHandler(nickname, client) {
             @Override public void close() {
                 super.close();
                 handlers.remove(nickname);
                 if (getSession() != null && getSession().isTerminated())
-                    takenNicknames.remove(nickname);
+                    lobby.releaseNickname(nickname);
             }
         };
         handlers.put(nickname, handler);
@@ -95,6 +100,7 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
 
     // ── Helper ────────────────────────────────────────────────────────────────
 
+    /** Extracts the playerName field from action messages for routing. */
     private String extractPlayerName(Message msg) {
         return switch (msg.getType()) {
             case Message.PLACE_TOTEM,
@@ -109,8 +115,8 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Wraps an RMI client callback as a ClientConnection.
- * Allows GameSession to treat Socket and RMI clients uniformly.
+ * Wraps an RMI client callback as a {@link ClientConnection}.
+ * Allows {@link GameSession} to treat Socket and RMI clients uniformly.
  */
 class RmiClientHandler implements ClientConnection {
 

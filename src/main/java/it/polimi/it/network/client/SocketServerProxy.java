@@ -4,11 +4,12 @@ import it.polimi.it.network.message.Message;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 /**
- * Client-side TCP proxy. Uses Message (org.json) for serialisation.
+ * Client-side TCP proxy.
  */
 public class SocketServerProxy implements ServerProxy {
 
@@ -36,9 +37,12 @@ public class SocketServerProxy implements ServerProxy {
 
     @Override
     public void connect(String nickname, int numPlayers) throws IOException {
-        socket    = new Socket(host, port);
-        reader    = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        writer    = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
+        socket = new Socket(host, port);
+        // FIX: explicit UTF-8 charset on both streams
+        reader    = new BufferedReader(
+                new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+        writer    = new PrintWriter(
+                new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true);
         connected = true;
         writer.println(Message.join(nickname, numPlayers).encode());
         Thread t = new Thread(this::readLoop, "client-reader");
