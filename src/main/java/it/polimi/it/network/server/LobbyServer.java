@@ -1,6 +1,6 @@
 package it.polimi.it.network.server;
 
-import it.polimi.it.network.message.*;
+import it.polimi.it.network.message.Message;
 
 import java.io.*;
 import java.net.*;
@@ -9,24 +9,17 @@ import java.util.concurrent.*;
 import java.util.logging.Logger;
 
 /**
- * TCP lobby server: accepts incoming connections and routes each player
- * to the appropriate GameSession.
+ * TCP lobby server.
  *
- * Changes vs original:
- * - {@link #reserveNickname(String)} and {@link #releaseNickname(String)} are
- *   now public so RmiServerImpl can share the same nickname namespace instead
- *   of maintaining its own separate set (which caused Socket and RMI players
- *   to be able to register with the same nickname in the same game).
- * - {@link #findSessionForReconnection(String)} is now public so RmiServerImpl
- *   can use the same reconnection logic as the Socket path.
+ * Accepts incoming connections and routes each player to the appropriate
+ * GameSession. Supports multiple concurrent sessions and reconnections.
  */
 public class LobbyServer {
 
     private static final Logger LOG = Logger.getLogger(LobbyServer.class.getName());
 
     private final int             socketPort;
-    private final ExecutorService threadPool = Executors.newCachedThreadPool();
-
+    private final ExecutorService threadPool     = Executors.newCachedThreadPool();
     private final List<GameSession> waitingSessions = new ArrayList<>();
     private final List<GameSession> activeSessions  = new ArrayList<>();
     private final Set<String>       takenNicknames  = ConcurrentHashMap.newKeySet();
@@ -37,7 +30,7 @@ public class LobbyServer {
         this.socketPort = socketPort;
     }
 
-    // ── Server lifecycle ──────────────────────────────────────────────────────
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     public void start() throws IOException {
         running = true;
@@ -56,27 +49,6 @@ public class LobbyServer {
 
     public void stop() { running = false; }
 
-    // ── Nickname management ───────────────────────────────────────────────────
-
-    /**
-     * Attempts to atomically reserve a nickname.
-     * Public so RmiServerImpl can share the same namespace.
-     *
-     * @return true if reserved; false if already taken
-     */
-    public boolean reserveNickname(String nickname) {
-        return takenNicknames.add(nickname);
-    }
-
-    /**
-     * Releases a previously reserved nickname.
-     * Call when a session terminates so the name can be reused.
-     * Public so RmiServerImpl can call it on session end.
-     */
-    public void releaseNickname(String nickname) {
-        takenNicknames.remove(nickname);
-    }
-
     // ── New connection handshake ──────────────────────────────────────────────
 
     private void handleNewConnection(Socket socket) {
@@ -89,43 +61,47 @@ public class LobbyServer {
             String firstLine = reader.readLine();
             if (firstLine == null) { socket.close(); return; }
 
-            Message msg = MessageCodec.decode(firstLine);
-            if (!(msg instanceof JoinMessage join)) {
-                writer.println(MessageCodec.encode(
-                        new ErrorMessage("First message must be JOIN.")));
+            Message msg = Message.decode(firstLine);
+            if (!Message.JOIN.equals(msg.getType())) {
+                writer.println(Message.error("First message must be JOIN.").encode());
                 socket.close();
                 return;
             }
 
-            String nickname = join.nickname().trim();
+            String nickname   = msg.str("nickname").trim();
+            int    numPlayers = msg.num("numPlayers");
+
             if (nickname.isBlank()) {
-                writer.println(MessageCodec.encode(
-                        new ErrorMessage("Nickname must not be blank.")));
+                writer.println(Message.error("Nickname must not be blank.").encode());
                 socket.close();
                 return;
             }
 
-            // Check if this is a RECONNECTION
+            // Check reconnection first
             GameSession reconnectTarget = findSessionForReconnection(nickname);
             if (reconnectTarget != null) {
                 handleReconnection(socket, nickname, reconnectTarget);
                 return;
             }
 
-            // Normal join — reserve nickname
-            if (!reserveNickname(nickname)) {
-                writer.println(MessageCodec.encode(
-                        new ErrorMessage("Nickname '" + nickname + "' is already taken.")));
-                socket.close();
-                return;
+            // Normal join — check uniqueness
+            synchronized (this) {
+                if (takenNicknames.contains(nickname)) {
+                    writer.println(Message.error(
+                            "Nickname '" + nickname + "' is already taken.").encode());
+                    socket.close();
+                    return;
+                }
+                takenNicknames.add(nickname);
             }
 
-            GameSession session = getOrCreateSession(join.numPlayers());
+            GameSession session = getOrCreateSession(numPlayers);
 
             SocketClientHandler handler = new SocketClientHandler(socket, nickname, session) {
                 @Override public void close() {
                     super.close();
-                    if (session.isTerminated()) releaseNickname(nickname);
+                    if (session.isTerminated())
+                        takenNicknames.remove(nickname);
                 }
             };
 
@@ -143,7 +119,8 @@ public class LobbyServer {
         SocketClientHandler handler = new SocketClientHandler(socket, nickname, session) {
             @Override public void close() {
                 super.close();
-                if (session.isTerminated()) releaseNickname(nickname);
+                if (session.isTerminated())
+                    takenNicknames.remove(nickname);
             }
         };
         session.reconnectClient(handler);
@@ -154,10 +131,8 @@ public class LobbyServer {
     // ── Session management ────────────────────────────────────────────────────
 
     /**
-     * Looks for a started (possibly suspended) session that contains the given
-     * nickname as a player. Public so RmiServerImpl can use the same logic.
-     *
-     * @return the session, or null if this is a fresh join
+     * Finds a started session that contains a disconnected player with the
+     * given nickname. Used for reconnection logic.
      */
     public synchronized GameSession findSessionForReconnection(String nickname) {
         return activeSessions.stream()
@@ -175,12 +150,11 @@ public class LobbyServer {
             if (s.hasRoom()) return s;
         }
 
-        int numPlayers = (requestedPlayers >= 2 && requestedPlayers <= 5)
-                ? requestedPlayers : 2;
-        GameSession session = new GameSession(numPlayers);
+        int n = (requestedPlayers >= 2 && requestedPlayers <= 5) ? requestedPlayers : 2;
+        GameSession session = new GameSession(n);
         waitingSessions.add(session);
         activeSessions.add(session);
-        LOG.info("Created new GameSession for " + numPlayers + " players.");
+        LOG.info("Created new GameSession for " + n + " players.");
         return session;
     }
 }

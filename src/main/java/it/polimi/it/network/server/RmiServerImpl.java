@@ -1,6 +1,6 @@
 package it.polimi.it.network.server;
 
-import it.polimi.it.network.message.*;
+import it.polimi.it.network.message.Message;
 import it.polimi.it.network.rmi.RmiClient;
 import it.polimi.it.network.rmi.RmiServer;
 
@@ -9,31 +9,28 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 /**
  * Server-side RMI implementation.
  *
- * Exported to the RMI registry under "MesosServer". Shares LobbyServer's
- * session management with the Socket server, allowing mixed Socket + RMI games.
+ * Exported to the RMI registry under "MesosServer".
+ * Shares LobbyServer session management with the Socket server,
+ * allowing mixed Socket + RMI games.
  *
- * Bug fix: reconnection support added for RMI clients.
- * The original version had its own independent takenNicknames set, so:
- * (a) an RMI player and a Socket player could register with the same nickname,
- * (b) a disconnected RMI player could never reconnect (rejected as "taken").
- *
- * Fix: the private takenNicknames set is removed. Nickname reservation is
- * delegated to LobbyServer.reserveNickname() / releaseNickname(), and
- * reconnection reuses LobbyServer.findSessionForReconnection().
+ * Each RMI client is wrapped in an RmiClientHandler that implements
+ * ClientConnection, making it transparent to GameSession.
  */
 public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
 
     private static final Logger LOG           = Logger.getLogger(RmiServerImpl.class.getName());
-    public static final  String REGISTRY_NAME = "MesosServer";
+    public  static final String REGISTRY_NAME = "MesosServer";
 
     private final LobbyServer                   lobby;
-    private final Map<String, RmiClientHandler> handlers = new ConcurrentHashMap<>();
+    private final Map<String, RmiClientHandler> handlers       = new ConcurrentHashMap<>();
+    private final Set<String>                   takenNicknames = ConcurrentHashMap.newKeySet();
 
     public RmiServerImpl(LobbyServer lobby, int rmiPort) throws RemoteException {
         super();
@@ -50,65 +47,60 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
             throws RemoteException {
 
         if (nickname == null || nickname.isBlank()) {
-            client.receiveMessage(new ErrorMessage("Nickname must not be blank."));
+            client.receiveMessage(Message.error("Nickname must not be blank.").encode());
             return;
         }
+        if (takenNicknames.contains(nickname)) {
+            client.receiveMessage(
+                    Message.error("Nickname '" + nickname + "' is already taken.").encode());
+            return;
+        }
+        takenNicknames.add(nickname);
 
-        // Check for RECONNECTION first — same logic as LobbyServer for Socket
+        // Check reconnection
         GameSession reconnectTarget = lobby.findSessionForReconnection(nickname);
+
+        RmiClientHandler handler = new RmiClientHandler(nickname, client) {
+            @Override public void close() {
+                super.close();
+                handlers.remove(nickname);
+                if (getSession() != null && getSession().isTerminated())
+                    takenNicknames.remove(nickname);
+            }
+        };
+        handlers.put(nickname, handler);
+
         if (reconnectTarget != null) {
-            RmiClientHandler handler = buildHandler(nickname, client, reconnectTarget);
+            handler.setSession(reconnectTarget);
             reconnectTarget.reconnectClient(handler);
-            LOG.info("RMI player '" + nickname + "' reconnected.");
-            return;
+        } else {
+            GameSession session = lobby.getOrCreateSession(numPlayers);
+            handler.setSession(session);
+            session.addClient(handler);
         }
 
-        // Normal join — delegate nickname uniqueness to LobbyServer
-        if (!lobby.reserveNickname(nickname)) {
-            client.receiveMessage(new ErrorMessage(
-                    "Nickname '" + nickname + "' is already taken."));
-            return;
-        }
-
-        GameSession session = lobby.getOrCreateSession(numPlayers);
-        RmiClientHandler handler = buildHandler(nickname, client, session);
-        session.addClient(handler);
         LOG.info("RMI player '" + nickname + "' registered.");
     }
 
     @Override
-    public void sendMessage(Message message) throws RemoteException {
-        String name = extractPlayerName(message);
+    public void sendMessage(String json) throws RemoteException {
+        Message msg  = Message.decode(json);
+        String  name = extractPlayerName(msg);
         if (name == null) return;
         RmiClientHandler handler = handlers.get(name);
-        if (handler != null) handler.getSession().handleMessage(message, handler);
+        if (handler != null && handler.getSession() != null) {
+            handler.getSession().handleMessage(msg, handler);
+        }
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── Helper ────────────────────────────────────────────────────────────────
 
-    private RmiClientHandler buildHandler(String nickname, RmiClient client,
-                                          GameSession session) {
-        RmiClientHandler handler = new RmiClientHandler(nickname, client) {
-            @Override
-            public void close() {
-                super.close();
-                handlers.remove(nickname);
-                // Release nickname only when the session is fully over,
-                // so the player can reconnect with the same name while suspended.
-                if (session.isTerminated()) lobby.releaseNickname(nickname);
-            }
-        };
-        handlers.put(nickname, handler);
-        handler.setSession(session);
-        return handler;
-    }
-
-    private String extractPlayerName(Message message) {
-        return switch (message) {
-            case PlaceTotemMessage m -> m.playerName();
-            case TakeCardMessage   m -> m.playerName();
-            case PassMessage       m -> m.playerName();
-            case PostRoundMessage  m -> m.playerName();
+    private String extractPlayerName(Message msg) {
+        return switch (msg.getType()) {
+            case Message.PLACE_TOTEM,
+                 Message.TAKE_CARD,
+                 Message.PASS,
+                 Message.POST_ROUND -> msg.str("playerName");
             default -> null;
         };
     }
@@ -117,17 +109,17 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Wraps an RMI client callback as a ClientConnection so that GameSession
- * can treat Socket and RMI clients uniformly.
+ * Wraps an RMI client callback as a ClientConnection.
+ * Allows GameSession to treat Socket and RMI clients uniformly.
  */
 class RmiClientHandler implements ClientConnection {
 
     private static final Logger LOG = Logger.getLogger(RmiClientHandler.class.getName());
 
-    private final String     nickname;
-    private final RmiClient  stub;
-    private       GameSession session;
-    private volatile boolean  closed = false;
+    private final String    nickname;
+    private final RmiClient stub;
+    private GameSession     session;
+    private volatile boolean closed = false;
 
     RmiClientHandler(String nickname, RmiClient stub) {
         this.nickname = nickname;
@@ -143,8 +135,8 @@ class RmiClientHandler implements ClientConnection {
     public void send(Message message) {
         if (closed) return;
         try {
-            stub.receiveMessage(message);
-        } catch (RemoteException e) {
+            stub.receiveMessage(message.encode());
+        } catch (Exception e) {
             LOG.warning("RMI send failed for '" + nickname + "': " + e.getMessage());
             close();
             if (session != null) session.onPlayerDisconnected(nickname);

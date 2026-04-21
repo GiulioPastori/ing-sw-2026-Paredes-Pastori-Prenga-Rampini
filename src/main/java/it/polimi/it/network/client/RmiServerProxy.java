@@ -14,14 +14,10 @@ import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 /**
- * Client-side proxy for the server connection over RMI.
+ * Client-side RMI proxy.
  *
- * Implements both {@link ServerProxy} (so the client code is transport-agnostic)
- * and {@link RmiClient} (so the server can push event messages back via callback).
- *
- * The RMI stub exported by this object is passed to the server during
- * registration; the server then calls receiveMessage() on it whenever a
- * GameEvent needs to be delivered to this client.
+ * Implements ServerProxy (transport-agnostic) and RmiClient (callback).
+ * Uses String JSON instead of serialised Message objects.
  */
 public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, RmiClient {
 
@@ -30,7 +26,7 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
     private final String host;
     private final int    rmiPort;
 
-    private RmiServer serverStub;
+    private RmiServer         serverStub;
     private Consumer<Message> onMessage;
     private Runnable          onDisconnect;
     private volatile boolean  connected = false;
@@ -43,11 +39,9 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
 
     // ── ServerProxy ───────────────────────────────────────────────────────────
 
-    @Override
-    public void setOnMessage(Consumer<Message> listener)  { this.onMessage    = listener; }
-
-    @Override
-    public void setOnDisconnect(Runnable listener)        { this.onDisconnect  = listener; }
+    @Override public void setOnMessage(Consumer<Message> l)  { this.onMessage    = l; }
+    @Override public void setOnDisconnect(Runnable l)        { this.onDisconnect  = l; }
+    @Override public boolean isConnected()                   { return connected; }
 
     @Override
     public void connect(String nickname, int numPlayers) throws IOException {
@@ -66,7 +60,7 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
     public void send(Message message) {
         if (!connected || serverStub == null) return;
         try {
-            serverStub.sendMessage(message);
+            serverStub.sendMessage(message.encode());
         } catch (RemoteException e) {
             LOG.warning("RMI send failed: " + e.getMessage());
             connected = false;
@@ -80,17 +74,10 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
         try { UnicastRemoteObject.unexportObject(this, true); } catch (Exception ignored) {}
     }
 
-    @Override
-    public boolean isConnected() { return connected; }
-
     // ── RmiClient callback ────────────────────────────────────────────────────
 
-    /**
-     * Called by the server to deliver an event message to this client.
-     * Runs on the RMI thread pool — forwards to onMessage listener.
-     */
     @Override
-    public void receiveMessage(Message message) throws RemoteException {
-        if (onMessage != null) onMessage.accept(message);
+    public void receiveMessage(String json) throws RemoteException {
+        if (onMessage != null) onMessage.accept(Message.decode(json));
     }
 }

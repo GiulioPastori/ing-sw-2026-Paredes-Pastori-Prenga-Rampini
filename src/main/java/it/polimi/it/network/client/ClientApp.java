@@ -12,15 +12,6 @@ import java.util.logging.Logger;
 /**
  * Client entry point.
  *
- * Startup flow:
- * 1. Read server host and port from command-line args (defaults: localhost:12345)
- * 2. Ask the player to choose TUI or GUI
- * 3. Ask the player to choose Socket or RMI
- * 4. Ask for a nickname and number of players
- * 5. Build the view, proxy and controller
- * 6. Connect to the server
- * 7. Block in controller.run() until the game ends
- *
  * Usage:
  *   java -jar mesos-client.jar [host] [socketPort]
  *
@@ -43,20 +34,19 @@ public class ClientApp {
 
         Scanner scanner = new Scanner(System.in);
 
-        // ── 1. Choose interface ───────────────────────────────────────────────
         System.out.println("=== MESOS ===");
-        System.out.println("Choose interface:");
-        System.out.println("  1) TUI (text)");
-        System.out.println("  2) GUI (graphical)");
-        System.out.print("> ");
-        String uiChoice = scanner.nextLine().trim();
 
-        // ── 2. Choose transport ───────────────────────────────────────────────
-        System.out.println("Choose connection:");
-        System.out.println("  1) Socket (TCP)");
-        System.out.println("  2) RMI");
+        // ── 1. Interface ──────────────────────────────────────────────────────
+        System.out.println("Choose interface:  1) TUI   2) GUI");
         System.out.print("> ");
-        String netChoice = scanner.nextLine().trim();
+        String uiChoice = scanner.nextLine().trim().toLowerCase();
+        boolean useGui = uiChoice.equals("2") || uiChoice.equals("gui");
+
+        // ── 2. Transport ──────────────────────────────────────────────────────
+        System.out.println("Choose connection: 1) Socket (TCP)   2) RMI");
+        System.out.print("> ");
+        String netChoice = scanner.nextLine().trim().toLowerCase();
+        boolean useRmi = netChoice.equals("2") || netChoice.equals("rmi");
 
         // ── 3. Nickname ───────────────────────────────────────────────────────
         System.out.print("Your nickname: ");
@@ -66,28 +56,30 @@ public class ClientApp {
             nickname = scanner.nextLine().trim();
         }
 
-        // ── 4. Number of players (only relevant if creating a new session) ────
-        System.out.print("Number of players (2-5, used only if you create the session): ");
+        // ── 4. Number of players ──────────────────────────────────────────────
+        System.out.print("Number of players (2-5): ");
         int numPlayers = 2;
         try { numPlayers = Integer.parseInt(scanner.nextLine().trim()); }
         catch (NumberFormatException ignored) {}
         numPlayers = Math.max(2, Math.min(5, numPlayers));
 
         // ── 5. Build view ─────────────────────────────────────────────────────
-        GameView view = "2".equals(uiChoice) ? new GuiView() : new TuiView(scanner);
+        GameView view = useGui ? new GuiView() : new TuiView(scanner);
 
         // ── 6. Build proxy ────────────────────────────────────────────────────
         ServerProxy proxy;
-        if ("2".equals(netChoice)) {
+        if (useRmi) {
             try {
                 proxy = new RmiServerProxy(host, rmiPort);
+                System.out.println("Using RMI on port " + rmiPort);
             } catch (RemoteException e) {
-                System.err.println("Could not create RMI proxy: " + e.getMessage());
+                System.err.println("Cannot create RMI proxy: " + e.getMessage());
                 System.exit(1);
                 return;
             }
         } else {
             proxy = new SocketServerProxy(host, socketPort);
+            System.out.println("Using Socket on port " + socketPort);
         }
 
         // ── 7. Build controller ───────────────────────────────────────────────
@@ -96,17 +88,20 @@ public class ClientApp {
         proxy.setOnDisconnect(controller::onDisconnect);
 
         // ── 8. Connect ────────────────────────────────────────────────────────
+        int connectPort = useRmi ? rmiPort : socketPort;
         try {
             proxy.connect(nickname, numPlayers);
-            System.out.println("Connected! Waiting for other players...");
+            System.out.println("Connected to " + host + ":" + connectPort
+                    + " as '" + nickname + "'. Waiting for other players...");
         } catch (IOException e) {
-            System.err.println("Could not connect to server at "
-                    + host + ":" + socketPort + " — " + e.getMessage());
+            System.err.println("Cannot connect to " + host + ":" + connectPort
+                    + " — " + e.getMessage());
             System.exit(1);
         }
 
-        // ── 9. Block until the game ends ──────────────────────────────────────
+        // ── 9. Run ────────────────────────────────────────────────────────────
         controller.run();
         proxy.disconnect();
+        System.out.println("Goodbye!");
     }
 }
