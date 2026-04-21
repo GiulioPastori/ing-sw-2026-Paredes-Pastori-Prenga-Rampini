@@ -101,11 +101,22 @@ public class SocketClientHandler implements ClientConnection, Runnable {
             try {
                 Thread.sleep(PING_INTERVAL_MS);
                 if (closed) return;
+
+                long pingSentAt = System.currentTimeMillis();
                 send(Message.ping());
-                Thread.sleep(PONG_TIMEOUT_MS);
-                if (!closed && System.currentTimeMillis() - lastPongTime > PONG_TIMEOUT_MS) {
-                    LOG.warning("Ping timeout for '" + nickname + "' — closing connection.");
-                    close(); // readLoop will notice and notify session via run()'s finally
+
+                // controlla ogni 500ms invece di dormire tutto il timeout in blocco
+                long deadline = pingSentAt + PONG_TIMEOUT_MS;
+                while (System.currentTimeMillis() < deadline) {
+                    if (closed) return;
+                    if (lastPongTime >= pingSentAt) break; // pong ricevuto dopo il ping
+                    Thread.sleep(500);
+                }
+
+                if (!closed && lastPongTime < pingSentAt) {
+                    LOG.warning("Pong timeout for '" + nickname + "'");
+                    close();
+                    session.onPlayerDisconnected(nickname);
                     return;
                 }
             } catch (InterruptedException e) {
