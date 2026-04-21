@@ -209,13 +209,26 @@ public class GameBuilder {
      */
     private OfferTiles buildOfferTiles(int numPlayers) {
         List<OfferTile> tiles = new ArrayList<>();
-        if (numPlayers >= 2) tiles.add(new OfferTile('A', 2, 0, 0, true));
-        if (numPlayers >= 2) tiles.add(new OfferTile('B', 2, 1, 0, false));
-        if (numPlayers >= 2) tiles.add(new OfferTile('C', 2, 0, 1, false));
-        if (numPlayers >= 3) tiles.add(new OfferTile('D', 3, 1, 1, false));
-        if (numPlayers >= 3) tiles.add(new OfferTile('E', 3, 1, 2, false));
-        if (numPlayers >= 4) tiles.add(new OfferTile('F', 4, 2, 2, false));
-        if (numPlayers >= 5) tiles.add(new OfferTile('G', 5, 2, 3, false));
+
+        // Tessera A: solo con 5 giocatori, dà 3 food
+        if (numPlayers >= 5) tiles.add(new OfferTile('A', 5, 0, 0, true));
+
+        // B e C: sempre presenti (2P+)
+        if (numPlayers >= 2) tiles.add(new OfferTile('B', 2, 0, 1, false));
+        if (numPlayers >= 2) tiles.add(new OfferTile('C', 2, 1, 0, false));
+
+        // D: da 3 giocatori in su
+        if (numPlayers >= 3) tiles.add(new OfferTile('D', 3,0, 2, false));
+
+        // E: sempre presente (2P+)
+        if (numPlayers >= 2) tiles.add(new OfferTile('E', 2, 1, 1, false));
+
+        // F: sempre presente (2P+)
+        if (numPlayers >= 2) tiles.add(new OfferTile('F', 2, 2, 0, false));
+
+        // G: da 4 giocatori in su
+        if (numPlayers >= 4) tiles.add(new OfferTile('G', 4, 2, 1, false));
+
         return new OfferTiles(tiles);
     }
 
