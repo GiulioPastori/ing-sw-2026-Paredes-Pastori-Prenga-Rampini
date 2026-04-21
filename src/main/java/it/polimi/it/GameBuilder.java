@@ -156,7 +156,6 @@ public class GameBuilder {
     /**
      * Builds and shuffles the three building decks (one per era).
      * The number of buildings per era varies with player count
-     * (rulebook p.2: 2P->1/2/3, 3P->2/2/4, 4P->2/3/4, 5P->2/3/5).
      */
     private Map<Era, Deque<Building>> buildBuildingDecks(int numPlayers) {
         // Counts: [eraI, eraII, eraIII] indexed by player count (index 2-5)

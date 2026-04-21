@@ -32,10 +32,10 @@ import java.util.Map;
  */
 public class Board {
 
-    /** Cards in the top row: players + 4 (rulebook p.2). */
+    /** Cards in the top row: players + 4  */
     public static final int TOP_ROW_EXTRA = 4;
 
-    /** Cards in the bottom row during setup: players + 1 (rulebook p.2). */
+    /** Cards in the bottom row during setup: players + 1 . */
     public static final int BOTTOM_ROW_SETUP_EXTRA = 1;
 
     /** Tribe deck (characters + events), from top to bottom. */
@@ -117,6 +117,7 @@ public class Board {
      */
     public void setupTopRow(int numPlayers) {
         int needed              = numPlayers + TOP_ROW_EXTRA;
+
         long eventsAlreadyInTop = topRow.stream().filter(c -> c instanceof Event).count();
         int  toDraw             = (int) (needed - eventsAlreadyInTop);
 
