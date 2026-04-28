@@ -110,7 +110,7 @@ public class GuiView implements GameView {
     // ── Display ───────────────────────────────────────────────────────────────
 
     @Override
-    public void showRoundStarted(int round, List<PlayerSnapshot> turnOrder) {
+    public void showRoundStarted(int round, List<PlayerSnapshot> turnOrder, List<it.polimi.it.observer.OfferTileSnapshot> availableTiles) {
         SwingUtilities.invokeLater(() -> {
             log("══ ROUND " + round + " STARTED ══");
             updatePlayerPanel(turnOrder);
@@ -125,8 +125,15 @@ public class GuiView implements GameView {
 
     @Override
     public void showCardSlotReady(PlayerSnapshot player, boolean isTopRow,
-                                  List<CardSnapshot> availableCards) {
+                                  List<CardSnapshot> availableCards,
+                                  List<CardSnapshot> visibleEvents) {
         SwingUtilities.invokeLater(() -> {
+            if (!visibleEvents.isEmpty()) {
+                log("[EVENTI in " + (isTopRow ? "riga sup" : "riga inf") + "] "
+                        + visibleEvents.stream()
+                        .map(c -> c.effectDescription())
+                        .reduce((a,b) -> a + ", " + b).orElse(""));
+            }
             log("[" + player.name() + "] " + (isTopRow ? "top" : "bottom")
                     + " row slot ready.");
             updateRowPanel(isTopRow ? topRowPanel : bottomRowPanel, availableCards, false);

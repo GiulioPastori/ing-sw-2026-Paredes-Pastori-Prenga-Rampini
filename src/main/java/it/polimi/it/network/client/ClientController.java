@@ -14,35 +14,51 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
+import java.util.logging.Logger;
 
 /**
- * Client-side controller.
- * Receives Messages from the server and drives the view.
- * Uses Message (org.json) — no typed record subtypes.
+ * Controller lato client.
+ *
+ * <p>Riceve i messaggi dal server e guida la view.
+ *
+ * <p><b>Regola fondamentale sull'inputExecutor:</b>
+ * L'executor è <em>uno solo</em> per tutta la durata della partita e non
+ * viene mai ricreato né interrotto durante il gioco. I task di input si
+ * accodano naturalmente: il server invia {@code CARD_SLOT_READY} solo
+ * quando è effettivamente il turno di quel giocatore, quindi non ci
+ * saranno mai task "obsoleti" in coda.
+ * L'executor viene terminato solo in {@link #onDisconnect()} e {@link #run()}.
  */
 public class ClientController {
 
     private static final Logger LOG = Logger.getLogger(ClientController.class.getName());
-    private int totemPlacedCount = 0;
+
     private final ServerProxy proxy;
     private final GameView    view;
     private final String      myNickname;
+
     private List<PlayerSnapshot> currentTurnOrder = new ArrayList<>();
-    private final CountDownLatch gameLatch = new CountDownLatch(1);
+    private int                  totemPlacedCount  = 0;
+
+    private final CountDownLatch  gameLatch     = new CountDownLatch(1);
     private final ExecutorService inputExecutor = Executors.newSingleThreadExecutor();
+
     public ClientController(ServerProxy proxy, GameView view, String myNickname) {
         this.proxy      = proxy;
         this.view       = view;
         this.myNickname = myNickname;
     }
 
-    /** Blocks until the game ends. Call after proxy.connect(). */
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
+
+    /** Chiamato quando la connessione cade. */
     public void onDisconnect() {
         inputExecutor.shutdownNow();
-        view.showInvalidAction("SERVER", "Connection lost.");
+        view.showInvalidAction("SERVER", "Connessione persa.");
         gameLatch.countDown();
     }
 
+    /** Blocca finché la partita non finisce. Da chiamare dopo proxy.connect(). */
     public void run() {
         try { gameLatch.await(); }
         catch (InterruptedException e) { Thread.currentThread().interrupt(); }
@@ -52,27 +68,34 @@ public class ClientController {
     // ── Dispatch ──────────────────────────────────────────────────────────────
 
     public void onMessage(Message msg) {
+        try {
+            dispatch(msg);
+        } catch (Exception e) {
+            LOG.severe("Eccezione in onMessage tipo=" + msg.getType() + ": " + e);
+            for (StackTraceElement el : e.getStackTrace()) LOG.severe("  at " + el);
+        }
+    }
+
+    private void dispatch(Message msg) {
         switch (msg.getType()) {
             case Message.LOBBY_UPDATE ->
-                    System.out.println("Lobby: " + msg.strList("connectedPlayers").size()
+                    System.out.println("Lobby: "
+                            + msg.strList("connectedPlayers").size()
                             + "/" + msg.num("expectedPlayers")
                             + " — " + msg.strList("connectedPlayers"));
             case Message.ERROR ->
                     view.showInvalidAction("SERVER", msg.str("reason"));
-            case Message.ROUND_STARTED ->
-                    handleRoundStarted(msg);
-            case Message.TOTEM_PLACED ->
-                    handleTotemPlaced(msg);
-            case Message.CARD_SLOT_READY ->
-                    handleCardSlotReady(msg);
+            // Heartbeat e keep-alive: aggiornano solo il timestamp nel proxy, niente altro
+            case Message.HEARTBEAT, Message.PING, Message.PONG -> { /* ignorati */ }
+            case Message.ROUND_STARTED      -> handleRoundStarted(msg);
+            case Message.TOTEM_PLACED       -> handleTotemPlaced(msg);
+            case Message.CARD_SLOT_READY    -> handleCardSlotReady(msg);
             case Message.CARD_ACQUIRED ->
                     view.showCardAcquired(msg.playerObj("player"), msg.cardObj("card"));
-            case Message.CARD_ACQUISITION_FAILED ->
-                    handleCardAcquisitionFailed(msg);
+            case Message.CARD_ACQUISITION_FAILED -> handleCardAcquisitionFailed(msg);
             case Message.TOTEM_RETURNED ->
                     view.showTotemReturnedToTurnOrder(msg.playerObj("player"), msg.num("position"));
-            case Message.POST_ROUND_STARTED ->
-                    handlePostRoundStarted(msg);
+            case Message.POST_ROUND_STARTED -> handlePostRoundStarted(msg);
             case Message.EVENT_RESOLVED ->
                     view.showEventResolved(
                             msg.num("eventId"),
@@ -92,24 +115,21 @@ public class ClientController {
                 view.showInvalidAction("DISCONNECT", msg.str("nickname"));
                 gameLatch.countDown();
             }
-            case Message.PING -> proxy.send(Message.pong());
-            default -> LOG.warning("Unknown message type: " + msg.getType());
+            default -> LOG.warning("Tipo messaggio sconosciuto: " + msg.getType());
         }
-    }
+    } // fine dispatch()
 
-
-
-
-    // ── Handlers
+    // ── Handler: piazzamento totem ────────────────────────────────────────────
 
     private void handleRoundStarted(Message msg) {
         totemPlacedCount = 0;
-        currentTurnOrder = msg.playerList("turnOrder");   // ← salva l'ordine
+        currentTurnOrder = msg.playerList("turnOrder");
         List<OfferTileSnapshot> tiles = msg.tileList("availableTiles");
-        view.showRoundStarted(msg.num("round"), currentTurnOrder);
+        view.showRoundStarted(msg.num("round"), currentTurnOrder, tiles);
 
-        // chiedi solo se sei il primo
-        if (!currentTurnOrder.isEmpty() && currentTurnOrder.get(0).name().equals(myNickname)) {
+        // Chiede l'input solo al primo giocatore di turno
+        if (!currentTurnOrder.isEmpty()
+                && currentTurnOrder.get(0).name().equals(myNickname)) {
             final PlayerSnapshot me = currentTurnOrder.get(0);
             inputExecutor.submit(() -> {
                 char chosen = view.requestOfferTileChoice(me, tiles);
@@ -117,21 +137,13 @@ public class ClientController {
             });
         }
     }
+
     private void handleTotemPlaced(Message msg) {
         view.showTotemPlaced(msg.playerObj("player"), msg.ch("tileLetter"));
-
         List<OfferTileSnapshot> remaining = msg.tileList("remainingTiles");
-
-
-        // il prossimo a piazzare è il primo in turnOrder che non ha ancora piazzato.
-        // Contiamo quanti hanno già piazzato = players - remaining - 1 (una tile rimane sempre libera)
-        // Oppure usiamo l'ordine: chi ha già piazzato = tutti tranne gli ultimi (remaining.size()) in ordine
-        // scorriamo turnOrder e vediamo chi è il prossimo che non ha ancora piazzato
-        // Il server garantisce l'ordine sequenziale, quindi:
-        // dopo N totem piazzati, il prossimo è turnOrder[N]
-        // Contiamo i TOTEM_PLACED ricevuti finora tramite un contatore
         totemPlacedCount++;
 
+        // Dopo N totem piazzati, il prossimo è turnOrder[N]
         if (totemPlacedCount < currentTurnOrder.size()) {
             PlayerSnapshot next = currentTurnOrder.get(totemPlacedCount);
             if (next.name().equals(myNickname)) {
@@ -142,13 +154,21 @@ public class ClientController {
             }
         }
     }
+
+    // ── Handler: scelta carte ─────────────────────────────────────────────────
+
     private void handleCardSlotReady(Message msg) {
-        PlayerSnapshot     player = msg.playerObj("player");
-        boolean            isTop  = msg.bool("isTopRow");
-        List<CardSnapshot> cards  = msg.cardList("availableCards");
+        PlayerSnapshot     player        = msg.playerObj("player");
+        boolean            isTop         = msg.bool("isTopRow");
+        List<CardSnapshot> cards         = msg.cardList("availableCards");
+        List<CardSnapshot> visibleEvents = msg.cardList("visibleEvents");
 
-        view.showCardSlotReady(player, isTop, cards);
+        view.showCardSlotReady(player, isTop, cards, visibleEvents);
 
+        // L'input viene richiesto solo al giocatore di turno.
+        // NON si fa shutdownNow/ricreazione: il server manda CARD_SLOT_READY
+        // solo quando è effettivamente il turno di questo giocatore,
+        // quindi i task si accodano correttamente senza mai essere "obsoleti".
         if (!player.name().equals(myNickname)) return;
 
         inputExecutor.submit(() -> {
@@ -159,8 +179,8 @@ public class ClientController {
     }
 
     private void handleCardAcquisitionFailed(Message msg) {
-        PlayerSnapshot player = msg.playerObj("player");
-        CardSnapshot card = msg.cardObj("card");
+        PlayerSnapshot     player       = msg.playerObj("player");
+        CardSnapshot       card         = msg.cardObj("card");
         List<CardSnapshot> alternatives = msg.cardList("alternatives");
 
         view.showCardAcquisitionFailed(player, card, msg.num("missingFood"));
@@ -174,9 +194,11 @@ public class ClientController {
         });
     }
 
+    // ── Handler: post-round (Torre di Guardia) ────────────────────────────────
+
     private void handlePostRoundStarted(Message msg) {
         List<PlayerSnapshot> watchtower = msg.playerList("watchtowerPlayers");
-        List<CardSnapshot> cards = msg.cardList("availableCards");
+        List<CardSnapshot>   cards      = msg.cardList("availableCards");
 
         view.showPostRoundStarted(watchtower, cards);
 

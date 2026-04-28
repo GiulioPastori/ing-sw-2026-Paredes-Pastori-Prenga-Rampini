@@ -90,11 +90,11 @@ public class GameController implements GameEventListener {
     public void onEvent(GameEvent event) {
         switch (event) {
             case GameEvent.RoundStarted             e ->
-                    view.showRoundStarted(e.round(), e.turnOrder());
+                    view.showRoundStarted(e.round(), e.turnOrder(), e.availableTiles());
             case GameEvent.TotemPlaced              e ->
                     view.showTotemPlaced(e.player(), e.tileLetter());
             case GameEvent.CardSlotReady            e ->
-                    view.showCardSlotReady(e.player(), e.isTopRow(), e.availableCards());
+                    view.showCardSlotReady(e.player(), e.isTopRow(), e.availableCards(), e.visibleEvents());
             case GameEvent.CardAcquired             e ->
                     view.showCardAcquired(e.player(), e.card());
             case GameEvent.CardAcquisitionFailed    e ->

@@ -24,29 +24,32 @@ public class Message {
 
     // ── Types ─────────────────────────────────────────────────────────────────
     // Client → Server
-    public static final String JOIN          = "JOIN";
-    public static final String PLACE_TOTEM   = "PLACE_TOTEM";
-    public static final String TAKE_CARD     = "TAKE_CARD";
-    public static final String PASS          = "PASS";
-    public static final String POST_ROUND    = "POST_ROUND";
-    public static final String PONG          = "PONG";
+    public static final String JOIN        = "JOIN";
+    public static final String PLACE_TOTEM = "PLACE_TOTEM";
+    public static final String TAKE_CARD   = "TAKE_CARD";
+    public static final String PASS        = "PASS";
+    public static final String POST_ROUND  = "POST_ROUND";
+    /** Heartbeat periodico inviato dal client ogni HEARTBEAT_INTERVAL_MS millisecondi. */
+    public static final String HEARTBEAT   = "HEARTBEAT";
 
     // Server → Client
-    public static final String LOBBY_UPDATE          = "LOBBY_UPDATE";
-    public static final String ERROR                 = "ERROR";
-    public static final String ROUND_STARTED         = "ROUND_STARTED";
-    public static final String TOTEM_PLACED          = "TOTEM_PLACED";
-    public static final String CARD_SLOT_READY       = "CARD_SLOT_READY";
-    public static final String CARD_ACQUIRED         = "CARD_ACQUIRED";
+    public static final String LOBBY_UPDATE            = "LOBBY_UPDATE";
+    public static final String ERROR                   = "ERROR";
+    public static final String ROUND_STARTED           = "ROUND_STARTED";
+    public static final String TOTEM_PLACED            = "TOTEM_PLACED";
+    public static final String CARD_SLOT_READY         = "CARD_SLOT_READY";
+    public static final String CARD_ACQUIRED           = "CARD_ACQUIRED";
     public static final String CARD_ACQUISITION_FAILED = "CARD_ACQUISITION_FAILED";
-    public static final String TOTEM_RETURNED        = "TOTEM_RETURNED";
-    public static final String POST_ROUND_STARTED    = "POST_ROUND_STARTED";
-    public static final String EVENT_RESOLVED        = "EVENT_RESOLVED";
-    public static final String ERA_CHANGED           = "ERA_CHANGED";
-    public static final String ROUND_ENDED           = "ROUND_ENDED";
-    public static final String GAME_ENDED            = "GAME_ENDED";
-    public static final String PLAYER_DISCONNECTED   = "PLAYER_DISCONNECTED";
-    public static final String PING                  = "PING";
+    public static final String TOTEM_RETURNED          = "TOTEM_RETURNED";
+    public static final String POST_ROUND_STARTED      = "POST_ROUND_STARTED";
+    public static final String EVENT_RESOLVED          = "EVENT_RESOLVED";
+    public static final String ERA_CHANGED             = "ERA_CHANGED";
+    public static final String ROUND_ENDED             = "ROUND_ENDED";
+    public static final String GAME_ENDED              = "GAME_ENDED";
+    public static final String PLAYER_DISCONNECTED     = "PLAYER_DISCONNECTED";
+    // Mantenuti per retrocompatibilità RMI (vecchi client)
+    public static final String PING = "PING";
+    public static final String PONG = "PONG";
 
     // ── Fields ────────────────────────────────────────────────────────────────
     private final String     type;
@@ -109,8 +112,9 @@ public class Message {
                 .put("cardId", cardId));
     }
 
-    public static Message ping() { return new Message(PING, new JSONObject()); }
-    public static Message pong() { return new Message(PONG, new JSONObject()); }
+    public static Message ping()      { return new Message(PING,      new JSONObject()); }
+    public static Message pong()      { return new Message(PONG,      new JSONObject()); }
+    public static Message heartbeat() { return new Message(HEARTBEAT, new JSONObject()); }
 
     // ── Server → Client factories ─────────────────────────────────────────────
 
@@ -147,11 +151,14 @@ public class Message {
     }
 
     public static Message cardSlotReady(PlayerSnapshot player, boolean isTopRow,
-                                        List<CardSnapshot> cards, int slotsRemaining) {
+                                        List<CardSnapshot> cards,
+                                        List<CardSnapshot> visibleEvents,
+                                        int slotsRemaining) {
         return new Message(CARD_SLOT_READY, new JSONObject()
                 .put("player",         playerToJson(player))
                 .put("isTopRow",       isTopRow)
                 .put("availableCards", cardListToJson(cards))
+                .put("visibleEvents",  cardListToJson(visibleEvents))
                 .put("slotsRemaining", slotsRemaining));
     }
 
@@ -232,7 +239,9 @@ public class Message {
                 .put("topRowCards",    t.topRowCards())
                 .put("bottomRowCards", t.bottomRowCards())
                 .put("isFoodOnly",     t.isFoodOnly())
-                .put("isFree",         t.isFree());
+                .put("isFree",         t.isFree())
+                .put("topCards",       cardListToJson(t.topCards()))
+                .put("bottomCards",    cardListToJson(t.bottomCards()));
     }
 
     private static JSONArray tileListToJson(List<OfferTileSnapshot> list) {
@@ -295,12 +304,34 @@ public class Message {
         List<OfferTileSnapshot> list = new ArrayList<>();
         for (int i = 0; i < arr.length(); i++) {
             JSONObject o = arr.getJSONObject(i);
+            List<CardSnapshot> topCards    = parseCardArray(o.getJSONArray("topCards"));
+            List<CardSnapshot> bottomCards = parseCardArray(o.getJSONArray("bottomCards"));
             list.add(new OfferTileSnapshot(
                     o.getString("letter").charAt(0),
                     o.getInt("topRowCards"),
                     o.getInt("bottomRowCards"),
                     o.getBoolean("isFoodOnly"),
-                    o.getBoolean("isFree")));
+                    o.getBoolean("isFree"),
+                    topCards,
+                    bottomCards));
+        }
+        return list;
+    }
+
+    /** Deserializza un JSONArray di carte in List<CardSnapshot>. */
+    private static List<CardSnapshot> parseCardArray(JSONArray arr) {
+        List<CardSnapshot> list = new ArrayList<>();
+        for (int i = 0; i < arr.length(); i++) {
+            JSONObject o = arr.getJSONObject(i);
+            String ct = o.optString("characterType", "");
+            list.add(new CardSnapshot(
+                    o.getInt("id"),
+                    it.polimi.it.enums.Era.valueOf(o.getString("era")),
+                    CardSnapshot.Type.valueOf(o.getString("type")),
+                    ct.isEmpty() ? null : it.polimi.it.enums.CharacterType.valueOf(ct),
+                    o.getInt("foodCost"),
+                    o.getInt("finalPoints"),
+                    o.getString("effectDescription")));
         }
         return list;
     }

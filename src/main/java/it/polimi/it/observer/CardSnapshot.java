@@ -44,7 +44,8 @@ public record CardSnapshot(
                     null, b.getFoodCost(), b.getFinalPoints(),
                     b.getEffectDescription());
         }
-        return new CardSnapshot(card.getId(), card.getEra(), Type.EVENT, null, 0, 0, "");
+        return new CardSnapshot(card.getId(), card.getEra(), Type.EVENT, null, 0, 0,
+                ((it.polimi.it.cards.events.Event) card).getType().name());
     }
 
     public boolean isCharacter() { return type == Type.CHARACTER; }

@@ -58,19 +58,19 @@ public sealed interface GameEvent permits
     ) implements GameEvent {}
 
     /**
-     * The model is waiting for a TakeCardAction or PassAction.
-     * Carrying availableCards in the payload means the Controller
-     * never has to query the board.
+     * Il modello è in attesa di un TakeCardAction o PassAction.
      *
-     * @param player         the player who must choose
-     * @param isTopRow       true if the slot is in the top row
-     * @param availableCards non-event cards selectable in this row
-     * @param slotsRemaining total slots still to consume after this one
+     * @param player         il giocatore che deve scegliere
+     * @param isTopRow       true se lo slot è nella riga superiore
+     * @param availableCards carte selezionabili (esclusi gli eventi)
+     * @param visibleEvents  carte evento visibili nella riga (non acquisibili, solo informative)
+     * @param slotsRemaining slot ancora da consumare dopo questo
      */
     record CardSlotReady(
             PlayerSnapshot     player,
             boolean            isTopRow,
             List<CardSnapshot> availableCards,
+            List<CardSnapshot> visibleEvents,
             int                slotsRemaining
     ) implements GameEvent {}
 

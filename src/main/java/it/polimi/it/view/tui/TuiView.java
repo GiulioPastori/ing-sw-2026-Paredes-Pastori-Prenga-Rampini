@@ -8,105 +8,129 @@ import it.polimi.it.observer.PlayerSnapshot;
 import it.polimi.it.view.GameView;
 
 import java.util.List;
-import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Text-based user interface.
+ * Interfaccia utente testuale (TUI).
  *
- * All output goes to stdout. Input is read from a Scanner (stdin).
- * Request methods block until the player enters a valid choice.
+ * <p>Output su stdout. Input tramite {@link StdinReader}: un singolo thread
+ * daemon legge stdin con {@code BufferedReader.readLine()} bloccante e mette
+ * le righe in una {@code BlockingQueue}. I metodi di input prelevano dalla coda
+ * con un timeout di {@value #INPUT_TIMEOUT_S}s, così il thread di input
+ * è sempre interrompibile e non tiene mai bloccato il sistema.
+ *
+ * <p>Sostituibile con una GUI JavaFX implementando {@link GameView}.
  */
 public class TuiView implements GameView {
 
-    private final Scanner scanner;
+    /** Timeout per ogni singola lettura da stdin (secondi).
+     *  Se scade, viene ritentato — il loop continua finché l'utente non risponde
+     *  o il thread viene interrotto. */
+    private static final long INPUT_TIMEOUT_S = 5;
 
-    public TuiView(Scanner scanner) {
-        this.scanner = scanner;
-    }
+    private final StdinReader stdin = StdinReader.getInstance();
 
     // ── Display ───────────────────────────────────────────────────────────────
 
     @Override
-    public void showRoundStarted(int round, List<PlayerSnapshot> turnOrder) {
+    public void showRoundStarted(int round, List<PlayerSnapshot> turnOrder,
+                                 List<OfferTileSnapshot> availableTiles) {
         println("\n╔══════════════════════════════╗");
-        println("║        ROUND " + round + " STARTED         ║");
+        println("║       ROUND " + pad2(round) + " INIZIATO        ║");
         println("╚══════════════════════════════╝");
-        println("Turn order:");
+        println("Ordine di turno:");
         for (int i = 0; i < turnOrder.size(); i++) {
             PlayerSnapshot p = turnOrder.get(i);
             println("  " + (i + 1) + ". " + p.name()
-                    + "  [Food: " + p.food() + " | PP: " + p.prestigePoints() + "]");
+                    + "  [Cibo: " + p.food() + " | PP: " + p.prestigePoints() + "]");
         }
+        println("");
+        showBoardWithTiles(availableTiles);
     }
 
     @Override
     public void showTotemPlaced(PlayerSnapshot player, char tileLetter) {
-        println(player.name() + " placed totem on tile " + tileLetter);
+        println(player.name() + " ha piazzato il totem sulla tessera " + tileLetter);
     }
 
     @Override
     public void showCardSlotReady(PlayerSnapshot player, boolean isTopRow,
-                                  List<CardSnapshot> availableCards) {
-        println("\n[" + player.name() + "] " + (isTopRow ? "TOP" : "BOTTOM")
-                + " row — " + availableCards.size() + " card(s) available.");
+                                  List<CardSnapshot> availableCards,
+                                  List<CardSnapshot> visibleEvents) {
+        String row = isTopRow ? "RIGA SUPERIORE" : "RIGA INFERIORE";
+        println("\n[" + player.name() + "] " + row
+                + " — " + availableCards.size() + " carta/e disponibile/i:");
+        if (!visibleEvents.isEmpty()) {
+            println("  ⚠ Carte evento presenti (non acquisibili):");
+            visibleEvents.forEach(e -> println("    • " + formatCard(e)));
+        }
         printCards(availableCards);
     }
 
     @Override
     public void showCardAcquired(PlayerSnapshot player, CardSnapshot card) {
-        println(player.name() + " acquired: " + formatCard(card));
+        println(player.name() + " ha acquisito: " + formatCard(card));
     }
 
     @Override
     public void showCardAcquisitionFailed(PlayerSnapshot player, CardSnapshot card,
                                           int missingFood) {
-        println(player.name() + " cannot afford " + formatCard(card)
-                + " (missing " + missingFood + " food).");
+        println("[!] " + player.name() + " non può permettersi " + formatCard(card)
+                + " (mancano " + missingFood + " cibo).");
     }
 
     @Override
     public void showTotemReturnedToTurnOrder(PlayerSnapshot player, int position) {
-        println(player.name() + " → Turn Order #" + position
-                + "  [Food: " + player.food() + " | PP: " + player.prestigePoints() + "]");
+        println(player.name() + " → Ordine di turno #" + position
+                + "  [Cibo: " + player.food() + " | PP: " + player.prestigePoints() + "]");
     }
 
     @Override
     public void showPostRoundStarted(List<PlayerSnapshot> watchtowerPlayers,
                                      List<CardSnapshot> availableCards) {
-        println("\n[WATCHTOWER] Post-round action:");
+        println("\n[TORRE DI GUARDIA] Azione post-round:");
         watchtowerPlayers.forEach(p -> println("  • " + p.name()));
+        println("Carte disponibili:");
         printCards(availableCards);
     }
 
     @Override
     public void showEventResolved(int eventId, Era era, EventType type) {
-        println("[EVENT] " + era + " " + type + " resolved.");
+        String desc = switch (type) {
+            case SUSTENANCE      -> "Ogni giocatore paga 1 cibo per personaggio";
+            case HUNT            -> "Ogni giocatore guadagna cibo in base ai Cacciatori";
+            case SHAMANIC_RITUAL -> "Gli Sciamani garantiscono Punti Prestigio";
+            case CAVE_PAINTINGS  -> "Artisti e Inventori segnano punti";
+        };
+        println("[EVENTO RISOLTO] " + formatEra(era) + " — "
+                + formatEventType(type.name()) + " (id:" + eventId + "): " + desc);
     }
 
     @Override
     public void showEraChanged(Era era) {
-        println("\n★★★  ERA " + era + " BEGINS  ★★★\n");
+        println("\n★★★  INIZIA L'ERA " + formatEra(era) + "  ★★★\n");
     }
 
     @Override
     public void showRoundEnded(int round) {
-        println("── Round " + round + " ended ──");
+        println("── Round " + round + " terminato ──");
     }
 
     @Override
     public void showGameEnded(List<PlayerSnapshot> winners, List<PlayerSnapshot> finalScores) {
         println("\n╔══════════════════════════════╗");
-        println("║           GAME OVER          ║");
+        println("║         PARTITA FINITA       ║");
         println("╚══════════════════════════════╝");
         String winnerNames = winners.stream()
                 .map(PlayerSnapshot::name)
-                .reduce((a, b) -> a + ", " + b).orElse("none");
-        println("WINNER(S): " + winnerNames);
-        println("\nFinal Scores:");
+                .reduce((a, b) -> a + ", " + b).orElse("nessuno");
+        println("VINCITORE/I: " + winnerNames);
+        println("\nPunteggi finali:");
         finalScores.stream()
                 .sorted((a, b) -> b.prestigePoints() - a.prestigePoints())
-                .forEach(p -> println("  " + p.name() + ": " + p.prestigePoints() + " PP"
-                        + " | Food: " + p.food()));
+                .forEach(p -> println("  " + p.name()
+                        + ": " + p.prestigePoints() + " PP"
+                        + " | Cibo: " + p.food()));
     }
 
     @Override
@@ -119,40 +143,42 @@ public class TuiView implements GameView {
     @Override
     public char requestOfferTileChoice(PlayerSnapshot player,
                                        List<OfferTileSnapshot> freeTiles) {
-        println("\n[" + player.name() + "] Choose an offer tile:");
-        freeTiles.forEach(t -> println("  " + t.letter()
-                + (t.isFoodOnly() ? " [+3 FOOD]"
-                : " [top:" + t.topRowCards() + " bottom:" + t.bottomRowCards() + "]")));
-        println("Enter tile letter: ");
+        println("\n[" + player.name() + "] Scegli una tessera:");
+        showBoardWithTiles(freeTiles);
+        print("Lettera tessera: ");
         while (true) {
-            String input = scanner.nextLine().trim().toUpperCase();
-            if (input.length() == 1) {
-                char letter = input.charAt(0);
-                if (freeTiles.stream().anyMatch(t -> t.letter() == letter)) {
-                    return letter;
-                }
+            String raw = nextLine();
+            if (raw == null) continue;
+            String upper = raw.trim().toUpperCase();
+            if (upper.length() == 1) {
+                char letter = upper.charAt(0);
+                if (freeTiles.stream().anyMatch(t -> t.letter() == letter)) return letter;
             }
-            println("Invalid choice. Try again: ");
+            print("Scelta non valida. Riprova: ");
         }
     }
 
     @Override
     public int requestCardChoice(PlayerSnapshot player, List<CardSnapshot> available) {
         if (available.isEmpty()) {
-            println("[" + player.name() + "] No cards available — passing.");
+            println("[" + player.name() + "] Nessuna carta disponibile — passo.");
             return -1;
         }
-        println("\n[" + player.name() + "] Choose a card (0 to pass):");
+        println("\n[" + player.name() + "] Scegli una carta (0 per passare):");
         printCards(available);
-        println("Enter number: ");
+        print("Numero: ");
         while (true) {
+            String line = nextLine();
+            if (line == null) continue; // timeout, riprova
             try {
-                int choice = Integer.parseInt(scanner.nextLine().trim());
+                int choice = Integer.parseInt(line.trim());
                 if (choice == 0) return -1;
                 if (choice >= 1 && choice <= available.size())
                     return available.get(choice - 1).id();
-            } catch (NumberFormatException ignored) {}
-            println("Invalid choice. Try again: ");
+                print("Scelta non valida (1-" + available.size() + " o 0). Riprova: ");
+            } catch (NumberFormatException ignored) {
+                print("Inserisci un numero. Riprova: ");
+            }
         }
     }
 
@@ -160,21 +186,84 @@ public class TuiView implements GameView {
     public int requestPostRoundCardChoice(PlayerSnapshot player,
                                           List<CardSnapshot> available) {
         if (available.isEmpty()) return -1;
-        println("\n[WATCHTOWER " + player.name() + "] Take a card (0 to decline):");
+        println("\n[TORRE DI GUARDIA " + player.name() + "] Prendi una carta (0 per rifiutare):");
         printCards(available);
-        println("Enter number: ");
+        print("Numero: ");
         while (true) {
+            String line = nextLine();
+            if (line == null) continue;
             try {
-                int choice = Integer.parseInt(scanner.nextLine().trim());
+                int choice = Integer.parseInt(line.trim());
                 if (choice == 0) return -1;
                 if (choice >= 1 && choice <= available.size())
                     return available.get(choice - 1).id();
-            } catch (NumberFormatException ignored) {}
-            println("Invalid choice. Try again: ");
+                print("Scelta non valida. Riprova: ");
+            } catch (NumberFormatException ignored) {
+                print("Inserisci un numero. Riprova: ");
+            }
         }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Legge la prossima riga con timeout {@value #INPUT_TIMEOUT_S}s.
+     * Ritorna {@code null} se il timeout scade (il chiamante deve riprovare).
+     * Ritorna {@code null} anche se il thread viene interrotto
+     * (il chiamante deve uscire dal loop o passare).
+     */
+    private String nextLine() {
+        try {
+            return stdin.readLine(INPUT_TIMEOUT_S, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return null;
+        }
+    }
+
+    /** Mostra tessere con le carte di entrambe le righe. */
+    /**
+     * Mostra le tessere disponibili nel formato richiesto:
+     * - Prima riga: elenco delle tessere con le loro lettere e quante carte si possono prendere
+     * - Poi una volta sola la riga superiore con tutte le carte
+     * - Poi una volta sola la riga inferiore con tutte le carte
+     *
+     * Le carte sono condivise tra tutte le tessere, quindi non ha senso
+     * ripeterle per ogni tessera.
+     */
+    private void showBoardWithTiles(List<OfferTileSnapshot> tiles) {
+        // Riga 1: elenco tessere con i loro slot
+        StringBuilder tileHeader = new StringBuilder("Tessere: ");
+        List<OfferTileSnapshot> nonFood = tiles.stream()
+                .filter(t -> !t.isFoodOnly()).toList();
+        List<OfferTileSnapshot> food = tiles.stream()
+                .filter(OfferTileSnapshot::isFoodOnly).toList();
+
+        food.forEach(t -> tileHeader.append(t.letter()).append(" [+3 CIBO]  "));
+        nonFood.forEach(t -> tileHeader
+                .append(t.letter())
+                .append(" [sup:").append(t.topRowCards())
+                .append(" inf:").append(t.bottomRowCards()).append("]  "));
+        println(tileHeader.toString().stripTrailing());
+
+        // Le carte sono le stesse per tutte le tessere non-food: prendi la prima
+        if (!nonFood.isEmpty()) {
+            OfferTileSnapshot ref = nonFood.get(0);
+            if (!ref.topCards().isEmpty()) {
+                println("  ↑ Riga superiore (" + ref.topCards().size() + " carte):");
+                ref.topCards().forEach(c -> println("      • " + formatCard(c)));
+            }
+            if (!ref.bottomCards().isEmpty()) {
+                println("  ↓ Riga inferiore (" + ref.bottomCards().size() + " carte):");
+                ref.bottomCards().forEach(c -> println("      • " + formatCard(c)));
+            }
+        }
+    }
+
+    /** @deprecated Usa showBoardWithTiles */
+    private void showTiles(List<OfferTileSnapshot> tiles) {
+        showBoardWithTiles(tiles);
+    }
 
     private void printCards(List<CardSnapshot> cards) {
         for (int i = 0; i < cards.size(); i++) {
@@ -184,17 +273,52 @@ public class TuiView implements GameView {
 
     private String formatCard(CardSnapshot c) {
         return switch (c.type()) {
-            case CHARACTER -> "[" + c.era() + "] " + c.characterType()
+            case CHARACTER -> "[" + formatEra(c.era()) + "] PERSONAGGIO "
+                    + (c.characterType() != null ? formatCharType(c.characterType().name()) : "")
                     + " (id:" + c.id() + ")";
-            case BUILDING  -> "[" + c.era() + "] BUILDING  cost:" + c.foodCost()
-                    + "  PP:" + c.finalPoints()
-                    + "  " + c.effectDescription()
-                    + " (id:" + c.id() + ")";
-            case EVENT     -> "[EVENT] (id:" + c.id() + ")";
+            case BUILDING  -> "[" + formatEra(c.era()) + "] EDIFICIO"
+                    + "  costo:" + c.foodCost()
+                    + "  PP:"    + c.finalPoints()
+                    + "  "       + c.effectDescription()
+                    + " (id:"    + c.id() + ")";
+            case EVENT     -> "[" + formatEra(c.era()) + "] EVENTO "
+                    + formatEventType(c.effectDescription())
+                    + " (id:" + c.id() + ")  ⚠ non acquisibile";
         };
     }
 
-    private void println(String text) {
-        System.out.println(text);
+    private String formatEra(Era era) {
+        return switch (era) {
+            case ERA_I   -> "Era I";
+            case ERA_II  -> "Era II";
+            case ERA_III -> "Era III";
+        };
     }
+
+    private String formatEventType(String typeName) {
+        return switch (typeName) {
+            case "SUSTENANCE"      -> "Sostentamento";
+            case "HUNT"            -> "Caccia";
+            case "SHAMANIC_RITUAL" -> "Rituale Sciamanico";
+            case "CAVE_PAINTINGS"  -> "Pitture Rupestri";
+            default                -> typeName;
+        };
+    }
+
+    private String formatCharType(String typeName) {
+        return switch (typeName) {
+            case "HUNTER"   -> "Cacciatore";
+            case "GATHERER" -> "Raccoglitore";
+            case "BUILDER"  -> "Costruttore";
+            case "SHAMAN"   -> "Sciamano";
+            case "INVENTOR" -> "Inventore";
+            case "ARTIST"   -> "Artista";
+            default         -> typeName;
+        };
+    }
+
+    private String pad2(int n) { return n < 10 ? " " + n : String.valueOf(n); }
+    private void println(String s) { System.out.println(s); }
+    private void print(String s)   { System.out.print(s); System.out.flush(); }
 }
+

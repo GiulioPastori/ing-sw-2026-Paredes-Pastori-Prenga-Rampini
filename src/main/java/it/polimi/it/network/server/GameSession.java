@@ -131,6 +131,14 @@ public class GameSession implements GameEventListener {
      * to the client that sent the bad action.
      */
     public synchronized void handleMessage(Message msg, ClientConnection sender) {
+        // HEARTBEAT/PONG/PING: aggiornano solo il timestamp nel handler (già fatto dal reader),
+        // non devono produrre azioni di gioco né messaggi di errore.
+        if (Message.HEARTBEAT.equals(msg.getType())
+                || Message.PONG.equals(msg.getType())
+                || Message.PING.equals(msg.getType())) {
+            return;
+        }
+
         if (!started || terminated || suspended || controller == null) return;
 
         PlayerAction action = switch (msg.getType()) {
@@ -142,21 +150,28 @@ public class GameSession implements GameEventListener {
                     new PassAction(msg.str("playerName"));
             case Message.POST_ROUND ->
                     new PostRoundAction(msg.str("playerName"), msg.num("cardId"));
-            case Message.PONG -> null;
             default -> {
-                sender.send(Message.error("Unexpected: " + msg.getType()));
+                sender.send(Message.error("Messaggio inatteso: " + msg.getType()));
                 yield null;
             }
         };
 
         if (action == null) return;
 
-        // Delegate entirely to the controller — it validates, executes, and
-        // calls the view if something went wrong.
-        ValidationResult result = controller.handle(action);
-        if (!result.isOk()) {
-            // Also notify the client directly over the network.
-            sender.send(Message.error(((ValidationResult.Fail) result).reason()));
+        try {
+            // Delegate entirely to the controller — it validates, executes, and
+            // calls the view if something went wrong.
+            ValidationResult result = controller.handle(action);
+            if (!result.isOk()) {
+                sender.send(Message.error(((ValidationResult.Fail) result).reason()));
+            }
+        } catch (Exception e) {
+            LOG.severe("Eccezione non gestita durante handle(" + action.getClass().getSimpleName()
+                    + ") da '" + action.playerName() + "': " + e);
+            for (StackTraceElement el : e.getStackTrace()) {
+                LOG.severe("  at " + el);
+            }
+            sender.send(Message.error("Errore interno del server: " + e.getMessage()));
         }
     }
 
@@ -178,7 +193,7 @@ public class GameSession implements GameEventListener {
                     Message.totemPlaced(e.player(), e.tileLetter(), e.remainingTiles());
             case GameEvent.CardSlotReady e ->
                     Message.cardSlotReady(e.player(), e.isTopRow(),
-                            e.availableCards(), e.slotsRemaining());
+                            e.availableCards(), e.visibleEvents(), e.slotsRemaining());
             case GameEvent.CardAcquired e ->
                     Message.cardAcquired(e.player(), e.card());
             case GameEvent.CardAcquisitionFailed e ->

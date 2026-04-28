@@ -17,7 +17,7 @@ import java.util.List;
 public class StubGameView implements GameView {
 
     @Override
-    public void showRoundStarted(int round, List<PlayerSnapshot> turnOrder) {
+    public void showRoundStarted(int round, List<PlayerSnapshot> turnOrder, List<it.polimi.it.observer.OfferTileSnapshot> availableTiles) {
         System.out.println("\n=== Round " + round + " ===");
         turnOrder.forEach(p -> System.out.print(p.name() + " "));
         System.out.println();
@@ -30,10 +30,11 @@ public class StubGameView implements GameView {
 
     @Override
     public void showCardSlotReady(PlayerSnapshot player, boolean isTopRow,
-                                  List<CardSnapshot> availableCards) {
+                                  List<CardSnapshot> availableCards,
+                                  List<CardSnapshot> visibleEvents) {
         String row = isTopRow ? "top" : "bottom";
         System.out.println(player.name() + " choosing from " + row + " row ("
-                + availableCards.size() + " cards)");
+                + availableCards.size() + " cards, " + visibleEvents.size() + " events)");
     }
 
     @Override

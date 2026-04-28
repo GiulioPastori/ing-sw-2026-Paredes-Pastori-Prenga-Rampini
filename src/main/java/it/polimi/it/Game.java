@@ -19,6 +19,7 @@ import it.polimi.it.validation.ActionValidator;
 import it.polimi.it.validation.ValidationResult;
 
 import java.util.*;
+import java.util.logging.Logger;
 
 /**
  * Pure game model (Model role in MVC).
@@ -39,6 +40,8 @@ import java.util.*;
  * not when no free tiles remain.
  */
 public class Game {
+
+    private static final Logger LOG = Logger.getLogger(Game.class.getName());
 
     public static final int TOTAL_ROUNDS = 10;
 
@@ -139,7 +142,7 @@ public class Game {
         board.getOfferTiles().placeTotem(player, tile);
 
         List<OfferTileSnapshot> remaining = board.getOfferTiles().getFreeTiles().stream()
-                .map(OfferTileSnapshot::of).toList();
+                .map(t -> OfferTileSnapshot.of(t, board.getTopRow(), board.getBottomRow())).toList();
 
         publish(new GameEvent.TotemPlaced(
                 PlayerSnapshot.of(player),
@@ -171,12 +174,20 @@ public class Game {
                 .findFirst()
                 .orElse(null);
 
+        LOG.info("[advanceToNext] prossima tessera occupata: "
+                + (next == null ? "nessuna" : next.getLetter()));
+
         if (next == null) {
             beginPostRoundPhase();
             return;
         }
 
         Player actor = getPlayerByTotem(next.getPlacedTotem());
+        LOG.info("[advanceToNext] giocatore attivo: " + actor.getName()
+                + " tessera=" + next.getLetter()
+                + " isFoodOnly=" + next.isFoodOnly()
+                + " top=" + next.getTopRowCards()
+                + " bot=" + next.getBottomRowCards());
 
         if (next.isFoodOnly()) {
             actor.addFood(3);
@@ -192,11 +203,18 @@ public class Game {
     private void publishNextSlotReady() {
         if (currentTileState == null || currentTileState.isExhausted()) return;
 
-        boolean isTop  = currentTileState.remainingTopCards() > 0;
-        List<Card> row = isTop ? board.getTopRow() : board.getBottomRow();
+        boolean    isTop = currentTileState.remainingTopCards() > 0;
+        List<Card> row   = isTop ? board.getTopRow() : board.getBottomRow();
 
+        // Carte acquisibili (no eventi)
         List<CardSnapshot> available = row.stream()
                 .filter(c -> !(c instanceof Event))
+                .map(CardSnapshot::of)
+                .toList();
+
+        // Carte evento visibili nella riga (non acquisibili ma mostrate al giocatore)
+        List<CardSnapshot> visibleEvents = row.stream()
+                .filter(c -> c instanceof Event)
                 .map(CardSnapshot::of)
                 .toList();
 
@@ -204,6 +222,7 @@ public class Game {
                 PlayerSnapshot.of(currentTileState.getActingPlayer()),
                 isTop,
                 available,
+                visibleEvents,
                 currentTileState.totalSlotsRemaining() - 1));
     }
 
@@ -262,7 +281,12 @@ public class Game {
         ValidationResult v = ActionValidator.validate(action, player, currentTileState);
         if (!v.isOk()) return v;
 
-        boolean fromTop = currentTileState.remainingBottomCards() == 0;
+        // Se ci sono ancora slot top da consumare siamo nella riga superiore,
+        // altrimenti siamo nella riga inferiore.
+        // NOTA: NON usare "remainingBottomCards == 0" perché quando entrambi i
+        // contatori sono > 0 (tessera E: top=1, bottom=1) quella formula
+        // restituisce false e consuma erroneamente lo slot bottom al posto del top.
+        boolean fromTop = currentTileState.remainingTopCards() > 0;
         consumeSlot(fromTop);
         return ValidationResult.ok();
     }
@@ -293,6 +317,7 @@ public class Game {
     // ── Post-round phase (Watchtower building) ────────────────────────────────
 
     private void beginPostRoundPhase() {
+        LOG.info("[beginPostRound] inizio fase post-round");
         pendingPostRound = new ArrayList<>();
         for (Player p : players) {
             if (p.getTribe().getBuildings().stream()
@@ -300,6 +325,7 @@ public class Game {
                 pendingPostRound.add(p);
             }
         }
+        LOG.info("[beginPostRound] giocatori con Torre di Guardia: " + pendingPostRound.size());
         if (pendingPostRound.isEmpty()) {
             endRound();
             return;
@@ -342,24 +368,34 @@ public class Game {
     // ── End of round ──────────────────────────────────────────────────────────
 
     private void endRound() {
+        LOG.info("[endRound] Inizio fine round " + currentRound);
         boolean isLastRound = (currentRound == TOTAL_ROUNDS);
 
         if (isLastRound) {
+            LOG.info("[endRound] Ultimo round - risolvo tutti gli eventi visibili");
             board.resolveAllVisibleEvents(players)
                     .forEach(e -> publish(new GameEvent.EventResolved(
                             e.getId(), e.getEra(), e.getType())));
         } else {
+            LOG.info("[endRound] Risolvo eventi riga inferiore");
             board.resolveBottomRowEvents(players)
                     .forEach(e -> publish(new GameEvent.EventResolved(
                             e.getId(), e.getEra(), e.getType())));
+            LOG.info("[endRound] clearBottomRow");
             board.clearBottomRowExceptBuildings();
+            LOG.info("[endRound] moveTopToBottom");
             board.moveTopToBottom();
+            LOG.info("[endRound] refillTopRow");
             boolean eraChanged = board.refillTopRow(players.size());
+            LOG.info("[endRound] refillTopRow completato, eraChanged=" + eraChanged);
             if (eraChanged) handleEraChange();
         }
 
+        LOG.info("[endRound] TurnOrderTile.reset()");
         board.getTurnOrderTile().reset();
+        LOG.info("[endRound] publish RoundEnded");
         publish(new GameEvent.RoundEnded(currentRound));
+        LOG.info("[endRound] Fine round " + currentRound + " completata");
 
         if (isLastRound) {
             endGame();
@@ -416,12 +452,19 @@ public class Game {
     private void beginRound() {
         currentRound++;
         currentPhase = Phase.PLACING_TOTEMS;
+        LOG.info("[beginRound] inizio round " + currentRound);
 
         List<PlayerSnapshot> order = getPlacementOrder().stream()
                 .map(PlayerSnapshot::of).toList();
-        List<OfferTileSnapshot> freeTiles = board.getOfferTiles().getFreeTiles().stream()
-                .map(OfferTileSnapshot::of).toList();
 
+        // Passa le righe di carte in modo che ogni tessera mostri le carte disponibili
+        List<Card> topRow    = board.getTopRow();
+        List<Card> bottomRow = board.getBottomRow();
+        List<OfferTileSnapshot> freeTiles = board.getOfferTiles().getFreeTiles().stream()
+                .map(t -> OfferTileSnapshot.of(t, topRow, bottomRow)).toList();
+
+        LOG.info("[beginRound] tessere libere: " + freeTiles.size()
+                + " top=" + topRow.size() + " bottom=" + bottomRow.size());
         publish(new GameEvent.RoundStarted(currentRound, order, freeTiles));
         autoPlaceDisconnectedTotems();
     }
@@ -527,7 +570,7 @@ public class Game {
             OfferTile tile = free.get(0);
             board.getOfferTiles().placeTotem(p, tile);
             List<OfferTileSnapshot> remaining = board.getOfferTiles().getFreeTiles()
-                    .stream().map(OfferTileSnapshot::of).toList();
+                    .stream().map(t -> OfferTileSnapshot.of(t, board.getTopRow(), board.getBottomRow())).toList();
             publish(new GameEvent.TotemPlaced(
                     PlayerSnapshot.of(p), tile.getLetter(), remaining));
             long placed = board.getOfferTiles().getAllTiles().stream()

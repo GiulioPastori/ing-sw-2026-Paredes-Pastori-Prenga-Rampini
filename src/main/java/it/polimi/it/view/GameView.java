@@ -29,13 +29,16 @@ public interface GameView {
 
     // ── Display methods ───────────────────────────────────────────────────────
 
-    void showRoundStarted(int round, List<PlayerSnapshot> turnOrder);
+    void showRoundStarted(int round, List<PlayerSnapshot> turnOrder,
+                          List<OfferTileSnapshot> availableTiles);
 
     void showTotemPlaced(PlayerSnapshot player, char tileLetter);
 
-    /** Notifies the view that a card slot is ready and shows available cards. */
+    /** Mostra le carte disponibili in una riga per il giocatore attivo.
+     *  visibleEvents contiene gli eventi presenti nella stessa riga (non acquisibili). */
     void showCardSlotReady(PlayerSnapshot player, boolean isTopRow,
-                           List<CardSnapshot> availableCards);
+                           List<CardSnapshot> availableCards,
+                           List<CardSnapshot> visibleEvents);
 
     void showCardAcquired(PlayerSnapshot player, CardSnapshot card);
 
