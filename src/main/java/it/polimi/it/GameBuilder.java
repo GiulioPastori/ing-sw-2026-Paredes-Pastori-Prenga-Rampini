@@ -90,7 +90,7 @@ public class GameBuilder {
         board.setupBottomRow(n);
         board.setupTopRow(n);
 
-        // 6. Assign a random initial turn order (rulebook p.3)
+        // 6. Assign random initial turn order AND starting food (rulebook p.3)
         assignInitialTurnOrder(players);
 
         return new Game(players, board);
@@ -100,18 +100,32 @@ public class GameBuilder {
 
     private List<Player> buildPlayers(int n) {
         List<Player> players = new ArrayList<>();
-        // Shuffle indices to randomise starting food assignment
-        List<Integer> indices = new ArrayList<>();
-        for (int i = 0; i < n; i++) indices.add(i);
-        Collections.shuffle(indices, rng);
-
         for (int i = 0; i < n; i++) {
-            Player p = new Player(playerNames.get(i), playerColours.get(i));
-            int startingFood = STARTING_FOOD[indices.indexOf(i) + 1];
-            p.addFood(startingFood);
-            players.add(p);
+            players.add(new Player(playerNames.get(i), playerColours.get(i)));
         }
         return players;
+    }
+
+    /**
+     * Assegna casualmente l'ordine di turno iniziale e distribuisce il cibo
+     * iniziale in base alla posizione (regolamento p.3):
+     * <ul>
+     *   <li>Posizione 1 → 2 Cibo</li>
+     *   <li>Posizioni 2-3 → 3 Cibo</li>
+     *   <li>Posizioni 4-5 → 4 Cibo</li>
+     * </ul>
+     * Il cibo viene assegnato QUI, dopo aver determinato l'ordine, in modo che
+     * la posizione di turno e il cibo iniziale siano sempre coerenti.
+     */
+    private void assignInitialTurnOrder(List<Player> players) {
+        List<Player> shuffled = new ArrayList<>(players);
+        Collections.shuffle(shuffled, rng);
+        for (int i = 0; i < shuffled.size(); i++) {
+            Player p = shuffled.get(i);
+            int position = i + 1;
+            p.setTurnOrder(position);
+            p.addFood(STARTING_FOOD[position]);
+        }
     }
 
     // Tribe deck construction
@@ -232,18 +246,6 @@ public class GameBuilder {
     }
 
     // Initial turn order
-
-    /**
-     * Assigns a random initial turn order. Bonuses and penalties of the
-     * Turn Order Tile do not apply during setup
-     */
-    private void assignInitialTurnOrder(List<Player> players) {
-        List<Player> shuffled = new ArrayList<>(players);
-        Collections.shuffle(shuffled, rng);
-        for (int i = 0; i < shuffled.size(); i++) {
-            shuffled.get(i).setTurnOrder(i + 1);
-        }
-    }
 
     // Validation
 
