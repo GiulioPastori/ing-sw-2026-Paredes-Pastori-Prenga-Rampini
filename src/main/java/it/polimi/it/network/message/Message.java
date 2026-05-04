@@ -195,11 +195,10 @@ public class Message {
 
     public static Message eventResolved(int eventId, Era era, EventType type) {
         return new Message(EVENT_RESOLVED, new JSONObject()
-                .put("eventId", eventId)
-                .put("era",     era.name())
-                .put("type",    type.name()));
+                .put("eventId",   eventId)
+                .put("era",       era.name())
+                .put("eventType", type.name()));
     }
-
     public static Message eraChanged(Era newEra) {
         return new Message(ERA_CHANGED, new JSONObject()
                 .put("newEra", newEra.name()));

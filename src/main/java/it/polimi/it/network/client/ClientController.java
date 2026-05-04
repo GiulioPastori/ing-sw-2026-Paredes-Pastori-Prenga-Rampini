@@ -100,7 +100,7 @@ public class ClientController {
                     view.showEventResolved(
                             msg.num("eventId"),
                             Era.valueOf(msg.str("era")),
-                            EventType.valueOf(msg.str("type")));
+                            EventType.valueOf(msg.str("eventType")));
             case Message.ERA_CHANGED ->
                     view.showEraChanged(Era.valueOf(msg.str("newEra")));
             case Message.ROUND_ENDED ->
