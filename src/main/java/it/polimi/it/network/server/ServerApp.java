@@ -52,6 +52,7 @@ public class ServerApp {
         if (args.length <= index) return defaultValue;
         try { return Integer.parseInt(args[index]); }
         catch (NumberFormatException e) {
+
             LOG.warning("Invalid argument at index " + index + ", using default " + defaultValue);
             return defaultValue;
         }

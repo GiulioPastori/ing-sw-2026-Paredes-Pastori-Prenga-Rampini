@@ -1,0 +1,374 @@
+/*
+ * MESOS — JavaFX stylesheet
+ *
+ * Palette (tema "preistoria/caverna"):
+ *   bg-deep      #281910   marrone scuro fondo
+ *   bg-panel     #3a2616   marrone caldo per pannelli
+ *   border       #b48c50   ocra/rame
+ *   text-warm    #dcc396   beige
+ *   accent-pp    #dcb43c   oro per punti prestigio
+ *   accent-food  #64c864   verde per il cibo
+ *   accent-action#c87850   terracotta per i bottoni "azione"
+ */
+
+.root {
+    -fx-font-family: "Segoe UI", "SF Pro Text", "Helvetica Neue", sans-serif;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * LOBBY
+ * ────────────────────────────────────────────────────────────────────────── */
+
+.lobby-root {
+    -fx-background-color: linear-gradient(to bottom, #281910, #1a0f08);
+    -fx-text-fill: #dcc396;
+}
+
+.lobby-title {
+    -fx-text-fill: #dcb43c;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 6, 0, 0, 2);
+}
+
+.lobby-subtitle {
+    -fx-text-fill: #b48c50;
+    -fx-font-size: 13px;
+}
+
+.lobby-block {
+    -fx-background-color: rgba(58, 38, 22, 0.6);
+    -fx-background-radius: 8;
+    -fx-padding: 12 16 12 16;
+    -fx-border-color: rgba(180, 140, 80, 0.4);
+    -fx-border-radius: 8;
+}
+
+.lobby-block-title {
+    -fx-text-fill: #b48c50;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-transform: uppercase;
+}
+
+.lobby-primary {
+    -fx-background-color: #c87850;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.lobby-primary:hover  { -fx-background-color: #d88860; }
+.lobby-primary:disabled { -fx-opacity: 0.5; }
+
+.lobby-status {
+    -fx-text-fill: #dcc396;
+    -fx-font-size: 12px;
+}
+
+.lobby-status.error  { -fx-text-fill: #d76060; }
+.lobby-status.ok     { -fx-text-fill: #64c864; }
+
+/* TextField / Spinner */
+.lobby-root .text-field,
+.lobby-root .spinner .text-field {
+    -fx-background-color: #1a0f08;
+    -fx-text-fill: #dcc396;
+    -fx-prompt-text-fill: rgba(180, 140, 80, 0.6);
+    -fx-border-color: #b48c50;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 6 8 6 8;
+}
+
+.lobby-root .radio-button {
+    -fx-text-fill: #dcc396;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * GAME BOARD
+ * ────────────────────────────────────────────────────────────────────────── */
+
+.game-root {
+    -fx-background-color: #281910;
+}
+
+.game-header {
+    -fx-background-color: #1a0f08;
+    -fx-border-color: #b48c50;
+    -fx-border-width: 0 0 1 0;
+}
+
+.game-title {
+    -fx-text-fill: #dcb43c;
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+}
+
+.game-header-label {
+    -fx-text-fill: #dcc396;
+    -fx-font-size: 14px;
+    -fx-padding: 4 12 4 12;
+    -fx-background-color: rgba(58, 38, 22, 0.8);
+    -fx-background-radius: 4;
+}
+
+.game-banner {
+    -fx-text-fill: #dcb43c;
+    -fx-font-size: 14px;
+    -fx-font-style: italic;
+}
+
+/* Tabellone */
+.split-pane {
+    -fx-background-color: #281910;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.split-pane > .split-pane-divider {
+    -fx-background-color: #1a0f08;
+    -fx-padding: 0 1 0 1;
+}
+
+.board-pane {
+    -fx-background-color: #281910;
+}
+
+.row-title {
+    -fx-text-fill: #b48c50;
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+    -fx-text-transform: uppercase;
+}
+
+.row-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-padding: 0;
+}
+
+.row-scroll > .viewport { -fx-background-color: transparent; }
+
+.card-row, .tile-row {
+    -fx-background-color: #3a2616;
+    -fx-background-radius: 6;
+    -fx-padding: 10;
+    -fx-min-height: 130;
+}
+
+.tile-row { -fx-min-height: 90; }
+
+/* Carte */
+.card-cell {
+    -fx-background-color: #4b376b;
+    -fx-background-radius: 6;
+    -fx-border-color: #b48c50;
+    -fx-border-radius: 6;
+    -fx-min-width: 90;
+    -fx-min-height: 120;
+    -fx-pref-width: 90;
+    -fx-pref-height: 120;
+    -fx-padding: 4;
+    -fx-cursor: hand;
+}
+
+.card-cell.disabled    { -fx-opacity: 0.55; -fx-cursor: default; }
+.card-cell.selectable:hover  { -fx-effect: dropshadow(gaussian, #dcb43c, 12, 0, 0, 0); }
+.card-cell.event       { -fx-background-color: #6b362f; }
+
+/* Caratteri */
+.card-cell.character.HUNTER   { -fx-background-color: #822d2d; }
+.card-cell.character.GATHERER { -fx-background-color: #2d5f2d; }
+.card-cell.character.SHAMAN   { -fx-background-color: #4b2d73; }
+.card-cell.character.BUILDER  { -fx-background-color: #5f4b23; }
+.card-cell.character.INVENTOR { -fx-background-color: #234b73; }
+.card-cell.character.ARTIST   { -fx-background-color: #733755; }
+
+.card-label {
+    -fx-text-fill: white;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+}
+
+.card-cell-image {
+    -fx-background-radius: 4;
+}
+
+/* Tile (offer track) */
+.tile-cell {
+    -fx-background-color: #5a3c23;
+    -fx-background-radius: 6;
+    -fx-border-color: #b48c50;
+    -fx-border-radius: 6;
+    -fx-min-width: 80;
+    -fx-min-height: 70;
+    -fx-pref-width: 80;
+    -fx-pref-height: 70;
+    -fx-cursor: hand;
+}
+
+.tile-cell.selectable:hover { -fx-effect: dropshadow(gaussian, #dcb43c, 12, 0, 0, 0); }
+.tile-cell.disabled         { -fx-opacity: 0.55; -fx-cursor: default; }
+.tile-cell.food-only        { -fx-background-color: #2d5f2d; }
+.tile-cell.placed           { -fx-opacity: 0.7; -fx-border-color: #dcb43c; }
+
+.tile-letter {
+    -fx-text-fill: white;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+.tile-info {
+    -fx-text-fill: #dcc396;
+    -fx-font-size: 10px;
+}
+
+/* Pannello giocatori */
+.players-bar {
+    -fx-background-color: #1a0f08;
+    -fx-border-color: #b48c50;
+    -fx-border-width: 1 0 0 0;
+    -fx-min-height: 110;
+}
+
+.player-card {
+    -fx-background-color: #3a2616;
+    -fx-background-radius: 8;
+    -fx-border-color: #b48c50;
+    -fx-border-radius: 8;
+    -fx-padding: 8 14 8 14;
+    -fx-min-width: 160;
+}
+
+.player-card.active {
+    -fx-border-color: #dcb43c;
+    -fx-border-width: 2;
+    -fx-effect: dropshadow(gaussian, #dcb43c, 10, 0, 0, 0);
+}
+
+.player-name {
+    -fx-text-fill: #dcc396;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+
+.player-food { -fx-text-fill: #64c864; -fx-font-size: 12px; }
+.player-pp   { -fx-text-fill: #dcb43c; -fx-font-size: 12px; }
+
+/* Log */
+.log-pane {
+    -fx-background-color: #1a0f08;
+}
+
+.log-title {
+    -fx-text-fill: #b48c50;
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+    -fx-text-transform: uppercase;
+}
+
+.log-area {
+    -fx-control-inner-background: #110803;
+    -fx-text-fill: #dcc396;
+    -fx-font-family: "Menlo", "Consolas", monospace;
+    -fx-font-size: 11px;
+    -fx-border-color: #b48c50;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.log-area .content { -fx-background-color: #110803; }
+
+/* Action bar */
+.action-bar {
+    -fx-padding: 6 0 0 0;
+}
+
+.action-bar .button {
+    -fx-background-color: #c87850;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 8 18 8 18;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.action-bar .button:hover { -fx-background-color: #d88860; }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * GAME OVER
+ * ────────────────────────────────────────────────────────────────────────── */
+
+.gameover-root {
+    -fx-background-color: linear-gradient(to bottom, #281910, #1a0f08);
+}
+
+.gameover-trophy {
+    -fx-effect: dropshadow(gaussian, #dcb43c, 30, 0, 0, 0);
+}
+
+.gameover-title {
+    -fx-text-fill: #dcb43c;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.7), 6, 0, 0, 2);
+}
+
+.gameover-winners {
+    -fx-text-fill: #dcc396;
+    -fx-font-size: 18px;
+    -fx-text-alignment: center;
+}
+
+.gameover-section-title {
+    -fx-text-fill: #b48c50;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+    -fx-text-transform: uppercase;
+}
+
+.gameover-table {
+    -fx-background-color: transparent;
+    -fx-control-inner-background: #1a0f08;
+    -fx-control-inner-background-alt: #281910;
+    -fx-text-fill: #dcc396;
+    -fx-border-color: #b48c50;
+    -fx-border-radius: 6;
+}
+
+.gameover-table .column-header,
+.gameover-table .column-header-background {
+    -fx-background-color: #3a2616;
+    -fx-text-fill: #dcb43c;
+}
+
+.gameover-table .column-header .label {
+    -fx-text-fill: #dcb43c;
+    -fx-font-weight: bold;
+}
+
+.gameover-table .table-row-cell {
+    -fx-background-color: #1a0f08;
+    -fx-text-fill: #dcc396;
+}
+
+.gameover-table .table-row-cell:odd {
+    -fx-background-color: #281910;
+}
+
+.gameover-table .table-row-cell:selected {
+    -fx-background-color: #5a3c23;
+}
+
+.gameover-table .table-row-cell.winner-row {
+    -fx-background-color: rgba(220, 180, 60, 0.2);
+}
+
+.gameover-button {
+    -fx-background-color: #c87850;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.gameover-button:hover { -fx-background-color: #d88860; }
