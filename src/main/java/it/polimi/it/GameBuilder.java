@@ -75,7 +75,7 @@ public class GameBuilder {
         List<Player> players = buildPlayers(n);
 
         // 2. Build and shuffle the decks
-        List<Card>                tribeDeckList  = buildTribeDeck();
+        List<Card>                tribeDeckList  = buildTribeDeck(n);
         Map<Era, Deque<Building>> buildingDecks  = buildBuildingDecks(n);
 
         // 3. Build the Offer Track for this player count
@@ -136,7 +136,7 @@ public class GameBuilder {
      * - Groups are added in era order (Era I on top, Era III at the bottom)
      * - The 2 FinalEvent cards are placed at the very bottom
      */
-    private List<Card> buildTribeDeck() {
+    private List<Card> buildTribeDeck(int numPlayers) {  // ← aggiungi numPlayers
         List<Card>       eraI   = new ArrayList<>();
         List<Card>       eraII  = new ArrayList<>();
         List<Card>       eraIII = new ArrayList<>();
@@ -144,6 +144,7 @@ public class GameBuilder {
 
         for (Card card : allCards) {
             if (card instanceof Building) continue;
+            if (card.getMinPlayers() > numPlayers) continue; // ← FILTRO
             if (card instanceof FinalEvent fe) { finals.add(fe); continue; }
             switch (card.getEra()) {
                 case ERA_I   -> eraI.add(card);

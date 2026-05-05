@@ -15,7 +15,10 @@ import it.polimi.it.enums.Era;
  * - Buildings:  101–399    (era I: 101-106, II: 201-207, III: 301-308)
  */
 public abstract class Card {
+    private int minPlayers = 2; // default: tutte le configurazioni
 
+    public int getMinPlayers() { return minPlayers; }
+    public void setMinPlayers(int minPlayers) { this.minPlayers = minPlayers; }
     /** Unique integer identifier for this card. Used as the network key. */
     protected final int id;
 

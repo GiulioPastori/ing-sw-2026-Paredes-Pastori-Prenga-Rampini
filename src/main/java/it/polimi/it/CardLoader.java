@@ -96,8 +96,9 @@ public class CardLoader {
         int    id   = obj.getInt("id");
         Era    era  = Era.valueOf(obj.getString("era"));
         String type = obj.getString("type");
+        int minPlayers = obj.optInt("minPlayers", 2);
 
-        return switch (type) {
+        Character c = switch (type) {
             case "HUNTER"   -> new Hunter(id, era, obj.getBoolean("hasTriggerIcon"));
             case "GATHERER" -> new Gatherer(id, era);
             case "SHAMAN"   -> new Shaman(id, era, obj.getInt("starIcons"));
@@ -108,6 +109,8 @@ public class CardLoader {
             case "ARTIST"   -> new Artist(id, era);
             default -> throw new IllegalArgumentException("Unknown character type: " + type);
         };
+        c.setMinPlayers(minPlayers);
+        return c;
     }
 
     // ── Event parsing ─────────────────────────────────────────────────────────
@@ -138,16 +141,21 @@ public class CardLoader {
      * </pre>
      */
     private static Event parseEvent(JSONObject obj) {
-        int       id      = obj.getInt("id");
-        Era       era     = Era.valueOf(obj.optString("era", "ERA_I"));
-        EventType type    = EventType.valueOf(obj.getString("type"));
-        boolean   isFinal = obj.optBoolean("isFinal", false);
-        int       value   = obj.optInt("value", 0);
+        int       id         = obj.getInt("id");
+        Era       era        = Era.valueOf(obj.optString("era", "ERA_I"));
+        EventType type       = EventType.valueOf(obj.getString("type"));
+        boolean   isFinal    = obj.optBoolean("isFinal", false);
+        int       value      = obj.optInt("value", 0);
+        int       minPlayers = obj.optInt("minPlayers", 2); // ← aggiunto
 
         EventStrategy strategy = parseStrategy(type, obj);
 
-        if (isFinal) return new FinalEvent(id, type, value, strategy);
-        return new Event(id, era, type, value, strategy);
+        Event e;
+        if (isFinal) e = new FinalEvent(id, type, value, strategy);
+        else         e = new Event(id, era, type, value, strategy);
+
+        e.setMinPlayers(minPlayers); // ← aggiunto
+        return e;
     }
 
     private static EventStrategy parseStrategy(EventType type, JSONObject obj) {
@@ -192,13 +200,13 @@ public class CardLoader {
      * </pre>
      */
     private static Building parseBuilding(JSONObject obj) {
-        int    id  = obj.getInt("id");
-        Era    era = Era.valueOf(obj.getString("era"));
-        int    foodCost     = obj.getInt("foodCost");
-        int    finalPoints  = obj.getInt("finalPoints");
-        String effectDesc   = obj.optString("effectDescription", "");
+        int    id          = obj.getInt("id");
+        Era    era         = Era.valueOf(obj.getString("era"));
+        int    foodCost    = obj.getInt("foodCost");
+        int    finalPoints = obj.getInt("finalPoints");
+        String effectDesc  = obj.optString("effectDescription", "");
+        int    minPlayers  = obj.optInt("minPlayers", 2); // ← aggiunto
 
-        // Override the EndGameScorer for buildings with a per-character-type bonus
         if (obj.has("ppPerCharacter") && obj.has("targetCharacterType")) {
             int           ppPerCharacter = obj.getInt("ppPerCharacter");
             CharacterType targetType     = CharacterType.valueOf(
@@ -207,6 +215,8 @@ public class CardLoader {
                     player -> player.getTribe().countByType(targetType) * ppPerCharacter);
         }
 
-        return new Building(id, era, foodCost, finalPoints, effectDesc);
+        Building b = new Building(id, era, foodCost, finalPoints, effectDesc);
+        b.setMinPlayers(minPlayers); // ← aggiunto
+        return b;
     }
 }
