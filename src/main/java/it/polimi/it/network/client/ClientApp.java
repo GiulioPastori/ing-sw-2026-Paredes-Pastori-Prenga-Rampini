@@ -1,9 +1,10 @@
 package it.polimi.it.network.client;
 
 import it.polimi.it.view.GameView;
-import it.polimi.it.view.gui.GuiView;
+import it.polimi.it.view.gui.JavaFxApp;
 import it.polimi.it.view.tui.StdinReader;
 import it.polimi.it.view.tui.TuiView;
+import javafx.application.Application;
 
 import java.io.IOException;
 import java.rmi.RemoteException;
@@ -13,14 +14,44 @@ import java.util.logging.Logger;
 /**
  * Punto di ingresso del client.
  *
- * Uso: java -jar mesos-client.jar [host] [socketPort]
- * Default: host=localhost, socketPort=12345 (RMI usa socketPort+1=12346)
+ * <p>Uso: {@code java -jar mesos-client.jar [host] [socketPort]}
+ * (default: host=localhost, socketPort=12345; la porta RMI è socketPort+1).
+ *
+ * <p>L'app chiede da stdin se usare TUI o GUI:
+ * <ul>
+ *   <li>TUI → continua il flusso classico su console e crea una {@link TuiView};</li>
+ *   <li>GUI → cede il controllo a {@link JavaFxApp}, che si occupa di tutto
+ *       (lobby + connessione + board) sul JavaFX runtime. In questo ramo
+ *       gli altri input da stdin (host/porta/nickname) vengono saltati:
+ *       li raccoglie la lobby grafica.</li>
+ * </ul>
  */
 public class ClientApp {
 
     private static final Logger LOG = Logger.getLogger(ClientApp.class.getName());
 
     public static void main(String[] args) {
+        StdinReader stdin = StdinReader.getInstance();
+
+        System.out.println("=== MESOS ===");
+        System.out.println("Scegli interfaccia:  1) TUI   2) GUI");
+        System.out.print("> ");
+        boolean useGui = readLine(stdin).equals("2");
+
+        if (useGui) {
+            // Cediamo il controllo a JavaFX: la lobby raccoglie host/porta/
+            // protocollo/nickname/numero giocatori e gestisce la connessione.
+            // Application.launch è bloccante e termina solo quando la finestra
+            // viene chiusa (o Platform.exit() è invocato).
+            Application.launch(JavaFxApp.class, args);
+            return;
+        }
+
+        // ── Ramo TUI (flusso classico) ────────────────────────────────────────
+        runTui(stdin, args);
+    }
+
+    private static void runTui(StdinReader stdin, String[] args) {
         String host       = args.length >= 1 ? args[0] : "localhost";
         int    socketPort = 12345;
         if (args.length >= 2) {
@@ -29,24 +60,13 @@ public class ClientApp {
         }
         int rmiPort = socketPort + 1;
 
-        // StdinReader è un singleton: avvia il thread di lettura stdin una sola volta.
-        // Viene usato sia qui per il setup che dalla TuiView durante la partita.
-        StdinReader stdin = StdinReader.getInstance();
-
-        System.out.println("=== MESOS ===");
-
-        // ── 1. Interfaccia ────────────────────────────────────────────────────
-        System.out.println("Scegli interfaccia:  1) TUI   2) GUI");
-        System.out.print("> ");
-        boolean useGui = readLine(stdin).equals("2");
-
-        // ── 2. Trasporto ──────────────────────────────────────────────────────
+        // ── Trasporto ─────────────────────────────────────────────────────────
         System.out.println("Scegli connessione:  1) Socket (TCP)   2) RMI");
         System.out.print("> ");
         String netChoice = readLine(stdin).toLowerCase();
         boolean useRmi = netChoice.equals("2") || netChoice.equals("rmi");
 
-        // ── 3. Nickname ───────────────────────────────────────────────────────
+        // ── Nickname ──────────────────────────────────────────────────────────
         System.out.print("Il tuo nickname: ");
         String nickname = readLine(stdin).trim();
         while (nickname.isBlank()) {
@@ -54,17 +74,17 @@ public class ClientApp {
             nickname = readLine(stdin).trim();
         }
 
-        // ── 4. Numero giocatori ───────────────────────────────────────────────
+        // ── Numero giocatori ──────────────────────────────────────────────────
         System.out.print("Numero di giocatori (2-5): ");
         int numPlayers = 2;
         try { numPlayers = Integer.parseInt(readLine(stdin).trim()); }
         catch (NumberFormatException ignored) {}
         numPlayers = Math.max(2, Math.min(5, numPlayers));
 
-        // ── 5. View ───────────────────────────────────────────────────────────
-        GameView view = useGui ? new GuiView() : new TuiView();
+        // ── View ──────────────────────────────────────────────────────────────
+        GameView view = new TuiView();
 
-        // ── 6. Proxy ──────────────────────────────────────────────────────────
+        // ── Proxy ─────────────────────────────────────────────────────────────
         ServerProxy proxy;
         if (useRmi) {
             try {
@@ -80,12 +100,11 @@ public class ClientApp {
             System.out.println("Connessione Socket sulla porta " + socketPort);
         }
 
-        // ── 7. Controller ─────────────────────────────────────────────────────
+        // ── Controller + connessione ──────────────────────────────────────────
         ClientController controller = new ClientController(proxy, view, nickname);
         proxy.setOnMessage(controller::onMessage);
         proxy.setOnDisconnect(controller::onDisconnect);
 
-        // ── 8. Connetti ───────────────────────────────────────────────────────
         int connectPort = useRmi ? rmiPort : socketPort;
         try {
             proxy.connect(nickname, numPlayers);
@@ -97,7 +116,6 @@ public class ClientApp {
             System.exit(1);
         }
 
-        // ── 9. Avvia ──────────────────────────────────────────────────────────
         controller.run();
         proxy.disconnect();
         System.out.println("Arrivederci!");
