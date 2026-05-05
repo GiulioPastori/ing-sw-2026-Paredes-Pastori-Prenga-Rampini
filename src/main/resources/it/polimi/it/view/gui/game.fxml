@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane fx:id="root"
+            xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="it.polimi.it.view.gui.controllers.GameBoardController"
+            styleClass="game-root"
+            prefWidth="1280" prefHeight="800">
+
+    <!-- HEADER: round / era / banner di stato -->
+    <top>
+        <HBox spacing="20" alignment="CENTER_LEFT" styleClass="game-header">
+            <padding><Insets top="10" right="20" bottom="10" left="20"/></padding>
+
+            <Label text="MESOS" styleClass="game-title"/>
+
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <Label fx:id="roundLabel" text="Round —"     styleClass="game-header-label"/>
+            <Label fx:id="eraLabel"   text="Era I"        styleClass="game-header-label"/>
+
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <Label fx:id="bannerLabel" text="" styleClass="game-banner"/>
+        </HBox>
+    </top>
+
+    <!-- CENTER: tabellone e log affiancati -->
+    <center>
+        <SplitPane orientation="HORIZONTAL" dividerPositions="0.78">
+
+            <!-- Tabellone -->
+            <VBox spacing="14" styleClass="board-pane">
+                <padding><Insets top="14" right="14" bottom="14" left="14"/></padding>
+
+                <Label text="Riga superiore" styleClass="row-title"/>
+                <ScrollPane fitToHeight="true" hbarPolicy="AS_NEEDED" vbarPolicy="NEVER"
+                            styleClass="row-scroll">
+                    <HBox fx:id="topRowBox" spacing="10" alignment="CENTER_LEFT" styleClass="card-row"/>
+                </ScrollPane>
+
+                <Label text="Tessere offerta" styleClass="row-title"/>
+                <ScrollPane fitToHeight="true" hbarPolicy="AS_NEEDED" vbarPolicy="NEVER"
+                            styleClass="row-scroll">
+                    <HBox fx:id="offerTrackBox" spacing="10" alignment="CENTER_LEFT" styleClass="tile-row"/>
+                </ScrollPane>
+
+                <Label text="Riga inferiore" styleClass="row-title"/>
+                <ScrollPane fitToHeight="true" hbarPolicy="AS_NEEDED" vbarPolicy="NEVER"
+                            styleClass="row-scroll">
+                    <HBox fx:id="bottomRowBox" spacing="10" alignment="CENTER_LEFT" styleClass="card-row"/>
+                </ScrollPane>
+
+                <!-- Pannello azione contestuale (Pass / Decline) -->
+                <HBox fx:id="actionBar" spacing="10" alignment="CENTER_RIGHT" styleClass="action-bar">
+                    <Button fx:id="passButton"    text="Passa"    onAction="#onPass"    visible="false" managed="false"/>
+                    <Button fx:id="declineButton" text="Rifiuta"  onAction="#onDecline" visible="false" managed="false"/>
+                </HBox>
+            </VBox>
+
+            <!-- Log eventi -->
+            <VBox spacing="6" styleClass="log-pane">
+                <padding><Insets top="14" right="14" bottom="14" left="14"/></padding>
+                <Label text="Eventi della partita" styleClass="log-title"/>
+                <TextArea fx:id="logArea" editable="false" wrapText="true"
+                          VBox.vgrow="ALWAYS" styleClass="log-area"/>
+            </VBox>
+        </SplitPane>
+    </center>
+
+    <!-- BOTTOM: pannello giocatori -->
+    <bottom>
+        <StackPane styleClass="players-bar">
+            <padding><Insets top="10" right="14" bottom="10" left="14"/></padding>
+            <HBox fx:id="playersBox" spacing="14" alignment="CENTER"/>
+        </StackPane>
+    </bottom>
+
+</BorderPane>

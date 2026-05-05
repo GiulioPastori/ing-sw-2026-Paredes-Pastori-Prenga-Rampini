@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox fx:id="root"
+      xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="it.polimi.it.view.gui.controllers.LobbyController"
+      styleClass="lobby-root"
+      alignment="CENTER" spacing="14"
+      prefWidth="520" prefHeight="600">
+
+    <padding><Insets top="40" right="48" bottom="40" left="48"/></padding>
+
+    <Label text="MESOS" styleClass="lobby-title">
+        <font><Font name="System Bold" size="48"/></font>
+    </Label>
+
+    <Label text="Prova Finale - Ingegneria del Software" styleClass="lobby-subtitle"/>
+
+    <Region prefHeight="20"/>
+
+    <!-- Server -->
+    <VBox spacing="6" styleClass="lobby-block">
+        <Label text="Server" styleClass="lobby-block-title"/>
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <TextField fx:id="hostField"  promptText="host"        prefWidth="280" text="localhost"/>
+            <TextField fx:id="portField"  promptText="port"        prefWidth="100" text="12345"/>
+        </HBox>
+    </VBox>
+
+    <!-- Protocollo -->
+    <VBox spacing="6" styleClass="lobby-block">
+        <Label text="Protocollo di rete" styleClass="lobby-block-title"/>
+        <HBox spacing="20" alignment="CENTER_LEFT">
+            <fx:define>
+                <ToggleGroup fx:id="netGroup"/>
+            </fx:define>
+            <RadioButton fx:id="socketRadio" text="Socket (TCP)" toggleGroup="$netGroup" selected="true"/>
+            <RadioButton fx:id="rmiRadio"    text="RMI"          toggleGroup="$netGroup"/>
+        </HBox>
+    </VBox>
+
+    <!-- Nickname e numero giocatori -->
+    <VBox spacing="6" styleClass="lobby-block">
+        <Label text="Giocatore" styleClass="lobby-block-title"/>
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <TextField fx:id="nicknameField" promptText="nickname" prefWidth="280"/>
+            <Label text="Giocatori:"/>
+            <Spinner fx:id="playerCountSpinner" prefWidth="80"/>
+        </HBox>
+    </VBox>
+
+    <Region prefHeight="10"/>
+
+    <Button fx:id="connectButton" text="Connetti" onAction="#onConnect"
+            styleClass="lobby-primary" prefWidth="200" prefHeight="42"/>
+
+    <Label fx:id="statusLabel" text="" styleClass="lobby-status" wrapText="true"/>
+
+    <ProgressIndicator fx:id="spinner" visible="false" prefWidth="32" prefHeight="32"/>
+</VBox>
