@@ -52,9 +52,10 @@ public class GameBoardController {
     @FXML private Button     declineButton;
 
     /** Ultimo turn order ricevuto: usato per evidenziare il giocatore attivo. */
-    private List<PlayerSnapshot> lastPlayers  = new ArrayList<>();
-    private String               activePlayer;
-    private boolean              lastIsTopRow = true;
+    private List<PlayerSnapshot>    lastPlayers  = new ArrayList<>();
+    private List<OfferTileSnapshot> lastTiles    = new ArrayList<>();
+    private String                  activePlayer;
+    private boolean                 lastIsTopRow = true;
 
     /** Iniettati dalla JavaFxView per ricevere le scelte dell'utente. */
     private BlockingQueue<Integer>   cardChoiceQueue;
@@ -239,6 +240,8 @@ public class GameBoardController {
     private void pushTileChoice(char letter) {
         if (tileChoiceQueue != null) tileChoiceQueue.offer(letter);
         bannerLabel.setText("");
+        // Ri-renderizza le tessere come non-selezionabili (la scelta è fatta)
+        renderTiles(lastTiles, /*selectable*/ false);
     }
 
     // ── Render helpers ────────────────────────────────────────────────────────
@@ -282,6 +285,7 @@ public class GameBoardController {
     }
 
     private void renderTiles(List<OfferTileSnapshot> tiles, boolean selectable) {
+        this.lastTiles = new ArrayList<>(tiles);
         offerTrackBox.getChildren().clear();
         for (OfferTileSnapshot t : tiles) {
             Consumer<Character> onClick = selectable ? this::pushTileChoice : null;
