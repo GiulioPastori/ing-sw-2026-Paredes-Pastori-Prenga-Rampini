@@ -1,23 +1,34 @@
 package it.polimi.it.view.tui;
 
+import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.EventType;
+import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;
 import it.polimi.it.observer.OfferTileSnapshot;
 import it.polimi.it.observer.PlayerSnapshot;
+import it.polimi.it.observer.TurnOrderTileSnapshot;
+import it.polimi.it.view.CardLocalization;
 import it.polimi.it.view.GameView;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static it.polimi.it.view.tui.AnsiStyle.*;
+
 /**
  * Interfaccia utente testuale (TUI).
  *
- * <p>Output su stdout. Input tramite {@link StdinReader}: un singolo thread
- * daemon legge stdin con {@code BufferedReader.readLine()} bloccante e mette
- * le righe in una {@code BlockingQueue}. I metodi di input prelevano dalla coda
- * con un timeout di {@value #INPUT_TIMEOUT_S}s, così il thread di input
- * è sempre interrompibile e non tiene mai bloccato il sistema.
+ * <p>Output su stdout con codici ANSI per il colore, emoji per i ruoli dei
+ * personaggi e per i tipi di evento, e una formattazione a riquadri per
+ * separare visivamente i diversi contesti (round / fase azione / post-round
+ * / fine partita).
+ *
+ * <p>Input tramite {@link StdinReader}: un singolo thread daemon legge stdin
+ * con {@code BufferedReader.readLine()} bloccante e mette le righe in una
+ * {@code BlockingQueue}. I metodi di input prelevano dalla coda con un
+ * timeout di {@value #INPUT_TIMEOUT_S}s, così il thread di input è sempre
+ * interrompibile e non tiene mai bloccato il sistema.
  *
  * <p>Sostituibile con una GUI JavaFX implementando {@link GameView}.
  */
@@ -28,29 +39,41 @@ public class TuiView implements GameView {
      *  o il thread viene interrotto. */
     private static final long INPUT_TIMEOUT_S = 5;
 
+    /** Larghezza fissa dei riquadri principali (in caratteri). */
+    private static final int BOX_WIDTH = 64;
+
     private final StdinReader stdin = StdinReader.getInstance();
 
     // ── Display ───────────────────────────────────────────────────────────────
 
     @Override
     public void showRoundStarted(int round, List<PlayerSnapshot> turnOrder,
-                                 List<OfferTileSnapshot> availableTiles) {
-        println("\n╔══════════════════════════════╗");
-        println("║       ROUND " + pad2(round) + " INIZIATO        ║");
-        println("╚══════════════════════════════╝");
-        println("Ordine di turno:");
+                                 BoardSnapshot board) {
+        printBoxTop("ROUND " + round + " — INIZIO");
+        printBoxBody("Ordine di turno:");
         for (int i = 0; i < turnOrder.size(); i++) {
             PlayerSnapshot p = turnOrder.get(i);
-            println("  " + (i + 1) + ". " + p.name()
-                    + "  [Cibo: " + p.food() + " | PP: " + p.prestigePoints() + "]");
+            printBoxBody("  " + (i + 1) + ". " + formatPlayer(p));
         }
+        printBoxBody("");
+        printBoxBody("Mazzo Tribù: " + paint(FG_B_CYAN, true,
+                "🂠 " + board.tribeDeckSize()) + paint(DIM, " carte rimanenti"));
+        printBoxBottom();
+        renderBoard(board);
+        renderAllTribes(turnOrder);
         println("");
-        showBoardWithTiles(availableTiles);
     }
 
     @Override
-    public void showTotemPlaced(PlayerSnapshot player, char tileLetter) {
-        println(player.name() + " ha piazzato il totem sulla tessera " + tileLetter);
+    public void showTotemPlaced(PlayerSnapshot player, char tileLetter,
+                                BoardSnapshot board) {
+        println(paint(FG_CYAN, "▸ ") + formatPlayerName(player)
+                + " ha piazzato il totem "
+                + paint(totemColor(player.totemColour()), true, "●")
+                + " sulla tessera "
+                + paint(FG_B_YELLOW, true, String.valueOf(tileLetter)) + ".");
+        // Riassunto dello stato del tracciato dopo il piazzamento
+        printOfferTrackOneLiner(board.offerTiles());
     }
 
     @Override
@@ -58,115 +81,159 @@ public class TuiView implements GameView {
                                   List<CardSnapshot> availableCards,
                                   List<CardSnapshot> visibleEvents) {
         String row = isTopRow ? "RIGA SUPERIORE" : "RIGA INFERIORE";
-        println("\n[" + player.name() + "] " + row
-                + " — " + availableCards.size() + " carta/e disponibile/i:");
+        String arrow = isTopRow ? "↑" : "↓";
+        println("");
+        println(paint(FG_B_CYAN, true, "── " + arrow + " " + formatPlayerName(player)
+                + " — " + row + " ──"));
         if (!visibleEvents.isEmpty()) {
-            println("  ⚠ Carte evento presenti (non acquisibili):");
-            visibleEvents.forEach(e -> println("    • " + formatCard(e)));
+            println(paint(FG_B_RED, "  ⚠ Carte evento presenti (non acquisibili):"));
+            visibleEvents.forEach(e -> println("    " + formatCard(e)));
         }
-        printCards(availableCards);
+        if (availableCards.isEmpty()) {
+            println(paint(DIM, "  (nessuna carta disponibile)"));
+        } else {
+            println(paint(FG_GRAY, "  Carte disponibili (" + availableCards.size() + "):"));
+            printCards(availableCards);
+        }
     }
 
     @Override
     public void showCardAcquired(PlayerSnapshot player, CardSnapshot card) {
-        println(player.name() + " ha acquisito: " + formatCard(card));
+        println(paint(FG_B_GREEN, "✔ ") + formatPlayerName(player)
+                + " ha acquisito " + formatCard(card));
     }
 
     @Override
     public void showCardAcquisitionFailed(PlayerSnapshot player, CardSnapshot card,
                                           int missingFood) {
-        println("[!] " + player.name() + " non può permettersi " + formatCard(card)
-                + " (mancano " + missingFood + " cibo).");
+        println(paint(FG_B_RED, "✘ ") + formatPlayerName(player)
+                + " non può permettersi " + formatCard(card)
+                + paint(FG_RED, "  (mancano " + missingFood + " 🍖)"));
     }
 
     @Override
-    public void showTotemReturnedToTurnOrder(PlayerSnapshot player, int position) {
-        println(player.name() + " → Ordine di turno #" + position
-                + "  [Cibo: " + player.food() + " | PP: " + player.prestigePoints() + "]");
+    public void showTotemReturnedToTurnOrder(PlayerSnapshot player, int position,
+                                             BoardSnapshot board) {
+        println(paint(FG_CYAN, "▸ ") + formatPlayerName(player)
+                + " → Ordine di turno "
+                + paint(FG_B_YELLOW, true, "#" + position)
+                + paint(DIM, "  [🍖 " + player.food()
+                + " | ⭐ " + player.prestigePoints() + "]"));
+        // Stato aggiornato della Turn Order Tile
+        renderTurnOrderTile(board.turnOrderTile());
     }
 
     @Override
     public void showPostRoundStarted(List<PlayerSnapshot> watchtowerPlayers,
                                      List<CardSnapshot> availableCards) {
-        println("\n[TORRE DI GUARDIA] Azione post-round:");
-        watchtowerPlayers.forEach(p -> println("  • " + p.name()));
-        println("Carte disponibili:");
+        printBoxTop("TORRE DI GUARDIA — Post-round");
+        printBoxBody("Possessori della Torre di Guardia:");
+        watchtowerPlayers.forEach(p -> printBoxBody("  • " + formatPlayer(p)));
+        printBoxBody("Carte disponibili:");
+        printBoxBottom();
         printCards(availableCards);
     }
 
     @Override
     public void showEventResolved(int eventId, Era era, EventType type) {
         String desc = switch (type) {
-            case SUSTENANCE      -> "Ogni giocatore paga 1 cibo per personaggio";
-            case HUNT            -> "Ogni giocatore guadagna cibo in base ai Cacciatori";
-            case SHAMANIC_RITUAL -> "Gli Sciamani garantiscono Punti Prestigio";
-            case CAVE_PAINTINGS  -> "Artisti e Inventori segnano punti";
+            case SUSTENANCE      -> "Ogni giocatore paga 1 cibo per personaggio.";
+            case HUNT            -> "Ogni giocatore guadagna cibo in base ai Cacciatori.";
+            case SHAMANIC_RITUAL -> "Gli Sciamani garantiscono Punti Prestigio.";
+            case CAVE_PAINTINGS  -> "Artisti e Inventori segnano punti.";
         };
-        println("[EVENTO RISOLTO] " + formatEra(era) + " — "
-                + formatEventType(type.name()) + " (id:" + eventId + "): " + desc);
+        println("");
+        println(paint(FG_B_MAGENTA, true,
+                "✦ EVENTO RISOLTO ✦  " + eventEmoji(type) + " "
+                        + eventNameIt(type)) + "  " + eraBadge(era)
+                + paint(DIM, "  (id:" + eventId + ")"));
+        println(paint(FG_GRAY, "  " + desc));
     }
 
     @Override
     public void showEraChanged(Era era) {
-        println("\n★★★  INIZIA L'ERA " + formatEra(era) + "  ★★★\n");
+        String banner = "★ ★ ★   INIZIA " + (switch (era) {
+            case ERA_I   -> "L'ERA I";
+            case ERA_II  -> "L'ERA II";
+            case ERA_III -> "L'ERA III";
+        }) + "   ★ ★ ★";
+        println("");
+        println(paint(switch (era) {
+            case ERA_I   -> FG_B_GREEN;
+            case ERA_II  -> FG_B_YELLOW;
+            case ERA_III -> FG_B_RED;
+        }, true, banner));
+        println("");
     }
 
     @Override
     public void showRoundEnded(int round) {
-        println("── Round " + round + " terminato ──");
+        println(paint(DIM, "── Round " + round + " terminato ──"));
     }
 
     @Override
     public void showGameEnded(List<PlayerSnapshot> winners, List<PlayerSnapshot> finalScores) {
-        println("\n╔══════════════════════════════╗");
-        println("║         PARTITA FINITA       ║");
-        println("╚══════════════════════════════╝");
+        println("");
+        printBoxTop("PARTITA FINITA");
         String winnerNames = winners.stream()
                 .map(PlayerSnapshot::name)
                 .reduce((a, b) -> a + ", " + b).orElse("nessuno");
-        println("VINCITORE/I: " + winnerNames);
-        println("\nPunteggi finali:");
+        printBoxBody(paint(FG_B_YELLOW, true, "🏆 VINCITORE/I: " + winnerNames));
+        printBoxBody("");
+        printBoxBody("Punteggi finali:");
         finalScores.stream()
                 .sorted((a, b) -> b.prestigePoints() - a.prestigePoints())
-                .forEach(p -> println("  " + p.name()
-                        + ": " + p.prestigePoints() + " PP"
-                        + " | Cibo: " + p.food()));
+                .forEach(p -> printBoxBody("  " + formatPlayer(p)));
+        printBoxBottom();
     }
 
     @Override
     public void showInvalidAction(String playerName, String reason) {
-        println("[!] " + playerName + ": " + reason);
+        println(paint(FG_B_RED, true, "[!] ") + paint(FG_B_RED, playerName) + ": " + reason);
     }
 
     // ── Input ─────────────────────────────────────────────────────────────────
 
     @Override
     public char requestOfferTileChoice(PlayerSnapshot player,
-                                       List<OfferTileSnapshot> freeTiles) {
-        println("\n[" + player.name() + "] Scegli una tessera:");
-        showBoardWithTiles(freeTiles);
-        print("Lettera tessera: ");
+                                       BoardSnapshot board) {
+        println("");
+        println(paint(FG_B_CYAN, true, "→ " + formatPlayerName(player)
+                + ", scegli una tessera:"));
+        renderBoard(board);
+        // L'utente vede tutto il tracciato (libere + occupate) ma può scegliere
+        // solo le libere; la validazione è nel loop sotto.
+        List<Character> freeLetters = board.offerTiles().stream()
+                .filter(OfferTileSnapshot::isFree)
+                .map(OfferTileSnapshot::letter)
+                .toList();
+        print(paint(FG_B_YELLOW, "Lettera tessera (libere: "
+                + freeLetters.stream().map(String::valueOf)
+                .reduce((a, b) -> a + ", " + b).orElse("nessuna")
+                + "): "));
         while (true) {
             String raw = nextLine();
             if (raw == null) continue;
             String upper = raw.trim().toUpperCase();
             if (upper.length() == 1) {
                 char letter = upper.charAt(0);
-                if (freeTiles.stream().anyMatch(t -> t.letter() == letter)) return letter;
+                if (freeLetters.contains(letter)) return letter;
             }
-            print("Scelta non valida. Riprova: ");
+            print(paint(FG_RED, "Scelta non valida. Riprova: "));
         }
     }
 
     @Override
     public int requestCardChoice(PlayerSnapshot player, List<CardSnapshot> available) {
         if (available.isEmpty()) {
-            println("[" + player.name() + "] Nessuna carta disponibile — passo.");
+            println(paint(DIM, "[" + player.name() + "] Nessuna carta disponibile — passo."));
             return -1;
         }
-        println("\n[" + player.name() + "] Scegli una carta (0 per passare):");
+        println("");
+        println(paint(FG_B_CYAN, true, "→ " + formatPlayerName(player)
+                + ", scegli una carta (0 per passare):"));
         printCards(available);
-        print("Numero: ");
+        print(paint(FG_B_YELLOW, "Numero: "));
         while (true) {
             String line = nextLine();
             if (line == null) continue; // timeout, riprova
@@ -175,9 +242,9 @@ public class TuiView implements GameView {
                 if (choice == 0) return -1;
                 if (choice >= 1 && choice <= available.size())
                     return available.get(choice - 1).id();
-                print("Scelta non valida (1-" + available.size() + " o 0). Riprova: ");
+                print(paint(FG_RED, "Scelta non valida (1-" + available.size() + " o 0). Riprova: "));
             } catch (NumberFormatException ignored) {
-                print("Inserisci un numero. Riprova: ");
+                print(paint(FG_RED, "Inserisci un numero. Riprova: "));
             }
         }
     }
@@ -186,9 +253,11 @@ public class TuiView implements GameView {
     public int requestPostRoundCardChoice(PlayerSnapshot player,
                                           List<CardSnapshot> available) {
         if (available.isEmpty()) return -1;
-        println("\n[TORRE DI GUARDIA " + player.name() + "] Prendi una carta (0 per rifiutare):");
+        println("");
+        println(paint(FG_B_CYAN, true, "→ TORRE DI GUARDIA: " + formatPlayerName(player)
+                + ", prendi una carta (0 per rifiutare):"));
         printCards(available);
-        print("Numero: ");
+        print(paint(FG_B_YELLOW, "Numero: "));
         while (true) {
             String line = nextLine();
             if (line == null) continue;
@@ -197,9 +266,9 @@ public class TuiView implements GameView {
                 if (choice == 0) return -1;
                 if (choice >= 1 && choice <= available.size())
                     return available.get(choice - 1).id();
-                print("Scelta non valida. Riprova: ");
+                print(paint(FG_RED, "Scelta non valida. Riprova: "));
             } catch (NumberFormatException ignored) {
-                print("Inserisci un numero. Riprova: ");
+                print(paint(FG_RED, "Inserisci un numero. Riprova: "));
             }
         }
     }
@@ -221,104 +290,244 @@ public class TuiView implements GameView {
         }
     }
 
-    /** Mostra tessere con le carte di entrambe le righe. */
     /**
-     * Mostra le tessere disponibili nel formato richiesto:
-     * - Prima riga: elenco delle tessere con le loro lettere e quante carte si possono prendere
-     * - Poi una volta sola la riga superiore con tutte le carte
-     * - Poi una volta sola la riga inferiore con tutte le carte
-     *
-     * Le carte sono condivise tra tutte le tessere, quindi non ha senso
-     * ripeterle per ogni tessera.
+     * Renders the full board state: Turn Order Tile on the left, Offer Track
+     * (with totems on occupied tiles), and the two card rows.
      */
-    private void showBoardWithTiles(List<OfferTileSnapshot> tiles) {
-        // Riga 1: elenco tessere con i loro slot
-        StringBuilder tileHeader = new StringBuilder("Tessere: ");
-        List<OfferTileSnapshot> nonFood = tiles.stream()
-                .filter(t -> !t.isFoodOnly()).toList();
-        List<OfferTileSnapshot> food = tiles.stream()
-                .filter(OfferTileSnapshot::isFoodOnly).toList();
+    private void renderBoard(BoardSnapshot board) {
+        renderTurnOrderTile(board.turnOrderTile());
+        renderOfferTrack(board.offerTiles());
+    }
 
-        food.forEach(t -> tileHeader.append(t.letter()).append(" [+3 CIBO]  "));
-        nonFood.forEach(t -> tileHeader
-                .append(t.letter())
-                .append(" [sup:").append(t.topRowCards())
-                .append(" inf:").append(t.bottomRowCards()).append("]  "));
-        println(tileHeader.toString().stripTrailing());
+    /**
+     * Single-line summary of the offer track. Each tile shows its letter and,
+     * if occupied, the coloured ● glyph for the placed totem. Used after
+     * {@code showTotemPlaced} so the player sees the new state at a glance.
+     */
+    private void printOfferTrackOneLiner(List<OfferTileSnapshot> tiles) {
+        StringBuilder sb = new StringBuilder(paint(FG_GRAY, "  Tracciato: "));
+        for (OfferTileSnapshot t : tiles) {
+            String letter = paint(t.isFoodOnly() ? FG_B_GREEN : FG_B_YELLOW,
+                    true, String.valueOf(t.letter()));
+            String totem = t.isFree()
+                    ? paint(DIM, "○")
+                    : paint(totemColor(t.placedTotem()), true, "●");
+            sb.append(letter).append(totem).append(" ");
+        }
+        println(sb.toString().stripTrailing());
+    }
 
-        // Le carte sono le stesse per tutte le tessere non-food: prendi la prima
-        if (!nonFood.isEmpty()) {
-            OfferTileSnapshot ref = nonFood.get(0);
-            if (!ref.topCards().isEmpty()) {
-                println("  ↑ Riga superiore (" + ref.topCards().size() + " carte):");
-                ref.topCards().forEach(c -> println("      • " + formatCard(c)));
-            }
-            if (!ref.bottomCards().isEmpty()) {
-                println("  ↓ Riga inferiore (" + ref.bottomCards().size() + " carte):");
-                ref.bottomCards().forEach(c -> println("      • " + formatCard(c)));
-            }
+    /**
+     * Renders the offer track with header + card rows.
+     * Includes occupied tiles (showing the totem glyph) so the player can see
+     * the entire board, not just the tiles still selectable.
+     */
+    private void renderOfferTrack(List<OfferTileSnapshot> tiles) {
+        StringBuilder header = new StringBuilder(paint(FG_GRAY, "Tessere: "));
+        for (OfferTileSnapshot t : tiles) {
+            String letter = paint(
+                    t.isFoodOnly() ? FG_B_GREEN : FG_B_YELLOW,
+                    true,
+                    String.valueOf(t.letter()));
+            String totem = t.isFree()
+                    ? ""
+                    : paint(totemColor(t.placedTotem()), true, "●");
+            String tag;
+            if (t.isFoodOnly())  tag = paint(FG_GREEN, " [+3 🍖]  ");
+            else                  tag = paint(FG_GRAY,
+                    " [↑" + t.topRowCards() + "  ↓" + t.bottomRowCards() + "]  ");
+            header.append(letter).append(totem).append(tag);
+        }
+        println(header.toString().stripTrailing());
+
+        // Card rows are shared across non-food tiles: print them once.
+        OfferTileSnapshot ref = tiles.stream()
+                .filter(t -> !t.isFoodOnly())
+                .filter(t -> !t.topCards().isEmpty() || !t.bottomCards().isEmpty())
+                .findFirst().orElse(null);
+        if (ref == null) return;
+
+        if (!ref.topCards().isEmpty()) {
+            println(paint(FG_GRAY, "  ↑ Riga superiore (" + ref.topCards().size() + " carte):"));
+            ref.topCards().forEach(c -> println("      " + formatCard(c)));
+        }
+        if (!ref.bottomCards().isEmpty()) {
+            println(paint(FG_GRAY, "  ↓ Riga inferiore (" + ref.bottomCards().size() + " carte):"));
+            ref.bottomCards().forEach(c -> println("      " + formatCard(c)));
         }
     }
 
-    /** @deprecated Usa showBoardWithTiles */
-    private void showTiles(List<OfferTileSnapshot> tiles) {
-        showBoardWithTiles(tiles);
+    /**
+     * Renders the Turn Order Tile horizontally, e.g.:
+     *   Ord. Turno [4P]: 1●R 2 3 4●B (last)
+     * Each occupied space shows the coloured ● glyph; food bonuses appear as
+     * "+N🍖" above the position number.
+     */
+    private void renderTurnOrderTile(TurnOrderTileSnapshot tot) {
+        if (tot == null) return;
+        StringBuilder sb = new StringBuilder(paint(FG_GRAY,
+                "Ord. Turno [" + tot.numPlayers() + "P]: "));
+        for (TurnOrderTileSnapshot.PositionSnap p : tot.positions()) {
+            sb.append(paint(FG_B_WHITE, true, String.valueOf(p.position())));
+            if (p.placedTotem() != null) {
+                sb.append(paint(totemColor(p.placedTotem()), true, "●"));
+            } else {
+                sb.append(paint(DIM, "○"));
+            }
+            if (p.foodBonus() > 0) sb.append(paint(FG_GREEN, "+" + p.foodBonus() + "🍖"));
+            if (p.isLast())        sb.append(paint(FG_RED, "(last)"));
+            sb.append("  ");
+        }
+        println(sb.toString().stripTrailing());
+    }
+
+    /**
+     * Compact tribe view shown after the round header. For each player:
+     *   ● Alice — 🏹×2 🌾×1 🌀×1  |  🏛 102, 205
+     * Buildings appear by ID (with a tooltip on the long form when the player
+     * actually picks a card).
+     */
+    private void renderAllTribes(List<PlayerSnapshot> players) {
+        boolean any = players.stream()
+                .anyMatch(p -> !p.tribeCharacters().isEmpty()
+                        || !p.tribeBuildings().isEmpty());
+        if (!any) return;
+        println(paint(FG_GRAY, "Tribù:"));
+        players.forEach(this::renderTribeLine);
+    }
+
+    private void renderTribeLine(PlayerSnapshot p) {
+        StringBuilder sb = new StringBuilder("  ");
+        sb.append(paint(totemColor(p.totemColour()), true, "●"));
+        sb.append(' ').append(formatPlayerName(p)).append(" — ");
+
+        // Characters grouped by type with count
+        for (CharacterType ct : CharacterType.values()) {
+            long n = p.tribeCharacters().stream()
+                    .filter(c -> c.characterType() == ct).count();
+            if (n == 0) continue;
+            sb.append(paint(roleColor(ct), true, emoji(ct)))
+                    .append(paint(FG_GRAY, "×" + n)).append(' ');
+        }
+        if (p.tribeCharacters().isEmpty()) sb.append(paint(DIM, "(nessun personaggio) "));
+
+        // Buildings as id list
+        if (!p.tribeBuildings().isEmpty()) {
+            sb.append(paint(DIM, "| ")).append(paint(FG_B_YELLOW, true, "🏛 "));
+            String ids = p.tribeBuildings().stream()
+                    .map(c -> String.valueOf(c.id()))
+                    .reduce((a, b) -> a + ", " + b).orElse("");
+            sb.append(paint(FG_YELLOW, ids));
+        }
+        println(sb.toString());
     }
 
     private void printCards(List<CardSnapshot> cards) {
         for (int i = 0; i < cards.size(); i++) {
-            println("  " + (i + 1) + ". " + formatCard(cards.get(i)));
+            String idx = paint(FG_B_WHITE, true, String.format("%2d.", i + 1));
+            println("  " + idx + " " + formatCard(cards.get(i)));
         }
     }
 
+    /**
+     * Formato carta dettagliato:
+     *   PERSONAGGIO  → emoji + ruolo colorato + era
+     *   EDIFICIO     → costo, PP finali, descrizione effetto in italiano
+     *   EVENTO       → tipo + emoji + nota "non acquisibile"
+     */
     private String formatCard(CardSnapshot c) {
         return switch (c.type()) {
-            case CHARACTER -> "[" + formatEra(c.era()) + "] PERSONAGGIO "
-                    + (c.characterType() != null ? formatCharType(c.characterType().name()) : "")
-                    + " (id:" + c.id() + ")";
-            case BUILDING  -> "[" + formatEra(c.era()) + "] EDIFICIO"
-                    + "  costo:" + c.foodCost()
-                    + "  PP:"    + c.finalPoints()
-                    + "  "       + c.effectDescription()
-                    + " (id:"    + c.id() + ")";
-            case EVENT     -> "[" + formatEra(c.era()) + "] EVENTO "
-                    + formatEventType(c.effectDescription())
-                    + " (id:" + c.id() + ")  ⚠ non acquisibile";
+            case CHARACTER -> formatCharacterCard(c);
+            case BUILDING  -> formatBuildingCard(c);
+            case EVENT     -> formatEventCard(c);
         };
     }
 
-    private String formatEra(Era era) {
-        return switch (era) {
-            case ERA_I   -> "Era I";
-            case ERA_II  -> "Era II";
-            case ERA_III -> "Era III";
-        };
+    private String formatCharacterCard(CardSnapshot c) {
+        CharacterType ct = c.characterType();
+        String label = paint(roleColor(ct), true,
+                emoji(ct) + " " + roleNameIt(ct).toUpperCase());
+        return label
+                + "  " + eraBadge(c.era())
+                + paint(DIM, "  (id:" + c.id() + ")");
     }
 
-    private String formatEventType(String typeName) {
-        return switch (typeName) {
-            case "SUSTENANCE"      -> "Sostentamento";
-            case "HUNT"            -> "Caccia";
-            case "SHAMANIC_RITUAL" -> "Rituale Sciamanico";
-            case "CAVE_PAINTINGS"  -> "Pitture Rupestri";
-            default                -> typeName;
-        };
+    private String formatBuildingCard(CardSnapshot c) {
+        String head = paint(FG_B_YELLOW, true, "🏛 EDIFICIO");
+        String stats = paint(FG_B_GREEN, "🍖 " + c.foodCost())
+                + paint(DIM, "  •  ")
+                + paint(FG_B_YELLOW, true, "⭐ " + c.finalPoints());
+        String desc = CardLocalization.buildingDescription(c.id(), c.effectDescription());
+        return head + "  " + eraBadge(c.era()) + "  " + stats
+                + "\n        " + paint(ITALIC, FG_GRAY) + desc + RESET
+                + paint(DIM, "  (id:" + c.id() + ")");
     }
 
-    private String formatCharType(String typeName) {
-        return switch (typeName) {
-            case "HUNTER"   -> "Cacciatore";
-            case "GATHERER" -> "Raccoglitore";
-            case "BUILDER"  -> "Costruttore";
-            case "SHAMAN"   -> "Sciamano";
-            case "INVENTOR" -> "Inventore";
-            case "ARTIST"   -> "Artista";
-            default         -> typeName;
-        };
+    private String formatEventCard(CardSnapshot c) {
+        EventType et = parseEventType(c.effectDescription());
+        String head = paint(FG_B_RED, true, "⚡ EVENTO " + eventEmoji(et)
+                + " " + eventNameIt(et));
+        return head + "  " + eraBadge(c.era())
+                + paint(FG_RED, "  ✗ non acquisibile")
+                + paint(DIM, "  (id:" + c.id() + ")");
     }
 
-    private String pad2(int n) { return n < 10 ? " " + n : String.valueOf(n); }
+    /** Player riepilogo lungo (ordine di turno + risorse). */
+    private String formatPlayer(PlayerSnapshot p) {
+        return formatPlayerName(p)
+                + paint(DIM, "  [")
+                + paint(FG_B_GREEN, "🍖 " + p.food())
+                + paint(DIM, " | ")
+                + paint(FG_B_YELLOW, "⭐ " + p.prestigePoints())
+                + paint(DIM, "]");
+    }
+
+    /** Just the player's name, colored by their totem. */
+    private String formatPlayerName(PlayerSnapshot p) {
+        return paint(totemColor(p.totemColour()), true, p.name());
+    }
+
+    /**
+     * Recupera l'EventType dall'effectDescription dello snapshot.
+     * Lo snapshot di un evento mette il nome dell'enum dentro effectDescription
+     * (vedi {@link CardSnapshot#of}).
+     */
+    private static EventType parseEventType(String name) {
+        try { return EventType.valueOf(name); }
+        catch (IllegalArgumentException | NullPointerException e) { return null; }
+    }
+
+    // ── Box drawing ───────────────────────────────────────────────────────────
+
+    /** Stampa un riquadro con titolo. La larghezza è fissa per allinearsi tra messaggi. */
+    private void printBoxTop(String title) {
+        String inner = " " + title + " ";
+        // padding centered
+        int pad = Math.max(0, BOX_WIDTH - 2 - inner.length());
+        int left = pad / 2;
+        int right = pad - left;
+        println(paint(FG_B_YELLOW, true,
+                "╔" + "═".repeat(left) + inner + "═".repeat(right) + "╗"));
+    }
+
+    private void printBoxBody(String body) {
+        // Visible-length padding: ANSI codes don't take screen columns, so we
+        // strip them when computing the pad to keep the right border aligned.
+        int visibleLen = stripAnsi(body).length();
+        int pad = Math.max(0, BOX_WIDTH - 4 - visibleLen);
+        println(paint(FG_B_YELLOW, "║ ") + body + " ".repeat(pad)
+                + paint(FG_B_YELLOW, " ║"));
+    }
+
+    private void printBoxBottom() {
+        println(paint(FG_B_YELLOW, true, "╚" + "═".repeat(BOX_WIDTH - 2) + "╝"));
+    }
+
+    /** Removes ANSI escape sequences for length calculations. */
+    private static String stripAnsi(String s) {
+        return s.replaceAll("\u001B\\[[;\\d]*m", "");
+    }
+
     private void println(String s) { System.out.println(s); }
     private void print(String s)   { System.out.print(s); System.out.flush(); }
 }
-

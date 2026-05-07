@@ -296,6 +296,140 @@
 
 .action-bar .button:hover { -fx-background-color: #d88860; }
 
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Totem badges
+ * ──────────────────────────────────────────────────────────────────────── */
+.totem-badge {
+    -fx-stroke: #1a0f08;
+    -fx-stroke-width: 1.2;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 4, 0, 1, 1);
+}
+.totem-red    { -fx-fill: #d6443a; }
+.totem-blue   { -fx-fill: #3a78d6; }
+.totem-yellow { -fx-fill: #e8c43a; }
+.totem-white  { -fx-fill: #f0e8d6; }
+.totem-black  { -fx-fill: #2a2018; -fx-stroke: #b48c50; }
+.totem-none   { -fx-fill: rgba(0,0,0,0.15); }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Offer track container (turn-order | offer-tiles | deck)
+ * ──────────────────────────────────────────────────────────────────────── */
+.offer-track-container {
+    -fx-padding: 4 0 4 0;
+}
+.turn-order-box, .deck-box {
+    -fx-padding: 0 4 0 4;
+}
+
+/* Letter badge over the tile image */
+.tile-letter-badge {
+    -fx-background-color: rgba(40, 25, 16, 0.78);
+    -fx-text-fill: #dcc396;
+    -fx-font-weight: bold;
+    -fx-padding: 1 6 1 6;
+    -fx-background-radius: 4;
+    -fx-font-size: 11px;
+}
+.tile-cell.placed { -fx-opacity: 0.92; }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Turn Order Tile
+ * ──────────────────────────────────────────────────────────────────────── */
+.turn-order-tile {
+    -fx-background-color: #4a2e18;
+    -fx-background-radius: 8;
+    -fx-border-color: #b48c50;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 2;
+}
+.turn-order-image {
+    -fx-opacity: 0.9;
+}
+.turn-position {
+    -fx-padding: 4 2 4 2;
+    -fx-background-radius: 4;
+}
+.turn-position.last {
+    -fx-background-color: rgba(214, 68, 58, 0.18);
+}
+.turn-position.occupied {
+    -fx-background-color: rgba(180, 140, 80, 0.18);
+}
+.turn-position-number {
+    -fx-text-fill: #dcc396;
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+}
+.turn-position-bonus {
+    -fx-text-fill: #64c864;
+    -fx-font-size: 9px;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Tribe deck
+ * ──────────────────────────────────────────────────────────────────────── */
+.deck {
+    -fx-padding: 4;
+}
+.deck-label {
+    -fx-text-fill: #dcc396;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+.deck-badge {
+    -fx-background-color: #dcb43c;
+    -fx-text-fill: #281910;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+    -fx-padding: 2 7 2 7;
+    -fx-background-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 4, 0, 1, 1);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Player + tribe panel
+ * ──────────────────────────────────────────────────────────────────────── */
+.player-panel {
+    -fx-background-color: #3a2616;
+    -fx-background-radius: 8;
+    -fx-border-color: #b48c50;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-min-width: 200;
+}
+.player-panel.active {
+    -fx-border-color: #dcb43c;
+    -fx-border-width: 2;
+    -fx-effect: dropshadow(gaussian, rgba(220,180,60,0.45), 8, 0, 0, 0);
+}
+.player-name { -fx-text-fill: #dcc396; -fx-font-weight: bold; -fx-font-size: 13px; }
+.player-food { -fx-text-fill: #64c864; -fx-font-size: 12px; }
+.player-pp   { -fx-text-fill: #dcb43c; -fx-font-size: 12px; }
+
+.char-count {
+    -fx-text-fill: #dcc396;
+    -fx-font-size: 12px;
+    -fx-padding: 2 6 2 6;
+    -fx-background-color: rgba(180, 140, 80, 0.18);
+    -fx-background-radius: 4;
+}
+.char-count.role-hunter   { -fx-text-fill: #ff7b6a; }
+.char-count.role-gatherer { -fx-text-fill: #7bd980; }
+.char-count.role-builder  { -fx-text-fill: #e8c43a; }
+.char-count.role-shaman   { -fx-text-fill: #c97bda; }
+.char-count.role-inventor { -fx-text-fill: #6ad8e0; }
+.char-count.role-artist   { -fx-text-fill: #d6669c; }
+
+/* Players bar can scroll horizontally if many players are present */
+.players-scroll {
+    -fx-background-color: transparent;
+}
+.players-scroll > .viewport { -fx-background-color: transparent; }
+
+
+
 /* ──────────────────────────────────────────────────────────────────────────
  * GAME OVER
  * ────────────────────────────────────────────────────────────────────────── */

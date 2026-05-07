@@ -3,8 +3,8 @@ package it.polimi.it.network.client;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.EventType;
 import it.polimi.it.network.message.Message;
+import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;
-import it.polimi.it.observer.OfferTileSnapshot;
 import it.polimi.it.observer.PlayerSnapshot;
 import it.polimi.it.view.GameView;
 
@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.logging.Logger;
 import java.util.logging.Logger;
 
 /**
@@ -94,7 +93,10 @@ public class ClientController {
                     view.showCardAcquired(msg.playerObj("player"), msg.cardObj("card"));
             case Message.CARD_ACQUISITION_FAILED -> handleCardAcquisitionFailed(msg);
             case Message.TOTEM_RETURNED ->
-                    view.showTotemReturnedToTurnOrder(msg.playerObj("player"), msg.num("position"));
+                    view.showTotemReturnedToTurnOrder(
+                            msg.playerObj("player"),
+                            msg.num("position"),
+                            msg.boardObj("board"));
             case Message.POST_ROUND_STARTED -> handlePostRoundStarted(msg);
             case Message.EVENT_RESOLVED ->
                     view.showEventResolved(
@@ -124,31 +126,29 @@ public class ClientController {
     private void handleRoundStarted(Message msg) {
         totemPlacedCount = 0;
         currentTurnOrder = msg.playerList("turnOrder");
-        List<OfferTileSnapshot> tiles = msg.tileList("availableTiles");
-        view.showRoundStarted(msg.num("round"), currentTurnOrder, tiles);
+        BoardSnapshot board = msg.boardObj("board");
+        view.showRoundStarted(msg.num("round"), currentTurnOrder, board);
 
-        // Chiede l'input solo al primo giocatore di turno
         if (!currentTurnOrder.isEmpty()
                 && currentTurnOrder.get(0).name().equals(myNickname)) {
             final PlayerSnapshot me = currentTurnOrder.get(0);
             inputExecutor.submit(() -> {
-                char chosen = view.requestOfferTileChoice(me, tiles);
+                char chosen = view.requestOfferTileChoice(me, board);
                 proxy.send(Message.placeTotem(myNickname, chosen));
             });
         }
     }
 
     private void handleTotemPlaced(Message msg) {
-        view.showTotemPlaced(msg.playerObj("player"), msg.ch("tileLetter"));
-        List<OfferTileSnapshot> remaining = msg.tileList("remainingTiles");
+        BoardSnapshot board = msg.boardObj("board");
+        view.showTotemPlaced(msg.playerObj("player"), msg.ch("tileLetter"), board);
         totemPlacedCount++;
 
-        // Dopo N totem piazzati, il prossimo è turnOrder[N]
         if (totemPlacedCount < currentTurnOrder.size()) {
             PlayerSnapshot next = currentTurnOrder.get(totemPlacedCount);
             if (next.name().equals(myNickname)) {
                 inputExecutor.submit(() -> {
-                    char chosen = view.requestOfferTileChoice(next, remaining);
+                    char chosen = view.requestOfferTileChoice(next, board);
                     proxy.send(Message.placeTotem(myNickname, chosen));
                 });
             }

@@ -90,9 +90,9 @@ public class GameController implements GameEventListener {
     public void onEvent(GameEvent event) {
         switch (event) {
             case GameEvent.RoundStarted             e ->
-                    view.showRoundStarted(e.round(), e.turnOrder(), e.availableTiles());
+                    view.showRoundStarted(e.round(), e.turnOrder(), e.board());
             case GameEvent.TotemPlaced              e ->
-                    view.showTotemPlaced(e.player(), e.tileLetter());
+                    view.showTotemPlaced(e.player(), e.tileLetter(), e.board());
             case GameEvent.CardSlotReady            e ->
                     view.showCardSlotReady(e.player(), e.isTopRow(), e.availableCards(), e.visibleEvents());
             case GameEvent.CardAcquired             e ->
@@ -100,7 +100,7 @@ public class GameController implements GameEventListener {
             case GameEvent.CardAcquisitionFailed    e ->
                     view.showCardAcquisitionFailed(e.player(), e.card(), e.missingFood());
             case GameEvent.TotemReturnedToTurnOrder e ->
-                    view.showTotemReturnedToTurnOrder(e.player(), e.position());
+                    view.showTotemReturnedToTurnOrder(e.player(), e.position(), e.board());
             case GameEvent.PostRoundStarted         e ->
                     view.showPostRoundStarted(e.watchtowerPlayers(), e.availableCards());
             case GameEvent.EventResolved            e ->

@@ -3,10 +3,12 @@ package it.polimi.it.view.gui;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.EventType;
 import it.polimi.it.observer.CardSnapshot;
+import it.polimi.it.observer.BoardSnapshot;
+import it.polimi.it.observer.CardSnapshot;
 import it.polimi.it.observer.OfferTileSnapshot;
 import it.polimi.it.observer.PlayerSnapshot;
 import it.polimi.it.view.GameView;
-import it.polimi.it.view.gui.controllers.GameBoardController;
+import it.polimi.it.view.gui.controllers.GameBoardView;
 import it.polimi.it.view.gui.controllers.GameOverController;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -15,10 +17,12 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -26,7 +30,7 @@ import java.util.logging.Logger;
  * Implementazione JavaFX di {@link GameView}.
  *
  * <p>È istanziata sul thread di rete (dal {@link it.polimi.it.network.client.ClientController})
- * e fa da ponte verso il {@link GameBoardController} che vive sul JavaFX
+ * e fa da ponte verso il {@link GameBoardView} che vive sul JavaFX
  * Application Thread.
  *
  * <p><b>Threading:</b>
@@ -35,21 +39,42 @@ import java.util.logging.Logger;
  *       chiamata in {@link Platform#runLater(Runnable)}.</li>
  *   <li>Tutti i metodi {@code requestXxx} sono bloccanti: riempiono il
  *       prompt sulla UI e attendono la scelta dell'utente tramite
- *       {@link BlockingQueue}, esattamente come faceva l'implementazione
- *       Swing originale.</li>
+ *       {@link BlockingQueue}.</li>
  * </ul>
  *
- * <p><b>Inizializzazione:</b> il costruttore richiede che il JavaFX runtime
- * sia già avviato (lo fa {@link JavaFxApp#start(Stage)}). La view crea il
- * board, lo monta nello stage che le viene passato e attende le chiamate
- * dal controller di rete.
+ * <p><b>Race-free initialisation:</b> il network thread può ricevere i primi
+ * messaggi del server (in particolare {@code ROUND_STARTED}) <em>prima</em>
+ * che {@link #showBoard(String)} abbia caricato l'FXML e creato il
+ * {@link GameBoardView}. Per evitare che questi eventi vengano persi,
+ * tutti i metodi {@code showXxx}/{@code requestXxx} passano per
+ * {@link #whenReady(Consumer)}: se il controller è pronto eseguono subito,
+ * altrimenti vengono accodati in {@link #pendingActions} e replayati in
+ * ordine non appena {@link #showBoard(String)} ha terminato l'inizializzazione.
+ *
+ * <p>La coda è solo "pre-init": una volta riempito il riferimento al
+ * controller, ogni successiva chiamata viene eseguita immediatamente.
  */
 public class JavaFxView implements GameView {
 
     private static final Logger LOG = Logger.getLogger(JavaFxView.class.getName());
 
     private final Stage primaryStage;
-    private GameBoardController boardController;
+
+    /**
+     * Set on the JavaFX thread inside {@link #showBoard(String)}.
+     * Read from any thread; writes are guarded by {@link #lock} together
+     * with the drain of {@link #pendingActions}.
+     */
+    private volatile GameBoardView boardController;
+
+    /** Lock that protects the controller-pending-queue handover. */
+    private final Object lock = new Object();
+
+    /**
+     * Actions queued before the board controller was ready. Drained in order
+     * once {@link #showBoard(String)} completes. Empty thereafter.
+     */
+    private final List<Consumer<GameBoardView>> pendingActions = new ArrayList<>();
 
     private final BlockingQueue<Integer>   cardChoiceQueue = new ArrayBlockingQueue<>(1);
     private final BlockingQueue<Character> tileChoiceQueue = new ArrayBlockingQueue<>(1);
@@ -67,6 +92,9 @@ public class JavaFxView implements GameView {
      * Costruisce e mostra la board nello stage. Da chiamare DOPO che la lobby
      * ha confermato la connessione; sincronizza la chiamata sul JavaFX
      * Application Thread.
+     *
+     * <p>Quando questo metodo termina, il {@link GameBoardView} è
+     * disponibile e qualsiasi evento precedentemente accodato viene replayato.
      */
     public void showBoard(String myNickname) {
         CountDownLatch ready = new CountDownLatch(1);
@@ -75,9 +103,9 @@ public class JavaFxView implements GameView {
                 FXMLLoader loader = new FXMLLoader(
                         getClass().getResource("/it/polimi/it/view/gui/game.fxml"));
                 javafx.scene.layout.BorderPane boardRoot = loader.load();
-                boardController = loader.getController();
-                boardController.wireQueues(cardChoiceQueue, tileChoiceQueue);
-                boardController.onGameStartingHandover(myNickname);
+                GameBoardView bc = loader.getController();
+                bc.bindInputQueues(cardChoiceQueue, tileChoiceQueue);
+                bc.onGameStartingHandover(myNickname);
 
                 Scene scene = new Scene(boardRoot, 1280, 800);
                 scene.getStylesheets().add(
@@ -85,6 +113,21 @@ public class JavaFxView implements GameView {
                 primaryStage.setScene(scene);
                 primaryStage.setTitle("MESOS — " + myNickname);
                 primaryStage.show();
+
+                // Publish the controller and drain anything queued in the meantime.
+                // Holding the lock here ensures any concurrent call to whenReady()
+                // either sees boardController == null and queues, or sees it set
+                // and runs directly — never both.
+                List<Consumer<GameBoardView>> toReplay;
+                synchronized (lock) {
+                    boardController = bc;
+                    toReplay = new ArrayList<>(pendingActions);
+                    pendingActions.clear();
+                }
+                if (!toReplay.isEmpty()) {
+                    LOG.info("Replaying " + toReplay.size() + " event(s) buffered before board init");
+                    toReplay.forEach(a -> a.accept(bc));
+                }
             } catch (IOException e) {
                 LOG.log(Level.SEVERE, "Impossibile caricare game.fxml", e);
             } finally {
@@ -94,77 +137,106 @@ public class JavaFxView implements GameView {
         try { ready.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
     }
 
+    /**
+     * Runs {@code action} against the board controller as soon as it is ready.
+     * If the controller already exists, the action runs immediately (on the
+     * caller's thread; controller methods themselves dispatch to the FX thread).
+     * Otherwise the action is queued and replayed by {@link #showBoard(String)}.
+     *
+     * <p>Used by every {@code show*} and {@code prompt*} method, so that
+     * messages arriving from the server before the board is mounted are not
+     * lost.
+     */
+    private void whenReady(Consumer<GameBoardView> action) {
+        // Fast path: controller already there. We still take the lock briefly
+        // to avoid a torn read between volatile load and the drain in showBoard.
+        GameBoardView bc = boardController;
+        if (bc != null) {
+            action.accept(bc);
+            return;
+        }
+        synchronized (lock) {
+            bc = boardController;
+            if (bc != null) {
+                action.accept(bc);
+            } else {
+                pendingActions.add(action);
+            }
+        }
+    }
+
     // ── show* (push) ──────────────────────────────────────────────────────────
 
     @Override
     public void showRoundStarted(int round, List<PlayerSnapshot> turnOrder,
-                                 List<OfferTileSnapshot> availableTiles) {
-        if (boardController != null)
-            boardController.onRoundStarted(round, turnOrder, availableTiles);
+                                 BoardSnapshot board) {
+        whenReady(bc -> bc.onRoundStarted(round, turnOrder, board));
     }
 
     @Override
-    public void showTotemPlaced(PlayerSnapshot player, char tileLetter) {
-        if (boardController != null) boardController.onTotemPlaced(player, tileLetter);
+    public void showTotemPlaced(PlayerSnapshot player, char tileLetter,
+                                BoardSnapshot board) {
+        whenReady(bc -> bc.onTotemPlaced(player, tileLetter, board));
     }
 
     @Override
     public void showCardSlotReady(PlayerSnapshot player, boolean isTopRow,
                                   List<CardSnapshot> availableCards,
                                   List<CardSnapshot> visibleEvents) {
-        if (boardController != null)
-            boardController.onCardSlotReady(player, isTopRow, availableCards, visibleEvents);
+        whenReady(bc -> bc.onCardSlotReady(player, isTopRow, availableCards, visibleEvents));
     }
 
     @Override
     public void showCardAcquired(PlayerSnapshot player, CardSnapshot card) {
-        if (boardController != null) boardController.onCardAcquired(player, card);
+        whenReady(bc -> bc.onCardAcquired(player, card));
     }
 
     @Override
     public void showCardAcquisitionFailed(PlayerSnapshot player, CardSnapshot card,
                                           int missingFood) {
-        if (boardController != null)
-            boardController.onCardAcquisitionFailed(player, card, missingFood);
+        whenReady(bc -> bc.onCardAcquisitionFailed(player, card, missingFood));
     }
 
     @Override
-    public void showTotemReturnedToTurnOrder(PlayerSnapshot player, int position) {
-        if (boardController != null)
-            boardController.onTotemReturnedToTurnOrder(player, position);
+    public void showTotemReturnedToTurnOrder(PlayerSnapshot player, int position,
+                                             BoardSnapshot board) {
+        whenReady(bc -> bc.onTotemReturnedToTurnOrder(player, position, board));
     }
 
     @Override
     public void showPostRoundStarted(List<PlayerSnapshot> watchtowerPlayers,
                                      List<CardSnapshot> availableCards) {
-        if (boardController != null)
-            boardController.onPostRoundStarted(watchtowerPlayers, availableCards);
+        whenReady(bc -> bc.onPostRoundStarted(watchtowerPlayers, availableCards));
     }
 
     @Override
     public void showEventResolved(int eventId, Era era, EventType type) {
-        if (boardController != null) boardController.onEventResolved(eventId, era, type);
+        whenReady(bc -> bc.onEventResolved(eventId, era, type));
     }
 
     @Override
     public void showEraChanged(Era newEra) {
-        if (boardController != null) boardController.onEraChanged(newEra);
+        whenReady(bc -> bc.onEraChanged(newEra));
     }
 
     @Override
     public void showRoundEnded(int round) {
-        if (boardController != null) boardController.onRoundEnded(round);
+        whenReady(bc -> bc.onRoundEnded(round));
     }
 
     @Override
     public void showInvalidAction(String playerName, String reason) {
-        if (boardController != null) boardController.onInvalidAction(playerName, reason);
+        whenReady(bc -> bc.onInvalidAction(playerName, reason));
     }
 
     @Override
     public void showGameEnded(List<PlayerSnapshot> winners,
                               List<PlayerSnapshot> finalScores) {
-        Platform.runLater(() -> {
+        // GameEnded does not depend on the in-game board: it can swap the scene
+        // directly. We still wait for the controller in case earlier events
+        // are queued, so the user does not see "game over" before the board
+        // ever rendered.
+        whenReady(bc -> Platform.runLater(() -> {
             try {
                 FXMLLoader loader = new FXMLLoader(
                         getClass().getResource("/it/polimi/it/view/gui/gameover.fxml"));
@@ -180,31 +252,34 @@ public class JavaFxView implements GameView {
             } catch (IOException e) {
                 LOG.log(Level.SEVERE, "Impossibile caricare gameover.fxml", e);
             }
-        });
+        }));
     }
 
     // ── request* (pull, blocking) ─────────────────────────────────────────────
 
     @Override
     public char requestOfferTileChoice(PlayerSnapshot player,
-                                       List<OfferTileSnapshot> freeTiles) {
-        if (boardController == null) {
-            // failsafe: non blocchiamo se la board non è pronta
-            return freeTiles.isEmpty() ? '?' : freeTiles.get(0).letter();
-        }
-        boardController.promptOfferTileChoice(player, freeTiles);
+                                       BoardSnapshot board) {
+        // Fallback letter used only if the input is interrupted: pick the first
+        // free tile, or '?' if there are none (shouldn't happen — the caller
+        // only requests when there's at least one free tile).
+        char fallback = board.offerTiles().stream()
+                .filter(OfferTileSnapshot::isFree)
+                .map(OfferTileSnapshot::letter)
+                .findFirst().orElse('?');
+        whenReady(bc -> bc.promptOfferTileChoice(player, board));
         try {
             return tileChoiceQueue.take();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return freeTiles.isEmpty() ? '?' : freeTiles.get(0).letter();
+            return fallback;
         }
     }
 
     @Override
     public int requestCardChoice(PlayerSnapshot player, List<CardSnapshot> available) {
-        if (available.isEmpty() || boardController == null) return -1;
-        boardController.promptCardChoice(player, available, /*showPass*/ true);
+        if (available.isEmpty()) return -1;
+        whenReady(bc -> bc.promptCardChoice(player, available, /*showPass*/ true));
         try {
             return cardChoiceQueue.take();
         } catch (InterruptedException e) {
@@ -216,8 +291,8 @@ public class JavaFxView implements GameView {
     @Override
     public int requestPostRoundCardChoice(PlayerSnapshot player,
                                           List<CardSnapshot> available) {
-        if (available.isEmpty() || boardController == null) return -1;
-        boardController.promptPostRoundCardChoice(player, available);
+        if (available.isEmpty()) return -1;
+        whenReady(bc -> bc.promptPostRoundCardChoice(player, available));
         try {
             return cardChoiceQueue.take();
         } catch (InterruptedException e) {

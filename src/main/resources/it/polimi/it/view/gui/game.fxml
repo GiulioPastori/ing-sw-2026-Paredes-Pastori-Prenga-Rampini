@@ -15,7 +15,7 @@
 <BorderPane fx:id="root"
             xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
-            fx:controller="it.polimi.it.view.gui.controllers.GameBoardController"
+            fx:controller="it.polimi.it.view.gui.controllers.GameBoardView"
             styleClass="game-root"
             prefWidth="1280" prefHeight="800">
 
@@ -28,8 +28,8 @@
 
             <Region HBox.hgrow="ALWAYS"/>
 
-            <Label fx:id="roundLabel" text="Round —"     styleClass="game-header-label"/>
-            <Label fx:id="eraLabel"   text="Era I"        styleClass="game-header-label"/>
+            <Label fx:id="roundLabel" text="Round —" styleClass="game-header-label"/>
+            <Label fx:id="eraLabel"   text="Era I"   styleClass="game-header-label"/>
 
             <Region HBox.hgrow="ALWAYS"/>
 
@@ -54,7 +54,20 @@
                 <Label text="Tessere offerta" styleClass="row-title"/>
                 <ScrollPane fitToHeight="true" hbarPolicy="AS_NEEDED" vbarPolicy="NEVER"
                             styleClass="row-scroll">
-                    <HBox fx:id="offerTrackBox" spacing="10" alignment="CENTER_LEFT" styleClass="tile-row"/>
+                    <!--
+                        offerTrackContainer: layout orizzontale con
+                          [ Turn Order Tile | Offer Track | Mazzo Tribù ]
+                        Le HBox interne sono popolate dal controller a ogni
+                        BoardSnapshot per restare in sync col modello.
+                    -->
+                    <HBox spacing="14" alignment="CENTER_LEFT" styleClass="offer-track-container">
+                        <HBox fx:id="turnOrderBox"   spacing="6"  alignment="CENTER_LEFT"
+                              styleClass="turn-order-box"/>
+                        <HBox fx:id="offerTrackBox"  spacing="10" alignment="CENTER_LEFT"
+                              styleClass="tile-row" HBox.hgrow="ALWAYS"/>
+                        <HBox fx:id="deckBox"        spacing="6"  alignment="CENTER_RIGHT"
+                              styleClass="deck-box"/>
+                    </HBox>
                 </ScrollPane>
 
                 <Label text="Riga inferiore" styleClass="row-title"/>
@@ -65,8 +78,8 @@
 
                 <!-- Pannello azione contestuale (Pass / Decline) -->
                 <HBox fx:id="actionBar" spacing="10" alignment="CENTER_RIGHT" styleClass="action-bar">
-                    <Button fx:id="passButton"    text="Passa"    onAction="#onPass"    visible="false" managed="false"/>
-                    <Button fx:id="declineButton" text="Rifiuta"  onAction="#onDecline" visible="false" managed="false"/>
+                    <Button fx:id="passButton"    text="Passa"   onAction="#onPass"    visible="false" managed="false"/>
+                    <Button fx:id="declineButton" text="Rifiuta" onAction="#onDecline" visible="false" managed="false"/>
                 </HBox>
             </VBox>
 
@@ -80,12 +93,15 @@
         </SplitPane>
     </center>
 
-    <!-- BOTTOM: pannello giocatori -->
+    <!-- BOTTOM: pannelli giocatori (con tribù visibili) -->
     <bottom>
-        <StackPane styleClass="players-bar">
-            <padding><Insets top="10" right="14" bottom="10" left="14"/></padding>
-            <HBox fx:id="playersBox" spacing="14" alignment="CENTER"/>
-        </StackPane>
+        <ScrollPane fitToHeight="true" hbarPolicy="AS_NEEDED" vbarPolicy="NEVER"
+                    styleClass="players-scroll">
+            <StackPane styleClass="players-bar">
+                <padding><Insets top="10" right="14" bottom="10" left="14"/></padding>
+                <HBox fx:id="playersBox" spacing="14" alignment="CENTER_LEFT"/>
+            </StackPane>
+        </ScrollPane>
     </bottom>
 
 </BorderPane>

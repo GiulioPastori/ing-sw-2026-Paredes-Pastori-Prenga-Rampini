@@ -188,9 +188,9 @@ public class GameSession implements GameEventListener {
     public void onEvent(GameEvent event) {
         Message msg = switch (event) {
             case GameEvent.RoundStarted e ->
-                    Message.roundStarted(e.round(), e.turnOrder(), e.availableTiles());
+                    Message.roundStarted(e.round(), e.turnOrder(), e.board());
             case GameEvent.TotemPlaced e ->
-                    Message.totemPlaced(e.player(), e.tileLetter(), e.remainingTiles());
+                    Message.totemPlaced(e.player(), e.tileLetter(), e.board());
             case GameEvent.CardSlotReady e ->
                     Message.cardSlotReady(e.player(), e.isTopRow(),
                             e.availableCards(), e.visibleEvents(), e.slotsRemaining());
@@ -200,7 +200,7 @@ public class GameSession implements GameEventListener {
                     Message.cardAcquisitionFailed(e.player(), e.card(),
                             e.missingFood(), e.fromTopRow(), e.alternatives());
             case GameEvent.TotemReturnedToTurnOrder e ->
-                    Message.totemReturned(e.player(), e.position());
+                    Message.totemReturned(e.player(), e.position(), e.board());
             case GameEvent.PostRoundStarted e ->
                     Message.postRoundStarted(e.round(), e.watchtowerPlayers(), e.availableCards());
             case GameEvent.EventResolved e ->

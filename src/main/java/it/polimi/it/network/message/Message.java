@@ -2,9 +2,11 @@ package it.polimi.it.network.message;
 
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.EventType;
+import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;
 import it.polimi.it.observer.OfferTileSnapshot;
 import it.polimi.it.observer.PlayerSnapshot;
+import it.polimi.it.observer.TurnOrderTileSnapshot;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -135,19 +137,19 @@ public class Message {
 
     public static Message roundStarted(int round,
                                        List<PlayerSnapshot> turnOrder,
-                                       List<OfferTileSnapshot> tiles) {
+                                       BoardSnapshot board) {
         return new Message(ROUND_STARTED, new JSONObject()
-                .put("round", round)
-                .put("turnOrder",     playerListToJson(turnOrder))
-                .put("availableTiles", tileListToJson(tiles)));
+                .put("round",     round)
+                .put("turnOrder", playerListToJson(turnOrder))
+                .put("board",     boardToJson(board)));
     }
 
     public static Message totemPlaced(PlayerSnapshot player, char tileLetter,
-                                      List<OfferTileSnapshot> remaining) {
+                                      BoardSnapshot board) {
         return new Message(TOTEM_PLACED, new JSONObject()
-                .put("player",        playerToJson(player))
-                .put("tileLetter",    String.valueOf(tileLetter))
-                .put("remainingTiles", tileListToJson(remaining)));
+                .put("player",     playerToJson(player))
+                .put("tileLetter", String.valueOf(tileLetter))
+                .put("board",      boardToJson(board)));
     }
 
     public static Message cardSlotReady(PlayerSnapshot player, boolean isTopRow,
@@ -179,10 +181,12 @@ public class Message {
                 .put("alternatives", cardListToJson(alternatives)));
     }
 
-    public static Message totemReturned(PlayerSnapshot player, int position) {
+    public static Message totemReturned(PlayerSnapshot player, int position,
+                                        BoardSnapshot board) {
         return new Message(TOTEM_RETURNED, new JSONObject()
                 .put("player",   playerToJson(player))
-                .put("position", position));
+                .put("position", position)
+                .put("board",    boardToJson(board)));
     }
 
     public static Message postRoundStarted(int round, List<PlayerSnapshot> watchtower,
@@ -219,11 +223,13 @@ public class Message {
 
     private static JSONObject playerToJson(PlayerSnapshot p) {
         return new JSONObject()
-                .put("name",           p.name())
-                .put("totemColour",    p.totemColour() != null ? p.totemColour().name() : "")
-                .put("food",           p.food())
-                .put("prestigePoints", p.prestigePoints())
-                .put("turnOrder",      p.turnOrder());
+                .put("name",            p.name())
+                .put("totemColour",     p.totemColour() != null ? p.totemColour().name() : "")
+                .put("food",            p.food())
+                .put("prestigePoints",  p.prestigePoints())
+                .put("turnOrder",       p.turnOrder())
+                .put("tribeCharacters", cardListToJson(p.tribeCharacters()))
+                .put("tribeBuildings",  cardListToJson(p.tribeBuildings()));
     }
 
     private static JSONArray playerListToJson(List<PlayerSnapshot> list) {
@@ -239,6 +245,7 @@ public class Message {
                 .put("bottomRowCards", t.bottomRowCards())
                 .put("isFoodOnly",     t.isFoodOnly())
                 .put("isFree",         t.isFree())
+                .put("placedTotem",    t.placedTotem() != null ? t.placedTotem().name() : "")
                 .put("topCards",       cardListToJson(t.topCards()))
                 .put("bottomCards",    cardListToJson(t.bottomCards()));
     }
@@ -247,6 +254,28 @@ public class Message {
         JSONArray arr = new JSONArray();
         list.forEach(t -> arr.put(tileToJson(t)));
         return arr;
+    }
+
+    private static JSONObject turnOrderTileToJson(TurnOrderTileSnapshot t) {
+        if (t == null) return new JSONObject();
+        JSONArray positions = new JSONArray();
+        for (TurnOrderTileSnapshot.PositionSnap p : t.positions()) {
+            positions.put(new JSONObject()
+                    .put("position",    p.position())
+                    .put("foodBonus",   p.foodBonus())
+                    .put("isLast",      p.isLast())
+                    .put("placedTotem", p.placedTotem() != null ? p.placedTotem().name() : ""));
+        }
+        return new JSONObject()
+                .put("numPlayers", t.numPlayers())
+                .put("positions",  positions);
+    }
+
+    private static JSONObject boardToJson(BoardSnapshot b) {
+        return new JSONObject()
+                .put("offerTiles",    tileListToJson(b.offerTiles()))
+                .put("turnOrderTile", turnOrderTileToJson(b.turnOrderTile()))
+                .put("tribeDeckSize", b.tribeDeckSize());
     }
 
     private static JSONObject cardToJson(CardSnapshot c) {
@@ -286,35 +315,53 @@ public class Message {
         JSONArray arr = data.getJSONArray(key);
         List<PlayerSnapshot> list = new ArrayList<>();
         for (int i = 0; i < arr.length(); i++) {
-            JSONObject o = arr.getJSONObject(i);
-            list.add(new PlayerSnapshot(
-                    o.getString("name"),
-                    it.polimi.it.enums.TotemColour.valueOf(
-                            o.optString("totemColour", "RED")),
-                    o.getInt("food"),
-                    o.getInt("prestigePoints"),
-                    o.getInt("turnOrder")));
+            list.add(parsePlayer(arr.getJSONObject(i)));
         }
         return list;
+    }
+
+    /** Shared deserialiser for a player JSON object (used by playerList and playerObj). */
+    private static PlayerSnapshot parsePlayer(JSONObject o) {
+        List<CardSnapshot> chars = o.has("tribeCharacters")
+                ? parseCardArray(o.getJSONArray("tribeCharacters"))
+                : List.of();
+        List<CardSnapshot> blds = o.has("tribeBuildings")
+                ? parseCardArray(o.getJSONArray("tribeBuildings"))
+                : List.of();
+        return new PlayerSnapshot(
+                o.getString("name"),
+                it.polimi.it.enums.TotemColour.valueOf(
+                        o.optString("totemColour", "RED")),
+                o.getInt("food"),
+                o.getInt("prestigePoints"),
+                o.getInt("turnOrder"),
+                chars,
+                blds);
     }
 
     public List<OfferTileSnapshot> tileList(String key) {
         JSONArray arr = data.getJSONArray(key);
         List<OfferTileSnapshot> list = new ArrayList<>();
         for (int i = 0; i < arr.length(); i++) {
-            JSONObject o = arr.getJSONObject(i);
-            List<CardSnapshot> topCards    = parseCardArray(o.getJSONArray("topCards"));
-            List<CardSnapshot> bottomCards = parseCardArray(o.getJSONArray("bottomCards"));
-            list.add(new OfferTileSnapshot(
-                    o.getString("letter").charAt(0),
-                    o.getInt("topRowCards"),
-                    o.getInt("bottomRowCards"),
-                    o.getBoolean("isFoodOnly"),
-                    o.getBoolean("isFree"),
-                    topCards,
-                    bottomCards));
+            list.add(parseTile(arr.getJSONObject(i)));
         }
         return list;
+    }
+
+    /** Shared OfferTileSnapshot deserialiser (used by tileList and boardObj). */
+    private static OfferTileSnapshot parseTile(JSONObject o) {
+        List<CardSnapshot> topCards    = parseCardArray(o.getJSONArray("topCards"));
+        List<CardSnapshot> bottomCards = parseCardArray(o.getJSONArray("bottomCards"));
+        String tc = o.optString("placedTotem", "");
+        return new OfferTileSnapshot(
+                o.getString("letter").charAt(0),
+                o.getInt("topRowCards"),
+                o.getInt("bottomRowCards"),
+                o.getBoolean("isFoodOnly"),
+                o.getBoolean("isFree"),
+                tc.isEmpty() ? null : it.polimi.it.enums.TotemColour.valueOf(tc),
+                topCards,
+                bottomCards);
     }
 
     /** Deserializza un JSONArray di carte in List<CardSnapshot>. */
@@ -354,21 +401,9 @@ public class Message {
         return list;
     }
 
-    public PlayerSnapshot player(String key) {
-        return playerList(key + "Wrap") // reuse list helper
-                .stream().findFirst().orElseThrow();
-    }
-
     /** Reads a single PlayerSnapshot from a nested object (not array). */
     public PlayerSnapshot playerObj(String key) {
-        JSONObject o = data.getJSONObject(key);
-        return new PlayerSnapshot(
-                o.getString("name"),
-                it.polimi.it.enums.TotemColour.valueOf(
-                        o.optString("totemColour", "RED")),
-                o.getInt("food"),
-                o.getInt("prestigePoints"),
-                o.getInt("turnOrder"));
+        return parsePlayer(data.getJSONObject(key));
     }
 
     /** Reads a single CardSnapshot from a nested object (not array). */
@@ -384,5 +419,41 @@ public class Message {
                 o.getInt("foodCost"),
                 o.getInt("finalPoints"),
                 o.getString("effectDescription"));
+    }
+
+    /** Reads a TurnOrderTileSnapshot from a nested object. */
+    public TurnOrderTileSnapshot turnOrderTileObj(String key) {
+        if (!data.has(key)) return null;
+        return parseTurnOrderTile(data.getJSONObject(key));
+    }
+
+    private static TurnOrderTileSnapshot parseTurnOrderTile(JSONObject o) {
+        if (o == null || !o.has("numPlayers")) return null;
+        int numPlayers = o.getInt("numPlayers");
+        JSONArray arr = o.getJSONArray("positions");
+        List<TurnOrderTileSnapshot.PositionSnap> snaps = new ArrayList<>();
+        for (int i = 0; i < arr.length(); i++) {
+            JSONObject p  = arr.getJSONObject(i);
+            String     tc = p.optString("placedTotem", "");
+            snaps.add(new TurnOrderTileSnapshot.PositionSnap(
+                    p.getInt("position"),
+                    p.getInt("foodBonus"),
+                    p.getBoolean("isLast"),
+                    tc.isEmpty() ? null : it.polimi.it.enums.TotemColour.valueOf(tc)));
+        }
+        return new TurnOrderTileSnapshot(numPlayers, snaps);
+    }
+
+    /** Reads a BoardSnapshot from a nested object. */
+    public BoardSnapshot boardObj(String key) {
+        JSONObject o = data.getJSONObject(key);
+        JSONArray  tilesArr = o.getJSONArray("offerTiles");
+        List<OfferTileSnapshot> tiles = new ArrayList<>();
+        for (int i = 0; i < tilesArr.length(); i++) {
+            tiles.add(parseTile(tilesArr.getJSONObject(i)));
+        }
+        TurnOrderTileSnapshot tot = parseTurnOrderTile(o.optJSONObject("turnOrderTile"));
+        int deckSize = o.optInt("tribeDeckSize", 0);
+        return new BoardSnapshot(tiles, tot, deckSize);
     }
 }

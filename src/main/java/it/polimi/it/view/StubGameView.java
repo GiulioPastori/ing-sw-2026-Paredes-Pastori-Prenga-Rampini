@@ -1,6 +1,7 @@
 package it.polimi.it.view;
 
 import it.polimi.it.enums.Era;
+import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;
 import it.polimi.it.observer.OfferTileSnapshot;
 import it.polimi.it.observer.PlayerSnapshot;
@@ -17,14 +18,14 @@ import java.util.List;
 public class StubGameView implements GameView {
 
     @Override
-    public void showRoundStarted(int round, List<PlayerSnapshot> turnOrder, List<it.polimi.it.observer.OfferTileSnapshot> availableTiles) {
-        System.out.println("\n=== Round " + round + " ===");
+    public void showRoundStarted(int round, List<PlayerSnapshot> turnOrder, BoardSnapshot board) {
+        System.out.println("\n=== Round " + round + " (deck: " + board.tribeDeckSize() + ") ===");
         turnOrder.forEach(p -> System.out.print(p.name() + " "));
         System.out.println();
     }
 
     @Override
-    public void showTotemPlaced(PlayerSnapshot player, char tileLetter) {
+    public void showTotemPlaced(PlayerSnapshot player, char tileLetter, BoardSnapshot board) {
         System.out.println(player.name() + " -> tile " + tileLetter);
     }
 
@@ -50,7 +51,7 @@ public class StubGameView implements GameView {
     }
 
     @Override
-    public void showTotemReturnedToTurnOrder(PlayerSnapshot player, int position) {
+    public void showTotemReturnedToTurnOrder(PlayerSnapshot player, int position, BoardSnapshot board) {
         System.out.println(player.name() + " -> turn order " + position
                 + " | food: " + player.food() + " | PP: " + player.prestigePoints());
     }
@@ -97,8 +98,12 @@ public class StubGameView implements GameView {
     // Input stubs — always pick first available option
 
     @Override
-    public char requestOfferTileChoice(PlayerSnapshot player, List<OfferTileSnapshot> freeTiles) {
-        return freeTiles.get(0).letter();
+    public char requestOfferTileChoice(PlayerSnapshot player, BoardSnapshot board) {
+        return board.offerTiles().stream()
+                .filter(OfferTileSnapshot::isFree)
+                .findFirst()
+                .map(OfferTileSnapshot::letter)
+                .orElse('?');
     }
 
     @Override

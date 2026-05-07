@@ -10,10 +10,11 @@ import java.util.Map;
  * Caricatore (con cache) delle immagini delle tessere offerta.
  *
  * <p>Convenzione: ogni tessera ha un PNG in
- * {@code resources/it/polimi/it/view/gui/tiles/tile_<lettera>.png}
- * (es. {@code tile_A.png}, {@code tile_B.png}, …).
- * Se l'immagine non è presente viene restituito {@code null} e
- * {@link CardCellFactory} userà il rendering testuale già esistente.
+ * {@code resources/it/polimi/it/view/gui/tiles/tile_<letter>.png}
+ * (es. {@code tile_A.png}, {@code tile_B.png}, …). Le lettere disponibili
+ * sono A–G (sufficienti per le 6 offer tile + 1 food-only del gioco a 5
+ * giocatori). Se l'immagine non è presente, viene restituito {@code null} e
+ * la {@link CardCellFactory} userà un placeholder testuale.
  */
 public final class TileImageCache {
 
@@ -23,8 +24,8 @@ public final class TileImageCache {
     private TileImageCache() { /* utility */ }
 
     /**
-     * Restituisce l'immagine PNG associata alla tessera, oppure {@code null}
-     * se non trovata fra le risorse.
+     * Returns the image for an offer tile based on its letter, or
+     * {@code null} if the asset is missing.
      */
     public static Image imageFor(OfferTileSnapshot tile) {
         return imageFor(tile.letter());
@@ -41,6 +42,25 @@ public final class TileImageCache {
             Image img = new Image(stream);
             if (img.isError()) return null;
             CACHE.put(letter, img);
+            return img;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    /**
+     * Returns the variant image for the Turn Order Tile based on player count.
+     * Convention: {@code tiles/turn_order_<numPlayers>.png}. Returns {@code null}
+     * if the asset is not present (the {@link CardCellFactory} falls back to
+     * a styled placeholder).
+     */
+    public static Image turnOrderTileFor(int numPlayers) {
+        String path = BASE_PATH + "turn_order_" + numPlayers + ".png";
+        try {
+            var stream = TileImageCache.class.getResourceAsStream(path);
+            if (stream == null) return null;
+            Image img = new Image(stream);
+            if (img.isError()) return null;
             return img;
         } catch (Exception ignored) {
             return null;

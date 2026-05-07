@@ -1,8 +1,8 @@
 package it.polimi.it.view;
 
 import it.polimi.it.enums.Era;
+import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;
-import it.polimi.it.observer.OfferTileSnapshot;
 import it.polimi.it.observer.PlayerSnapshot;
 
 import java.util.List;
@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * View interface (View role in MVC).
  *
- * Implemented by the TUI, the GUI (Swing/JavaFX), and stub implementations
+ * Implemented by the TUI, the GUI (JavaFX), and stub implementations
  * used in tests. The view knows nothing about Game, Board, Player, or Card:
  * it receives and displays only snapshot objects (DTO).
  *
@@ -24,15 +24,20 @@ import java.util.List;
  * - requestXxx(): ask the user to make a choice (only relevant for
  *   local/single-player play; in the networked case the client sends
  *   a PlayerAction message back to the server independently)
+ *
+ * <p>Player tribes (acquired characters and buildings) live inside
+ * {@link PlayerSnapshot}, so any view method that receives a player
+ * snapshot also receives that player's up-to-date tribe.
  */
 public interface GameView {
 
     // ── Display methods ───────────────────────────────────────────────────────
 
     void showRoundStarted(int round, List<PlayerSnapshot> turnOrder,
-                          List<OfferTileSnapshot> availableTiles);
+                          BoardSnapshot board);
 
-    void showTotemPlaced(PlayerSnapshot player, char tileLetter);
+    void showTotemPlaced(PlayerSnapshot player, char tileLetter,
+                         BoardSnapshot board);
 
     /** Mostra le carte disponibili in una riga per il giocatore attivo.
      *  visibleEvents contiene gli eventi presenti nella stessa riga (non acquisibili). */
@@ -44,7 +49,8 @@ public interface GameView {
 
     void showCardAcquisitionFailed(PlayerSnapshot player, CardSnapshot card, int missingFood);
 
-    void showTotemReturnedToTurnOrder(PlayerSnapshot player, int position);
+    void showTotemReturnedToTurnOrder(PlayerSnapshot player, int position,
+                                      BoardSnapshot board);
 
     void showPostRoundStarted(List<PlayerSnapshot> watchtowerPlayers,
                               List<CardSnapshot> availableCards);
@@ -63,9 +69,13 @@ public interface GameView {
 
     /**
      * Asks the player which free offer tile to place their totem on.
-     * Returns the letter of the chosen tile.
+     * The full {@link BoardSnapshot} is passed so the view can display the
+     * complete state (including tiles occupied by other players' totems);
+     * the choice itself must still resolve to a free tile.
+     *
+     * @return the letter of the chosen tile.
      */
-    char requestOfferTileChoice(PlayerSnapshot player, List<OfferTileSnapshot> freeTiles);
+    char requestOfferTileChoice(PlayerSnapshot player, BoardSnapshot board);
 
     /**
      * Asks the player which card to take.

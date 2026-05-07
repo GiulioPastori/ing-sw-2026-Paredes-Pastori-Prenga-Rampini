@@ -7,10 +7,10 @@ import it.polimi.it.cards.character.Character;
 import it.polimi.it.cards.events.Event;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.TotemColour;
+import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;
 import it.polimi.it.observer.GameEvent;
 import it.polimi.it.observer.GameEventListener;
-import it.polimi.it.observer.OfferTileSnapshot;
 import it.polimi.it.observer.PlayerSnapshot;
 import it.polimi.it.player.Player;
 import it.polimi.it.tiles.OfferTile;
@@ -141,13 +141,10 @@ public class Game {
         OfferTile tile = findTile(action.tileLetter());
         board.getOfferTiles().placeTotem(player, tile);
 
-        List<OfferTileSnapshot> remaining = board.getOfferTiles().getFreeTiles().stream()
-                .map(t -> OfferTileSnapshot.of(t, board.getTopRow(), board.getBottomRow())).toList();
-
         publish(new GameEvent.TotemPlaced(
                 PlayerSnapshot.of(player),
                 action.tileLetter(),
-                remaining));
+                BoardSnapshot.of(board)));
 
         // Bug fix 2: the Offer Track always has players+1 tiles, so one tile is
         // always left free. The action phase starts when all PLAYERS have placed,
@@ -311,7 +308,9 @@ public class Game {
         tile.removeTotem();
         TurnPosition pos = board.getTurnOrderTile().placeTotem(player);
         publish(new GameEvent.TotemReturnedToTurnOrder(
-                PlayerSnapshot.of(player), pos.getPosition()));
+                PlayerSnapshot.of(player),
+                pos.getPosition(),
+                BoardSnapshot.of(board)));
     }
 
     // ── Post-round phase (Watchtower building) ────────────────────────────────
@@ -457,15 +456,14 @@ public class Game {
         List<PlayerSnapshot> order = getPlacementOrder().stream()
                 .map(PlayerSnapshot::of).toList();
 
-        // Passa le righe di carte in modo che ogni tessera mostri le carte disponibili
-        List<Card> topRow    = board.getTopRow();
-        List<Card> bottomRow = board.getBottomRow();
-        List<OfferTileSnapshot> freeTiles = board.getOfferTiles().getFreeTiles().stream()
-                .map(t -> OfferTileSnapshot.of(t, topRow, bottomRow)).toList();
+        BoardSnapshot snapshot = BoardSnapshot.of(board);
 
-        LOG.info("[beginRound] tessere libere: " + freeTiles.size()
-                + " top=" + topRow.size() + " bottom=" + bottomRow.size());
-        publish(new GameEvent.RoundStarted(currentRound, order, freeTiles));
+        LOG.info("[beginRound] tessere totali: " + snapshot.offerTiles().size()
+                + " (libere: " + snapshot.offerTiles().stream()
+                .filter(t -> t.isFree()).count() + ")"
+                + " top=" + board.getTopRow().size() + " bottom=" + board.getBottomRow().size()
+                + " deck=" + snapshot.tribeDeckSize());
+        publish(new GameEvent.RoundStarted(currentRound, order, snapshot));
         autoPlaceDisconnectedTotems();
     }
 
@@ -569,10 +567,8 @@ public class Game {
             if (free.isEmpty()) break;
             OfferTile tile = free.get(0);
             board.getOfferTiles().placeTotem(p, tile);
-            List<OfferTileSnapshot> remaining = board.getOfferTiles().getFreeTiles()
-                    .stream().map(t -> OfferTileSnapshot.of(t, board.getTopRow(), board.getBottomRow())).toList();
             publish(new GameEvent.TotemPlaced(
-                    PlayerSnapshot.of(p), tile.getLetter(), remaining));
+                    PlayerSnapshot.of(p), tile.getLetter(), BoardSnapshot.of(board)));
             long placed = board.getOfferTiles().getAllTiles().stream()
                     .filter(t -> !t.isFree()).count();
             if (placed == players.size()) {
