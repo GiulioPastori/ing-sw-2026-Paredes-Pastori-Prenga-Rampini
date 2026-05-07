@@ -5,7 +5,6 @@ import it.polimi.it.observer.CardSnapshot;
 import it.polimi.it.observer.OfferTileSnapshot;
 import it.polimi.it.observer.PlayerSnapshot;
 import it.polimi.it.view.gui.widgets.CardCellFactory;
-import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -19,6 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.Consumer;
+
+import static it.polimi.it.view.gui.FxUtils.runFx;
 
 /**
  * Controller della schermata principale di gioco.
@@ -51,8 +52,9 @@ public class GameBoardController {
     @FXML private Button     declineButton;
 
     /** Ultimo turn order ricevuto: usato per evidenziare il giocatore attivo. */
-    private List<PlayerSnapshot> lastPlayers = new ArrayList<>();
+    private List<PlayerSnapshot> lastPlayers  = new ArrayList<>();
     private String               activePlayer;
+    private boolean              lastIsTopRow = true;
 
     /** Iniettati dalla JavaFxView per ricevere le scelte dell'utente. */
     private BlockingQueue<Integer>   cardChoiceQueue;
@@ -74,6 +76,7 @@ public class GameBoardController {
             this.activePlayer = null;
             renderPlayers();
             renderTiles(tiles, /*selectable*/ false);
+            renderBoardRows(tiles);
             log("══ ROUND " + round + " STARTED ══");
         });
     }
@@ -87,6 +90,7 @@ public class GameBoardController {
                                 List<CardSnapshot> visibleEvents) {
         runFx(() -> {
             this.activePlayer = player.name();
+            this.lastIsTopRow = isTopRow;
             renderPlayers();
             log("[" + player.name() + "] turno: scegli una carta dalla riga "
                     + (isTopRow ? "superiore" : "inferiore") + ".");
@@ -157,6 +161,7 @@ public class GameBoardController {
             renderPlayers();
             bannerLabel.setText("[" + player.name() + "] scegli una tessera.");
             renderTiles(freeTiles, /*selectable*/ true);
+            renderBoardRows(freeTiles);
         });
     }
 
@@ -172,7 +177,9 @@ public class GameBoardController {
             renderPlayers();
             bannerLabel.setText("[" + player.name() + "] scegli una carta"
                     + (showPass ? " o passa." : "."));
-            renderCards(topRowBox, available, this::pushCardChoice);
+
+            HBox target = lastIsTopRow ? topRowBox : bottomRowBox;
+            renderCards(target, available, this::pushCardChoice);
 
             // Mostra il bottone giusto per questa fase
             setActionButton(passButton, showPass, () -> pushCardChoice(-1));
@@ -257,6 +264,23 @@ public class GameBoardController {
         }
     }
 
+    /**
+     * Popola topRowBox e bottomRowBox con le carte visibili sul tabellone.
+     * Le carte sono condivise tra tutte le tessere non-food: basta prendere
+     * il primo snapshot non-food che ha le liste popolate.
+     * Le carte non sono cliccabili (onClick=null): serve solo per informare
+     * il giocatore prima di scegliere la tessera.
+     */
+    private void renderBoardRows(List<OfferTileSnapshot> tiles) {
+        OfferTileSnapshot ref = tiles.stream()
+                .filter(t -> !t.isFoodOnly() && !t.topCards().isEmpty())
+                .findFirst()
+                .orElse(null);
+        if (ref == null) return;
+        renderCards(topRowBox,    ref.topCards(),    null);
+        renderCards(bottomRowBox, ref.bottomCards(), null);
+    }
+
     private void renderTiles(List<OfferTileSnapshot> tiles, boolean selectable) {
         offerTrackBox.getChildren().clear();
         for (OfferTileSnapshot t : tiles) {
@@ -275,12 +299,6 @@ public class GameBoardController {
 
     private void log(String msg) {
         logArea.appendText(msg + "\n");
-    }
-
-    /** Esegue il task sul JavaFX Application Thread. Se siamo già lì lo esegue subito. */
-    private static void runFx(Runnable r) {
-        if (Platform.isFxApplicationThread()) r.run();
-        else Platform.runLater(r);
     }
 
     /** Espone il root per chi vuole sostituire la scena (es. game over). */

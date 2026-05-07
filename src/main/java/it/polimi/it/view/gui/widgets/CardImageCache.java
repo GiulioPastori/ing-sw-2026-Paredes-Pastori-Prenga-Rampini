@@ -38,7 +38,7 @@ public final class CardImageCache {
         Image cached = CACHE.get(cardId);
         if (cached != null) return cached;
 
-        String path = BASE_PATH + cardId + ".png";
+        String path = BASE_PATH + "card_" + cardId + ".png";
         try {
             var stream = CardImageCache.class.getResourceAsStream(path);
             if (stream == null) return null;

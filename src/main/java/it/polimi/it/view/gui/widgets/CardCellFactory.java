@@ -10,6 +10,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.TextAlignment;
+import it.polimi.it.view.gui.widgets.TileImageCache;
 
 import java.util.function.Consumer;
 
@@ -118,20 +119,31 @@ public final class CardCellFactory {
         if (tile.isFoodOnly())  cell.getStyleClass().add("food-only");
         if (!tile.isFree())     cell.getStyleClass().add("placed");
 
-        VBox box = new VBox(2);
-        box.setAlignment(Pos.CENTER);
+        Image img = TileImageCache.imageFor(tile);
+        if (img != null) {
+            ImageView iv = new ImageView(img);
+            iv.setFitWidth(76);
+            iv.setFitHeight(66);
+            iv.setPreserveRatio(true);
+            iv.getStyleClass().add("tile-cell-image");
+            cell.getChildren().add(iv);
+        } else {
+            // Placeholder testuale (identico a prima)
+            VBox box = new VBox(2);
+            box.setAlignment(Pos.CENTER);
 
-        Label letter = new Label(String.valueOf(tile.letter()));
-        letter.getStyleClass().add("tile-letter");
+            Label letter = new Label(String.valueOf(tile.letter()));
+            letter.getStyleClass().add("tile-letter");
 
-        Label info = new Label(
-                tile.isFoodOnly()
-                        ? "+3 Food"
-                        : "T:" + tile.topRowCards() + "  B:" + tile.bottomRowCards());
-        info.getStyleClass().add("tile-info");
+            Label info = new Label(
+                    tile.isFoodOnly()
+                            ? "+3 Food"
+                            : "T:" + tile.topRowCards() + "  B:" + tile.bottomRowCards());
+            info.getStyleClass().add("tile-info");
 
-        box.getChildren().addAll(letter, info);
-        cell.getChildren().add(box);
+            box.getChildren().addAll(letter, info);
+            cell.getChildren().add(box);
+        }
 
         if (onClick != null && tile.isFree()) {
             cell.getStyleClass().add("selectable");
