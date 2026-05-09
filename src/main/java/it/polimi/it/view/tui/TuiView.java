@@ -411,6 +411,11 @@ public class TuiView implements GameView {
         }
         if (p.tribeCharacters().isEmpty()) sb.append(paint(DIM, "(nessun personaggio) "));
 
+        // Aggregated character details: total Shaman stars, unique inventions,
+        // hunter triggers, total builder discount/PP. Drives end-game intuition.
+        String agg = aggregateCharacterDetails(p);
+        if (!agg.isEmpty()) sb.append(paint(DIM, "[")).append(agg).append(paint(DIM, "] "));
+
         // Buildings as id list
         if (!p.tribeBuildings().isEmpty()) {
             sb.append(paint(DIM, "| ")).append(paint(FG_B_YELLOW, true, "🏛 "));
@@ -420,6 +425,43 @@ public class TuiView implements GameView {
             sb.append(paint(FG_YELLOW, ids));
         }
         println(sb.toString());
+    }
+
+    /**
+     * Computes a one-line summary of character distinguishing data:
+     *  - total stars from all Shamans
+     *  - distinct invention icon count
+     *  - hunter triggers
+     *  - total Builder discount / end-game PP
+     * Returns "" if there's nothing to show.
+     */
+    private String aggregateCharacterDetails(PlayerSnapshot p) {
+        int stars = 0;
+        long triggers = 0;
+        int  builderDiscount = 0;
+        int  builderPoints = 0;
+        java.util.Set<String> inventions = new java.util.HashSet<>();
+
+        for (CardSnapshot c : p.tribeCharacters()) {
+            if (c.details() == null) continue;
+            stars           += c.details().starIcons();
+            builderDiscount += c.details().buildingDiscount();
+            builderPoints   += c.details().builderPoints();
+            if (c.details().triggerIcon()) triggers++;
+            if (!c.details().inventionIcon().isEmpty())
+                inventions.add(c.details().inventionIcon());
+        }
+
+        StringBuilder sb = new StringBuilder();
+        if (stars > 0)               sb.append(paint(FG_B_YELLOW, true, "★" + stars)).append(' ');
+        if (triggers > 0)            sb.append(paint(FG_B_RED, true, "🎯×" + triggers)).append(' ');
+        if (!inventions.isEmpty())   sb.append(paint(FG_B_CYAN, true,
+                "💡×" + inventions.size())).append(' ');
+        if (builderDiscount > 0)     sb.append(paint(FG_B_GREEN, true,
+                "🔨-" + builderDiscount)).append(' ');
+        if (builderPoints > 0)       sb.append(paint(FG_B_YELLOW, true,
+                "⭐+" + builderPoints)).append(' ');
+        return sb.toString().stripTrailing();
     }
 
     private void printCards(List<CardSnapshot> cards) {
@@ -447,9 +489,49 @@ public class TuiView implements GameView {
         CharacterType ct = c.characterType();
         String label = paint(roleColor(ct), true,
                 emoji(ct) + " " + roleNameIt(ct).toUpperCase());
+        String details = formatCharacterDetails(c);
         return label
+                + (details.isEmpty() ? "" : "  " + details)
                 + "  " + eraBadge(c.era())
                 + paint(DIM, "  (id:" + c.id() + ")");
+    }
+
+    /**
+     * Costruisce la stringa con le icone distintive di un personaggio in base
+     * al tipo. Per:
+     *  - HUNTER:   "🎯" se ha l'icona trigger (caccia immediata), altrimenti vuoto
+     *  - SHAMAN:   stelline pari a starIcons (★ ★★ ★★★)
+     *  - INVENTOR: l'identificatore dell'invenzione fra parentesi
+     *  - BUILDER:  sconto al costo edifici e PP a fine partita
+     *  - GATHERER, ARTIST: nessun dato distintivo (effetto fisso)
+     */
+    private String formatCharacterDetails(CardSnapshot c) {
+        if (c.details() == null || c.characterType() == null) return "";
+        CardSnapshot.CharacterDetails d = c.details();
+        return switch (c.characterType()) {
+            case HUNTER -> d.triggerIcon()
+                    ? paint(FG_B_RED, true, "🎯 trigger")
+                    : "";
+            case SHAMAN -> paint(FG_B_YELLOW, true,
+                    "★".repeat(Math.max(0, d.starIcons())));
+            case INVENTOR -> d.inventionIcon().isEmpty()
+                    ? ""
+                    : paint(FG_B_CYAN, true, "💡 " + d.inventionIcon());
+            case BUILDER -> {
+                StringBuilder sb = new StringBuilder();
+                if (d.buildingDiscount() != 0) {
+                    sb.append(paint(FG_B_GREEN, true,
+                            "🔨 -" + d.buildingDiscount() + " cibo"));
+                }
+                if (d.builderPoints() != 0) {
+                    if (sb.length() > 0) sb.append(" ");
+                    sb.append(paint(FG_B_YELLOW, true,
+                            "⭐ +" + d.builderPoints()));
+                }
+                yield sb.toString();
+            }
+            case GATHERER, ARTIST -> ""; // effetto fisso, niente da differenziare
+        };
     }
 
     private String formatBuildingCard(CardSnapshot c) {
