@@ -50,12 +50,14 @@ public final class TileImageCache {
 
     /**
      * Returns the variant image for the Turn Order Tile based on player count.
-     * Convention: {@code tiles/turn_order_<numPlayers>.png}. Returns {@code null}
-     * if the asset is not present (the {@link CardCellFactory} falls back to
-     * a styled placeholder).
+     *
+     * <p>Convention: {@code tiles/<numPlayers>_players_tile.png} (es.
+     * {@code 2_players_tile.png}). Returns {@code null} if the asset is not
+     * present (the {@link CardCellFactory} falls back to a procedural,
+     * stylesheet-only rendering).
      */
     public static Image turnOrderTileFor(int numPlayers) {
-        String path = BASE_PATH + "turn_order_" + numPlayers + ".png";
+        String path = BASE_PATH + numPlayers + "_players_tile.png";
         try {
             var stream = TileImageCache.class.getResourceAsStream(path);
             if (stream == null) return null;

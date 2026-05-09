@@ -9,6 +9,7 @@ import it.polimi.it.observer.TurnOrderTileSnapshot;
 import it.polimi.it.view.CardLocalization;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
@@ -21,6 +22,7 @@ import javafx.scene.text.TextAlignment;
 import javafx.util.Duration;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -46,6 +48,30 @@ public final class CardCellFactory {
     private static final double TILE_H = 110;
     private static final double TRIBE_CARD_W = 50;
     private static final double TRIBE_CARD_H = 70;
+
+    /** Dimensioni del nodo Turn Order Tile (ratio ~0.65 dell'immagine). */
+    private static final double TURN_TILE_W = 90;
+    private static final double TURN_TILE_H = 140;
+
+    /**
+     * Y-fractions of the boxes inside each player-count tile image.
+     * Indexed by {@code numPlayers - 2}: index 0 = 2-player tile, ...,
+     * index 3 = 5-player tile. Inner array is the list of box centres
+     * (one per position) as fractions of the image height.
+     *
+     * <p>Measured from the actual artwork after trimming the ~10 px white
+     * margins; the variation across re-rasterisations is &lt; 0.005 so these
+     * constants are stable.
+     */
+    private static final double[][] TURN_BOX_Y_FRACTIONS = {
+            { 0.306, 0.478 },                            // 2 players
+            { 0.261, 0.435, 0.608 },                     // 3 players
+            { 0.218, 0.390, 0.562, 0.731 },              // 4 players
+            { 0.151, 0.325, 0.498, 0.670, 0.841 },       // 5 players
+    };
+
+    /** All boxes are horizontally centred on the tile artwork. */
+    private static final double TURN_BOX_X_FRACTION = 0.50;
 
     private CardCellFactory() { /* utility */ }
 
@@ -114,6 +140,18 @@ public final class CardCellFactory {
             cell.getChildren().add(box);
         }
 
+        // Character details strip overlaid at the bottom (e.g. "★★★", "TRIG",
+        // "INV-A"). Always added when details are non-trivial so the user can
+        // see at a glance what makes this character valuable.
+        if (card.type() == CardSnapshot.Type.CHARACTER) {
+            HBox strip = buildCharacterIconStrip(card);
+            if (strip != null) {
+                StackPane.setAlignment(strip, Pos.BOTTOM_CENTER);
+                StackPane.setMargin(strip, new Insets(0, 0, 4, 0));
+                cell.getChildren().add(strip);
+            }
+        }
+
         // Tooltip: italian description for buildings, role for characters,
         // event type for events. Useful both on the offer rows and on the
         // small tribe thumbnails.
@@ -129,20 +167,104 @@ public final class CardCellFactory {
         return cell;
     }
 
+    /**
+     * Builds the icon strip shown at the bottom of a character card. Returns
+     * null if there's nothing useful to display (Gatherer / Artist have no
+     * distinguishing data beyond their type).
+     *
+     * <p>Glyphs intentionally use only common Unicode characters (★, dot, plus
+     * sign) plus short ASCII labels, so they render reliably in the absence
+     * of an emoji-capable font.
+     */
+    private static HBox buildCharacterIconStrip(CardSnapshot card) {
+        if (card.details() == null || card.characterType() == null) return null;
+        CardSnapshot.CharacterDetails d = card.details();
+
+        HBox strip = new HBox(3);
+        strip.getStyleClass().add("char-icon-strip");
+        strip.setAlignment(Pos.CENTER);
+
+        switch (card.characterType()) {
+            case HUNTER -> {
+                if (d.triggerIcon()) strip.getChildren().add(badge("🎯", "char-trigger"));
+                else                 return null;
+            }
+            case SHAMAN -> {
+                strip.getChildren().add(badge(
+                        "★".repeat(Math.max(1, d.starIcons())),
+                        "char-stars"));
+            }
+            case INVENTOR -> {
+                if (d.inventionIcon().isEmpty()) return null;
+                strip.getChildren().add(badge("💡 " + d.inventionIcon(), "char-invention"));
+            }
+            case BUILDER -> {
+                if (d.buildingDiscount() != 0)
+                    strip.getChildren().add(badge("🔨 -" + d.buildingDiscount() + " 🍖",
+                            "char-discount"));
+                if (d.builderPoints() != 0)
+                    strip.getChildren().add(badge("⭐ +" + d.builderPoints(),
+                            "char-pp"));
+                if (strip.getChildren().isEmpty()) return null;
+            }
+            case GATHERER, ARTIST -> { return null; }
+        }
+        return strip;
+    }
+
+    /** Small text badge with a CSS class for colouring. Marked as emoji-text
+     *  so it inherits the bundled emoji font for the glyph fallback. */
+    private static Label badge(String text, String styleClass) {
+        Label l = new Label(text);
+        l.getStyleClass().addAll("char-icon-badge", "emoji-text", styleClass);
+        return l;
+    }
+
     private static void attachTooltip(StackPane cell, CardSnapshot card) {
         String text = switch (card.type()) {
             case BUILDING  -> "Edificio #" + card.id()
                     + "\nCosto: " + card.foodCost() + " 🍖   PP: " + card.finalPoints()
                     + "\n" + CardLocalization.buildingDescription(card.id(), card.effectDescription());
-            case CHARACTER -> (card.characterType() != null
-                    ? card.characterType().name() : "Personaggio")
-                    + "  (id " + card.id() + ", " + card.era() + ")";
+            case CHARACTER -> characterTooltip(card);
             case EVENT     -> "Evento  (id " + card.id() + ", " + card.era() + ")"
                     + "\n" + card.effectDescription();
         };
         Tooltip tip = new Tooltip(text);
+        tip.getStyleClass().add("emoji-text");
         tip.setShowDelay(Duration.millis(250));
         Tooltip.install(cell, tip);
+    }
+
+    /** Tooltip text for a character card, including its distinguishing data. */
+    private static String characterTooltip(CardSnapshot c) {
+        String header = (c.characterType() != null
+                ? roleEmoji(c.characterType()) + " " + roleNameIt(c.characterType())
+                : "Personaggio")
+                + "  (id " + c.id() + ", " + c.era() + ")";
+        if (c.details() == null || c.characterType() == null) return header;
+
+        CardSnapshot.CharacterDetails d = c.details();
+        String tail = switch (c.characterType()) {
+            case HUNTER   -> d.triggerIcon()
+                    ? "\n🎯 Icona Trigger: SI (caccia immediata al pescaggio)"
+                    : "\nIcona Trigger: no";
+            case SHAMAN   -> "\n" + "★".repeat(d.starIcons())
+                    + "  (" + d.starIcons() + " icone stella)";
+            case INVENTOR -> d.inventionIcon().isEmpty()
+                    ? ""
+                    : "\n💡 Invenzione: " + d.inventionIcon();
+            case BUILDER  -> {
+                StringBuilder sb = new StringBuilder();
+                if (d.buildingDiscount() != 0)
+                    sb.append("\n🔨 Sconto edifici: -").append(d.buildingDiscount()).append(" 🍖");
+                if (d.builderPoints() != 0)
+                    sb.append("\n⭐ Fine partita: +").append(d.builderPoints()).append(" PP");
+                yield sb.toString();
+            }
+            case GATHERER -> "\n🌾 Sostentamento: -3 🍖 per ogni Raccoglitore";
+            case ARTIST   -> "\n🎨 Fine partita: 10 PP per ogni coppia di Artisti";
+        };
+        return header + tail;
     }
 
     private static String shortLabel(CardSnapshot c) {
@@ -204,12 +326,18 @@ public final class CardCellFactory {
         StackPane.setMargin(letterBadge, new Insets(4, 0, 0, 4));
         cell.getChildren().add(letterBadge);
 
-        // Totem overlay if occupied
+        // Totem overlay if occupied: large carved-totem image centered on
+        // the tile, plus a small coloured dot in the bottom-right corner so
+        // the colour is still legible at a glance.
         if (!tile.isFree() && tile.placedTotem() != null) {
-            StackPane totem = buildTotemBadge(tile.placedTotem(), 24);
-            StackPane.setAlignment(totem, Pos.BOTTOM_RIGHT);
-            StackPane.setMargin(totem, new Insets(0, 6, 6, 0));
+            Node totem = buildTotemImage(tile.placedTotem(), TILE_H * 0.7);
+            StackPane.setAlignment(totem, Pos.CENTER);
             cell.getChildren().add(totem);
+
+            StackPane dot = buildTotemBadge(tile.placedTotem(), 14);
+            StackPane.setAlignment(dot, Pos.BOTTOM_RIGHT);
+            StackPane.setMargin(dot, new Insets(0, 4, 4, 0));
+            cell.getChildren().add(dot);
         }
 
         if (onClick != null) {
@@ -224,8 +352,8 @@ public final class CardCellFactory {
 
     /**
      * Builds a coloured totem badge (filled circle with thin border) of the
-     * requested diameter. Used both as an overlay on offer tiles and inside
-     * the turn order tile spaces.
+     * requested diameter. Used as a small corner indicator on offer tiles and
+     * inside player panels where space is tight.
      */
     public static StackPane buildTotemBadge(TotemColour colour, double diameter) {
         Circle c = new Circle(diameter / 2.0);
@@ -234,6 +362,29 @@ public final class CardCellFactory {
         wrap.setPrefSize(diameter, diameter);
         wrap.setMaxSize(diameter, diameter);
         return wrap;
+    }
+
+    /**
+     * Builds a totem visual using the carved-stone PNG asset, scaled to the
+     * given height. Returns an {@link ImageView} when the asset is available;
+     * falls back to {@link #buildTotemBadge(TotemColour, double)} (a coloured
+     * circle of comparable size) when the asset is missing.
+     *
+     * @param colour the totem colour
+     * @param height target on-screen height in pixels
+     */
+    public static Node buildTotemImage(TotemColour colour, double height) {
+        Image img = TotemImageCache.imageFor(colour);
+        if (img == null) {
+            // Fallback: large coloured dot, ~half the requested height
+            return buildTotemBadge(colour, height * 0.55);
+        }
+        ImageView iv = new ImageView(img);
+        iv.setFitHeight(height);
+        iv.setPreserveRatio(true);
+        iv.setSmooth(true);
+        iv.getStyleClass().addAll("totem-image", totemCssClass(colour));
+        return iv;
     }
 
     private static String totemCssClass(TotemColour t) {
@@ -250,73 +401,97 @@ public final class CardCellFactory {
     // ── Turn Order Tile ───────────────────────────────────────────────────────
 
     /**
-     * Builds the Turn Order Tile as a horizontal strip of {@code numPlayers + 1}
-     * (or the actual number of positions) cells. Each cell shows the position
-     * number and any food bonus; if a totem is on it, a coloured badge is
-     * overlaid; if it is the last (penalty) position, the {@code .last} CSS
-     * class is added so the stylesheet can highlight it.
+     * Builds the Turn Order Tile as a vertical card with the player-count
+     * artwork as background and totems positioned at the centre of each
+     * physical box on the artwork.
      *
-     * <p>The whole strip is wrapped in a {@link StackPane} so a background
-     * image can be applied via CSS; the variant comes from {@code numPlayers}
-     * (the stylesheet selects {@code .turn-order-2}, {@code .turn-order-3}, …).
+     * <p>Box centres are pre-measured per player count (see
+     * {@link #TURN_BOX_Y_FRACTIONS}); the image is rendered at fixed
+     * {@link #TURN_TILE_W}×{@link #TURN_TILE_H} so layout is deterministic.
+     *
+     * <p>If the artwork is missing the method falls back to a procedural
+     * vertical strip of position cells with the same {@code numPlayers}
+     * positions, food bonuses and totems.
      */
     public static StackPane buildTurnOrderTile(TurnOrderTileSnapshot snap) {
         StackPane root = new StackPane();
         root.getStyleClass().addAll("turn-order-tile",
                 "turn-order-" + (snap == null ? "?" : snap.numPlayers()));
-        root.setPrefSize(TILE_W * 1.4, TILE_H);
-        root.setMinHeight(TILE_H);
+        root.setPrefSize(TURN_TILE_W, TURN_TILE_H);
+        root.setMinSize(TURN_TILE_W, TURN_TILE_H);
 
         if (snap == null) return root;
 
-        // Optional background image variant (turn_order_2.png ... turn_order_5.png)
         Image bg = TileImageCache.turnOrderTileFor(snap.numPlayers());
         if (bg != null) {
             ImageView iv = new ImageView(bg);
-            iv.setFitWidth(TILE_W * 1.4 - 4);
-            iv.setFitHeight(TILE_H - 4);
+            iv.setFitWidth(TURN_TILE_W);
+            iv.setFitHeight(TURN_TILE_H);
             iv.setPreserveRatio(true);
             iv.getStyleClass().add("turn-order-image");
             root.getChildren().add(iv);
-        }
 
-        HBox positions = new HBox(2);
-        positions.setAlignment(Pos.CENTER);
-        positions.setPadding(new Insets(4));
-
-        for (TurnOrderTileSnapshot.PositionSnap p : snap.positions()) {
-            positions.getChildren().add(buildTurnPosition(p));
+            // Overlay totems on top of the artwork at the precomputed centres.
+            // The Pane is unmanaged-positioned: each totem is placed via
+            // translateX/Y relative to the StackPane's centre.
+            int idx = snap.numPlayers() - 2;
+            if (idx >= 0 && idx < TURN_BOX_Y_FRACTIONS.length) {
+                double[] yFracs = TURN_BOX_Y_FRACTIONS[idx];
+                List<TurnOrderTileSnapshot.PositionSnap> positions = snap.positions();
+                for (int i = 0; i < Math.min(yFracs.length, positions.size()); i++) {
+                    var p = positions.get(i);
+                    if (p.placedTotem() == null) continue;
+                    Node totem = buildTotemImage(p.placedTotem(), TURN_TILE_H * 0.18);
+                    // StackPane.setAlignment + translate puts the node where
+                    // we want relative to the centre of the parent.
+                    StackPane.setAlignment(totem, Pos.TOP_CENTER);
+                    // y in pixels from the top of the parent
+                    double y = yFracs[i] * TURN_TILE_H - (TURN_TILE_H * 0.09);
+                    totem.setTranslateY(y);
+                    // Centre x: use TOP_CENTER alignment so x is already
+                    // centred; translateX 0 keeps it on the box centre.
+                    totem.setTranslateX(0);
+                    root.getChildren().add(totem);
+                }
+            }
+        } else {
+            // Fallback: procedural vertical strip with text labels and
+            // coloured-circle totems, no image.
+            VBox positions = new VBox(2);
+            positions.setAlignment(Pos.CENTER);
+            positions.setPadding(new Insets(4));
+            for (TurnOrderTileSnapshot.PositionSnap p : snap.positions()) {
+                positions.getChildren().add(buildTurnPosition(p));
+            }
+            root.getChildren().add(positions);
         }
-        root.getChildren().add(positions);
         return root;
     }
 
-    private static VBox buildTurnPosition(TurnOrderTileSnapshot.PositionSnap p) {
-        VBox v = new VBox(2);
-        v.getStyleClass().add("turn-position");
-        if (p.isLast())               v.getStyleClass().add("last");
-        if (p.placedTotem() != null)  v.getStyleClass().add("occupied");
-        v.setAlignment(Pos.CENTER);
-        v.setPrefWidth(28);
+    /**
+     * Procedural fallback for a single turn-order position: number, food
+     * bonus, and totem slot. Used only when the artwork PNG is missing.
+     */
+    private static HBox buildTurnPosition(TurnOrderTileSnapshot.PositionSnap p) {
+        HBox row = new HBox(4);
+        row.getStyleClass().add("turn-position");
+        if (p.isLast())               row.getStyleClass().add("last");
+        if (p.placedTotem() != null)  row.getStyleClass().add("occupied");
+        row.setAlignment(Pos.CENTER);
 
         Label num = new Label(String.valueOf(p.position()));
         num.getStyleClass().add("turn-position-number");
-        v.getChildren().add(num);
+        row.getChildren().add(num);
 
         if (p.foodBonus() > 0) {
             Label bonus = new Label("+" + p.foodBonus() + "🍖");
-            bonus.getStyleClass().add("turn-position-bonus");
-            v.getChildren().add(bonus);
+            bonus.getStyleClass().addAll("turn-position-bonus", "emoji-text");
+            row.getChildren().add(bonus);
         }
-
-        // Totem area: always present so columns line up; empty if free.
-        StackPane slot = new StackPane();
-        slot.setPrefSize(20, 20);
         if (p.placedTotem() != null) {
-            slot.getChildren().add(buildTotemBadge(p.placedTotem(), 18));
+            row.getChildren().add(buildTotemBadge(p.placedTotem(), 14));
         }
-        v.getChildren().add(slot);
-        return v;
+        return row;
     }
 
     // ── Deck ──────────────────────────────────────────────────────────────────
@@ -378,7 +553,7 @@ public final class CardCellFactory {
         panel.setAlignment(Pos.TOP_CENTER);
         panel.setPadding(new Insets(8));
 
-        // Header: totem + name + resources
+        // Header: totem + name
         HBox header = new HBox(8);
         header.setAlignment(Pos.CENTER_LEFT);
         header.getChildren().add(buildTotemBadge(p.totemColour(), 18));
@@ -387,10 +562,14 @@ public final class CardCellFactory {
         header.getChildren().add(name);
         panel.getChildren().add(header);
 
+        // Stats: Cibo / PP — both icon and number; CSS class .emoji-text
+        // ensures the bundled emoji font is applied to the glyph
         HBox stats = new HBox(10);
         stats.setAlignment(Pos.CENTER_LEFT);
-        Label food = new Label("🍖 " + p.food());      food.getStyleClass().add("player-food");
-        Label pp   = new Label("⭐ " + p.prestigePoints()); pp.getStyleClass().add("player-pp");
+        Label food = new Label("🍖 " + p.food());
+        food.getStyleClass().addAll("player-food", "emoji-text");
+        Label pp   = new Label("⭐ " + p.prestigePoints());
+        pp.getStyleClass().addAll("player-pp", "emoji-text");
         stats.getChildren().addAll(food, pp);
         panel.getChildren().add(stats);
 
@@ -398,6 +577,7 @@ public final class CardCellFactory {
         if (!p.tribeCharacters().isEmpty()) {
             HBox chars = new HBox(6);
             chars.setAlignment(Pos.CENTER_LEFT);
+            chars.setStyle("-fx-flex-wrap: wrap;");
             Map<CharacterType, Integer> counts = new HashMap<>();
             for (CardSnapshot c : p.tribeCharacters()) {
                 if (c.characterType() == null) continue;
@@ -407,11 +587,16 @@ public final class CardCellFactory {
                 int n = counts.getOrDefault(ct, 0);
                 if (n == 0) continue;
                 Label l = new Label(roleEmoji(ct) + " ×" + n);
-                l.getStyleClass().addAll("char-count", "role-" + ct.name().toLowerCase());
+                l.getStyleClass().addAll("char-count", "emoji-text",
+                        "role-" + ct.name().toLowerCase());
                 Tooltip.install(l, new Tooltip(roleNameIt(ct) + ": " + n));
                 chars.getChildren().add(l);
             }
             panel.getChildren().add(chars);
+
+            // Aggregated character detail
+            HBox agg = buildCharacterAggregateRow(p);
+            if (agg != null) panel.getChildren().add(agg);
         }
 
         // Building thumbnails
@@ -427,6 +612,41 @@ public final class CardCellFactory {
         return panel;
     }
 
+    /**
+     * Computes the per-player aggregate of character distinguishing data
+     * (used in the player panel, below the role counts). Returns null when
+     * there are no relevant aggregates.
+     */
+    private static HBox buildCharacterAggregateRow(PlayerSnapshot p) {
+        int stars = 0;
+        long triggers = 0;
+        int  builderDiscount = 0;
+        int  builderPoints = 0;
+        java.util.Set<String> inventions = new java.util.HashSet<>();
+
+        for (CardSnapshot c : p.tribeCharacters()) {
+            if (c.details() == null) continue;
+            stars           += c.details().starIcons();
+            builderDiscount += c.details().buildingDiscount();
+            builderPoints   += c.details().builderPoints();
+            if (c.details().triggerIcon()) triggers++;
+            if (!c.details().inventionIcon().isEmpty())
+                inventions.add(c.details().inventionIcon());
+        }
+        if (stars == 0 && triggers == 0 && inventions.isEmpty()
+                && builderDiscount == 0 && builderPoints == 0) return null;
+
+        HBox row = new HBox(4);
+        row.setAlignment(Pos.CENTER_LEFT);
+        if (stars > 0)             row.getChildren().add(badge("★ " + stars,                "char-stars"));
+        if (triggers > 0)          row.getChildren().add(badge("🎯 ×" + triggers,           "char-trigger"));
+        if (!inventions.isEmpty()) row.getChildren().add(badge("💡 ×" + inventions.size(), "char-invention"));
+        if (builderDiscount > 0)   row.getChildren().add(badge("🔨 -" + builderDiscount,    "char-discount"));
+        if (builderPoints > 0)     row.getChildren().add(badge("⭐ +" + builderPoints,      "char-pp"));
+        return row;
+    }
+
+    /** Role emoji (uses the bundled emoji font when applied to .emoji-text labels). */
     private static String roleEmoji(CharacterType t) {
         return switch (t) {
             case HUNTER   -> "🏹";

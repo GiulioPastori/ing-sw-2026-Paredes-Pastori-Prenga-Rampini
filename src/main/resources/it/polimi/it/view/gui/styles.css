@@ -297,6 +297,17 @@
 .action-bar .button:hover { -fx-background-color: #d88860; }
 
 
+/* Letter badge over the tile image */
+.tile-letter-badge {
+    -fx-background-color: rgba(40, 25, 16, 0.78);
+    -fx-text-fill: #dcc396;
+    -fx-font-weight: bold;
+    -fx-padding: 1 6 1 6;
+    -fx-background-radius: 4;
+    -fx-font-size: 11px;
+}
+.tile-cell.placed { -fx-opacity: 0.92; }
+
 /* ──────────────────────────────────────────────────────────────────────────
  * Totem badges
  * ──────────────────────────────────────────────────────────────────────── */
@@ -334,28 +345,26 @@
 .tile-cell.placed { -fx-opacity: 0.92; }
 
 /* ──────────────────────────────────────────────────────────────────────────
- * Turn Order Tile
+ * Turn Order Tile — vertical card with the player-count artwork
  * ──────────────────────────────────────────────────────────────────────── */
 .turn-order-tile {
-    -fx-background-color: #4a2e18;
-    -fx-background-radius: 8;
-    -fx-border-color: #b48c50;
-    -fx-border-radius: 8;
-    -fx-border-width: 1;
-    -fx-padding: 2;
+    -fx-background-color: transparent;
+    -fx-padding: 0;
 }
 .turn-order-image {
-    -fx-opacity: 0.9;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 4, 0, 1, 1);
 }
-.turn-position {
-    -fx-padding: 4 2 4 2;
+/* The procedural fallback (no artwork available) keeps the old style. */
+.turn-order-tile > .turn-position {
+    -fx-padding: 4 6 4 6;
     -fx-background-radius: 4;
+    -fx-background-color: rgba(74, 46, 24, 0.6);
 }
-.turn-position.last {
+.turn-order-tile > .turn-position.last {
     -fx-background-color: rgba(214, 68, 58, 0.18);
 }
-.turn-position.occupied {
-    -fx-background-color: rgba(180, 140, 80, 0.18);
+.turn-order-tile > .turn-position.occupied {
+    -fx-background-color: rgba(180, 140, 80, 0.25);
 }
 .turn-position-number {
     -fx-text-fill: #dcc396;
@@ -364,7 +373,20 @@
 }
 .turn-position-bonus {
     -fx-text-fill: #64c864;
-    -fx-font-size: 9px;
+    -fx-font-size: 10px;
+}
+
+/* Totem image rendered over the offer/turn-order tiles. The class
+ * variants (.totem-red, .totem-white, …) are present in case you ever
+ * want to apply colour-specific effects (e.g. a glow on the white totem
+ * to make it stand out on light backgrounds), but no special rule is
+ * required by default. */
+.totem-image {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.55), 4, 0, 1, 1);
+}
+.totem-image.totem-white {
+    /* Tiny dark outline so the white totem stays readable on light tile art */
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.85), 5, 0.2, 0, 0);
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -427,6 +449,48 @@
     -fx-background-color: transparent;
 }
 .players-scroll > .viewport { -fx-background-color: transparent; }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Character icon strip (overlay on character cards)
+ * ──────────────────────────────────────────────────────────────────────── */
+.char-icon-strip {
+    -fx-padding: 1 4 1 4;
+    -fx-background-color: rgba(0,0,0,0.55);
+    -fx-background-radius: 6;
+}
+.char-icon-badge {
+    -fx-text-fill: #f0e8d6;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-padding: 1 4 1 4;
+    -fx-background-radius: 4;
+}
+.char-icon-badge.char-stars      { -fx-text-fill: #e8c43a; }       /* gold stars */
+.char-icon-badge.char-trigger    { -fx-text-fill: #ff7b6a; }       /* hunter red */
+.char-icon-badge.char-invention  { -fx-text-fill: #6ad8e0; }       /* inventor cyan */
+.char-icon-badge.char-discount   { -fx-text-fill: #7bd980; }       /* gatherer-ish green */
+.char-icon-badge.char-pp         { -fx-text-fill: #e8c43a; }       /* gold */
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Emoji rendering
+ * Labels and tooltips that include emoji glyphs add the .emoji-text class.
+ * The font cascade tries the bundled "Noto Emoji" first (registered at
+ * startup by EmojiFont) and falls back to the default System font for the
+ * non-emoji characters. If the emoji font is not bundled, the cascade just
+ * silently uses System and the glyphs render as boxes — that's the visible
+ * sign that the font file is missing.
+ *
+ * The font family name in the cascade must match the one returned by
+ * Font.loadFont(...).getFamily() — both Noto Color Emoji and the monochrome
+ * Noto Emoji register as "Noto Emoji" or "Noto Color Emoji" depending on
+ * the file. We list both so either works.
+ * ──────────────────────────────────────────────────────────────────────── */
+.emoji-text {
+    -fx-font-family: "Noto Color Emoji", "Noto Emoji", "Segoe UI Emoji",
+    "Apple Color Emoji", "System Regular";
+}
+
+/* Append here any subs.
 
 
 

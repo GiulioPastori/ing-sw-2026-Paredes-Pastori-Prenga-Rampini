@@ -61,7 +61,7 @@
                         BoardSnapshot per restare in sync col modello.
                     -->
                     <HBox spacing="14" alignment="CENTER_LEFT" styleClass="offer-track-container">
-                        <HBox fx:id="turnOrderBox"   spacing="6"  alignment="CENTER_LEFT"
+                        <HBox fx:id="turnOrderBox"   spacing="6"  alignment="CENTER"
                               styleClass="turn-order-box"/>
                         <HBox fx:id="offerTrackBox"  spacing="10" alignment="CENTER_LEFT"
                               styleClass="tile-row" HBox.hgrow="ALWAYS"/>
