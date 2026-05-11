@@ -10,6 +10,7 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
@@ -63,6 +64,12 @@
         </HBox>
     </VBox>
 
+    <!-- Scelta colore totem -->
+    <VBox spacing="6" styleClass="lobby-block">
+        <Label text="Colore totem" styleClass="lobby-block-title"/>
+        <HBox fx:id="totemPickerBox" spacing="12" alignment="CENTER_LEFT"/>
+    </VBox>
+
     <Region prefHeight="10"/>
 
     <Button fx:id="connectButton" text="Connetti" onAction="#onConnect"
@@ -72,3 +79,4 @@
 
     <ProgressIndicator fx:id="spinner" visible="false" prefWidth="32" prefHeight="32"/>
 </VBox>
+

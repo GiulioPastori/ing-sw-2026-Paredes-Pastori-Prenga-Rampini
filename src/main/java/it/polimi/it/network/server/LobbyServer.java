@@ -1,5 +1,6 @@
 package it.polimi.it.network.server;
 
+import it.polimi.it.enums.TotemColour;
 import it.polimi.it.network.message.Message;
 
 import java.io.*;
@@ -94,8 +95,12 @@ public class LobbyServer {
                 return;
             }
 
-            String nickname   = msg.str("nickname").trim();
-            int    numPlayers = msg.num("numPlayers");
+            String nickname     = msg.str("nickname").trim();
+            int    numPlayers   = msg.num("numPlayers");
+            String colourStr    = msg.str("totemColour");
+            TotemColour totemColour;
+            try { totemColour = TotemColour.valueOf(colourStr); }
+            catch (Exception e) { totemColour = TotemColour.RED; }
 
             if (nickname.isBlank()) {
                 writer.println(Message.error("Nickname must not be blank.").encode());
@@ -120,7 +125,7 @@ public class LobbyServer {
 
             GameSession session = getOrCreateSession(numPlayers);
 
-            SocketClientHandler handler = new SocketClientHandler(socket, nickname, session) {
+            SocketClientHandler handler = new SocketClientHandler(socket, nickname, session, totemColour) {
                 @Override public void close() {
                     super.close();
                     if (session.isTerminated())
@@ -145,7 +150,7 @@ public class LobbyServer {
     }
 
     private void handleReconnection(Socket socket, String nickname, GameSession session) {
-        SocketClientHandler handler = new SocketClientHandler(socket, nickname, session) {
+        SocketClientHandler handler = new SocketClientHandler(socket, nickname, session, null) {
             @Override public void close() {
                 super.close();
                 if (session.isTerminated())

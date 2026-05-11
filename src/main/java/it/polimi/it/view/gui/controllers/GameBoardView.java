@@ -1,13 +1,16 @@
 package it.polimi.it.view.gui.controllers;
 
 import it.polimi.it.enums.Era;
+import it.polimi.it.enums.TotemColour;
 import it.polimi.it.enums.EventType;
 import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;
 import it.polimi.it.observer.OfferTileSnapshot;
 import it.polimi.it.observer.PlayerSnapshot;
 import it.polimi.it.view.gui.widgets.CardCellFactory;
+import javafx.animation.FadeTransition;
 import javafx.animation.PauseTransition;
+import javafx.animation.SequentialTransition;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
@@ -15,6 +18,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
+import javafx.geometry.Pos;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -71,6 +75,11 @@ public class GameBoardView {
     @FXML private HBox       actionBar;
     @FXML private Button     passButton;
     @FXML private Button     declineButton;
+
+    @FXML private StackPane  eventOverlay;
+    @FXML private VBox       eventOverlayBox;
+    @FXML private Label      eventOverlayTitle;
+    @FXML private Label      eventOverlayName;
 
     /** Insertion-ordered map by player name so the order is stable across redraws. */
     private final Map<String, PlayerSnapshot> players = new LinkedHashMap<>();
@@ -165,6 +174,14 @@ public class GameBoardView {
             this.lastBoard = board;
             renderAll();
             log(player.name() + " → Ordine di turno #" + position);
+
+            // Annuncio visivo quando tutti i totem hanno scelto la posizione.
+            boolean allPlaced = board.turnOrderTile() != null &&
+                    board.turnOrderTile().positions().stream()
+                            .allMatch(p -> p.placedTotem() != null);
+            if (allPlaced) {
+                flashBanner("Tutti i giocatori hanno scelto l'ordine di turno!");
+            }
         });
     }
 
@@ -182,7 +199,45 @@ public class GameBoardView {
     }
 
     public void onEventResolved(int eventId, Era era, EventType type) {
-        runFx(() -> log("[EVENTO] " + era + " — " + type + " (id " + eventId + ")"));
+        runFx(() -> {
+            String label = switch (type) {
+                case SUSTENANCE      -> "Sostentamento";
+                case SHAMANIC_RITUAL -> "Rito Sciamanico";
+                default              -> type.name();
+            };
+            log("▶ EVENTO: " + label + " (" + era + ")");
+            showEventOverlay(era, type, label);
+        });
+    }
+
+    private void showEventOverlay(Era era, EventType type, String label) {
+        // Clear previous style classes and set the per-event one
+        eventOverlayName.getStyleClass().removeIf(s -> s.startsWith("event-"));
+        String eventClass = switch (type) {
+            case SUSTENANCE      -> "event-sustenance";
+            case SHAMANIC_RITUAL -> "event-shamanic";
+            default              -> "event-default";
+        };
+        eventOverlayName.getStyleClass().add(eventClass);
+
+        eventOverlayTitle.setText("Evento — " + era);
+        eventOverlayName.setText(label);
+
+        eventOverlay.setOpacity(0);
+        eventOverlay.setVisible(true);
+
+        FadeTransition fadeIn = new FadeTransition(Duration.millis(400), eventOverlay);
+        fadeIn.setFromValue(0);
+        fadeIn.setToValue(1);
+
+        PauseTransition hold = new PauseTransition(Duration.millis(2800));
+
+        FadeTransition fadeOut = new FadeTransition(Duration.millis(600), eventOverlay);
+        fadeOut.setFromValue(1);
+        fadeOut.setToValue(0);
+        fadeOut.setOnFinished(e -> eventOverlay.setVisible(false));
+
+        new SequentialTransition(fadeIn, hold, fadeOut).play();
     }
 
     public void onEraChanged(Era era) {
@@ -380,6 +435,7 @@ public class GameBoardView {
      * restored after 2.5s. Used for non-blocking feedback (era change, invalid
      * tile click, …).
      */
+
     private void flashBanner(String text) {
         String previous = bannerLabel.getText();
         bannerLabel.setText(text);

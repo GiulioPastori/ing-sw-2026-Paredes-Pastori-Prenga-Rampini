@@ -1,5 +1,7 @@
 package it.polimi.it.network.client;
 
+
+import it.polimi.it.enums.TotemColour;
 import it.polimi.it.network.message.Message;
 
 import java.io.*;
@@ -47,14 +49,14 @@ public class SocketServerProxy implements ServerProxy {
     @Override public boolean isConnected()                  { return connected; }
 
     @Override
-    public void connect(String nickname, int numPlayers) throws IOException {
+    public void connect(String nickname, int numPlayers, TotemColour totemColour) throws IOException {
         socket    = new Socket(host, port);
         reader    = new BufferedReader(
                 new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
         writer    = new PrintWriter(
                 new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true);
         connected = true;
-        writer.println(Message.join(nickname, numPlayers).encode());
+        writer.println(Message.join(nickname, numPlayers, totemColour.name()).encode());
 
         Thread readerThread = new Thread(this::readLoop, "client-reader");
         readerThread.setDaemon(true);

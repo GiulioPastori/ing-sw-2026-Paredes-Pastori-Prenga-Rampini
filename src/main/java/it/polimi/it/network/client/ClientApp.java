@@ -1,5 +1,7 @@
 package it.polimi.it.network.client;
 
+import it.polimi.it.enums.TotemColour;
+import it.polimi.it.view.tui.AnsiStyle;
 import it.polimi.it.view.GameView;
 import it.polimi.it.view.gui.JavaFxApp;
 import it.polimi.it.view.tui.StdinReader;
@@ -81,6 +83,19 @@ public class ClientApp {
         catch (NumberFormatException ignored) {}
         numPlayers = Math.max(2, Math.min(5, numPlayers));
 
+        // ── Colore totem ──────────────────────────────────────────────────────────
+        TotemColour[] allColours = TotemColour.values();
+        System.out.println("Scegli il colore del tuo totem:");
+        for (int i = 0; i < allColours.length; i++) {
+            System.out.println("  " + (i + 1) + ". " + AnsiStyle.totemNameIt(allColours[i]));
+        }
+        System.out.print("> ");
+        TotemColour chosenColour = allColours[0];
+        try {
+            int idx = Integer.parseInt(readLine(stdin).trim()) - 1;
+            if (idx >= 0 && idx < allColours.length) chosenColour = allColours[idx];
+        } catch (NumberFormatException ignored) {}
+
         // ── View ──────────────────────────────────────────────────────────────
         GameView view = new TuiView();
 
@@ -107,7 +122,7 @@ public class ClientApp {
 
         int connectPort = useRmi ? rmiPort : socketPort;
         try {
-            proxy.connect(nickname, numPlayers);
+            proxy.connect(nickname, numPlayers, chosenColour);
             System.out.println("Connesso a " + host + ":" + connectPort
                     + " come '" + nickname + "'. In attesa degli altri giocatori...");
         } catch (IOException e) {

@@ -16,7 +16,7 @@ import it.polimi.it.enums.TotemColour;
  * <p>Note: this helper does not touch any business logic and contains no
  * model state. It is a pure utility class.
  */
-final class AnsiStyle {
+public final class AnsiStyle {
 
     // ── Reset / styles ────────────────────────────────────────────────────────
     static final String RESET     = "\u001B[0m";
@@ -150,7 +150,7 @@ final class AnsiStyle {
     }
 
     /** Italian display name for a totem colour. */
-    static String totemNameIt(TotemColour tc) {
+    public static String totemNameIt(TotemColour tc) {
         if (tc == null) return "?";
         return switch (tc) {
             case RED    -> "Rosso";

@@ -1,5 +1,6 @@
 package it.polimi.it.network.server;
 
+import it.polimi.it.enums.TotemColour;
 import it.polimi.it.network.message.Message;
 
 /**
@@ -12,6 +13,9 @@ public interface ClientConnection {
 
     /** Returns the nickname of the connected player. */
     String getNickname();
+
+    /** Returns the totem colour chosen by the player during JOIN. */
+    TotemColour getTotemColour();
 
     /**
      * Sends a message to this client.

@@ -1,6 +1,7 @@
 package it.polimi.it.view.gui.controllers;
 
 import javafx.application.Platform;
+import it.polimi.it.enums.TotemColour;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.ProgressIndicator;
@@ -38,25 +39,76 @@ public class LobbyController {
     @FXML private ToggleGroup       netGroup;
     @FXML private Button            connectButton;
     @FXML private ProgressIndicator spinner;
+    @FXML private javafx.scene.layout.HBox totemPickerBox;
     @FXML private Label             statusLabel;
 
     private Consumer<ConnectionParams> onConnectRequest;
+    private TotemColour selectedColour = TotemColour.RED; // default
 
     /**
      * Parametri raccolti dal form e passati alla {@code JavaFxView} per la
      * connessione vera e propria.
      */
     public record ConnectionParams(
-            String  host,
-            int     port,
-            boolean useRmi,
-            String  nickname,
-            int     numPlayers) {}
+            String      host,
+            int         port,
+            boolean     useRmi,
+            String      nickname,
+            int         numPlayers,
+            TotemColour totemColour) {}
 
     @FXML
     private void initialize() {
         playerCountSpinner.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(2, 5, 2));
+        initTotemPicker();
+    }
+
+    private void initTotemPicker() {
+        totemPickerBox.getChildren().clear();
+        for (TotemColour tc : TotemColour.values()) {
+            javafx.scene.shape.Circle circle = new javafx.scene.shape.Circle(22);
+            circle.getStyleClass().addAll("totem-badge", totemCssClass(tc));
+            circle.setCursor(javafx.scene.Cursor.HAND);
+
+            javafx.scene.layout.StackPane btn = new javafx.scene.layout.StackPane(circle);
+            btn.setPrefSize(52, 52);
+            btn.setMaxSize(52, 52);
+            btn.getStyleClass().add("totem-picker-lobby-btn");
+            if (tc == selectedColour) btn.getStyleClass().add("totem-picker-selected");
+
+            btn.setOnMouseClicked(e -> {
+                selectedColour = tc;
+                // Update selection highlight
+                totemPickerBox.getChildren().forEach(n ->
+                        n.getStyleClass().remove("totem-picker-selected"));
+                btn.getStyleClass().add("totem-picker-selected");
+            });
+
+            javafx.scene.control.Tooltip.install(btn,
+                    new javafx.scene.control.Tooltip(totemNameIt(tc)));
+            totemPickerBox.getChildren().add(btn);
+        }
+    }
+
+    private static String totemCssClass(TotemColour tc) {
+        return switch (tc) {
+            case RED    -> "totem-red";
+            case BLUE   -> "totem-blue";
+            case YELLOW -> "totem-yellow";
+            case WHITE  -> "totem-white";
+            case BLACK  -> "totem-black";
+        };
+    }
+
+    private static String totemNameIt(TotemColour tc) {
+        return switch (tc) {
+            case RED    -> "Rosso";
+            case BLUE   -> "Blu";
+            case YELLOW -> "Giallo";
+            case WHITE  -> "Bianco";
+            case BLACK  -> "Nero";
+        };
     }
 
     /** Imposta il consumer chiamato al click di "Connetti". */
@@ -81,7 +133,7 @@ public class LobbyController {
         int     numPlayers = playerCountSpinner.getValue();
 
         showConnecting("Connessione in corso a " + host + ":" + port + "…");
-        onConnectRequest.accept(new ConnectionParams(host, port, useRmi, nickname, numPlayers));
+        onConnectRequest.accept(new ConnectionParams(host, port, useRmi, nickname, numPlayers, selectedColour));
     }
 
     public void showConnecting(String msg) {

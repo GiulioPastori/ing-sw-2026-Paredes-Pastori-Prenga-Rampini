@@ -1,6 +1,7 @@
 package it.polimi.it.network.client;
 
 import it.polimi.it.enums.Era;
+import it.polimi.it.enums.TotemColour;
 import it.polimi.it.enums.EventType;
 import it.polimi.it.network.message.Message;
 import it.polimi.it.observer.BoardSnapshot;

@@ -316,12 +316,20 @@
     -fx-stroke-width: 1.2;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 4, 0, 1, 1);
 }
-.totem-red    { -fx-fill: #d6443a; }
-.totem-blue   { -fx-fill: #3a78d6; }
-.totem-yellow { -fx-fill: #e8c43a; }
-.totem-white  { -fx-fill: #f0e8d6; }
-.totem-black  { -fx-fill: #2a2018; -fx-stroke: #b48c50; }
+.totem-red    { -fx-fill: #e8503a; }  /* Pantone 1788 */
+.totem-blue   { -fx-fill: #00a3c4; }  /* Pantone 3135 */
+.totem-yellow { -fx-fill: #f5b800; }  /* Pantone 7406 */
+.totem-white  { -fx-fill: #e8e8e8; }  /* White */
+.totem-black  { -fx-fill: #3d1a3a; -fx-stroke: #7a3a72; }  /* Pantone 7449 */
 .totem-none   { -fx-fill: rgba(0,0,0,0.15); }
+
+/* Totem picker in the selection overlay */
+.totem-badge.selectable:hover {
+    -fx-effect: dropshadow(gaussian, #dcb43c, 20, 0.7, 0, 0);
+    -fx-scale-x: 1.18;
+    -fx-scale-y: 1.18;
+    -fx-cursor: hand;
+}
 
 /* ──────────────────────────────────────────────────────────────────────────
  * Offer track container (turn-order | offer-tiles | deck)
@@ -570,3 +578,98 @@
 }
 
 .gameover-button:hover { -fx-background-color: #d88860; }
+
+/* ── Event Overlay ────────────────────────────────────────────────────────── */
+
+.event-overlay {
+    -fx-background-color: rgba(0, 0, 0, 0.72);
+}
+
+.event-overlay-box {
+    -fx-padding: 40 60 40 60;
+    -fx-background-color: rgba(20, 10, 4, 0.88);
+    -fx-background-radius: 18;
+    -fx-border-color: #dcb43c;
+    -fx-border-width: 2;
+    -fx-border-radius: 18;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.9), 40, 0.4, 0, 0);
+    -fx-max-width: 700;
+}
+
+.event-overlay-title {
+    -fx-text-fill: #a08040;
+    -fx-font-size: 16px;
+    -fx-font-style: italic;
+    -fx-font-family: "Georgia";
+    -fx-letter-spacing: 3;
+}
+
+/* Base name style */
+.event-overlay-name {
+    -fx-text-fill: #f0e0a0;
+    -fx-font-size: 48px;
+    -fx-font-family: "Georgia";
+    -fx-wrap-text: true;
+    -fx-text-alignment: center;
+}
+
+/* Per-event overrides */
+.event-overlay-name.event-sustenance {
+    -fx-text-fill: #88cc66;
+    -fx-font-family: "Palatino Linotype";
+    -fx-font-size: 52px;
+    -fx-font-style: italic;
+    -fx-effect: dropshadow(gaussian, #224400, 18, 0.6, 0, 0);
+}
+
+.event-overlay-name.event-shamanic {
+    -fx-text-fill: #cc88ff;
+    -fx-font-family: "Papyrus";
+    -fx-font-size: 50px;
+    -fx-effect: dropshadow(gaussian, #330066, 22, 0.7, 0, 0);
+}
+
+.event-overlay-name.event-default {
+    -fx-text-fill: #dcb43c;
+    -fx-font-family: "Georgia";
+    -fx-font-size: 48px;
+    -fx-effect: dropshadow(gaussian, #5a3a00, 16, 0.5, 0, 0);
+}
+
+/* Totem picker buttons in selection overlay */
+.totem-picker-btn {
+    -fx-padding: 10 16 10 16;
+    -fx-background-radius: 10;
+    -fx-cursor: hand;
+}
+.totem-picker-btn:hover {
+    -fx-background-color: rgba(220, 180, 60, 0.15);
+    -fx-scale-x: 1.12;
+    -fx-scale-y: 1.12;
+    -fx-effect: dropshadow(gaussian, #dcb43c, 16, 0.5, 0, 0);
+}
+.totem-picker-label {
+    -fx-text-fill: #dcc396;
+    -fx-font-size: 13px;
+    -fx-font-family: "Georgia";
+}
+
+/* Lobby totem picker */
+.totem-picker-lobby-btn {
+    -fx-cursor: hand;
+    -fx-background-color: transparent;
+    -fx-padding: 4;
+    -fx-background-radius: 50%;
+}
+.totem-picker-lobby-btn:hover {
+    -fx-background-color: rgba(220,180,60,0.15);
+    -fx-scale-x: 1.1;
+    -fx-scale-y: 1.1;
+}
+.totem-picker-selected {
+    -fx-background-color: rgba(220,180,60,0.35);
+    -fx-border-color: #dcb43c;
+    -fx-border-width: 2.5;
+    -fx-border-radius: 50%;
+    -fx-background-radius: 50%;
+}

@@ -1,5 +1,6 @@
 package it.polimi.it.network.rmi;
 
+import it.polimi.it.enums.TotemColour;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
@@ -19,7 +20,7 @@ public interface RmiServer extends Remote {
      * @param numPlayers  desired number of players
      * @throws RemoteException on RMI communication failure
      */
-    void register(String nickname, RmiClient client, int numPlayers) throws RemoteException;
+    void register(String nickname, RmiClient client, int numPlayers, String totemColour) throws RemoteException;
 
     /**
      * Sends an action message from a client to the server (as JSON string).

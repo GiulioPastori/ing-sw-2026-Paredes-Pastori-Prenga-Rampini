@@ -84,10 +84,11 @@ public class Message {
 
     // ── Client → Server factories ─────────────────────────────────────────────
 
-    public static Message join(String nickname, int numPlayers) {
+    public static Message join(String nickname, int numPlayers, String totemColour) {
         return new Message(JOIN, new JSONObject()
-                .put("nickname", nickname)
-                .put("numPlayers", numPlayers));
+                .put("nickname",     nickname)
+                .put("numPlayers",   numPlayers)
+                .put("totemColour",  totemColour));
     }
 
     public static Message placeTotem(String playerName, char tileLetter) {

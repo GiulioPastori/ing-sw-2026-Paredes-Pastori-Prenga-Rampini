@@ -1,5 +1,6 @@
 package it.polimi.it.network.server;
 
+import it.polimi.it.enums.TotemColour;
 import it.polimi.it.network.message.Message;
 import it.polimi.it.network.rmi.RmiClient;
 import it.polimi.it.network.rmi.RmiServer;
@@ -42,7 +43,7 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
     // ── RmiServer ─────────────────────────────────────────────────────────────
 
     @Override
-    public void register(String nickname, RmiClient client, int numPlayers)
+    public void register(String nickname, RmiClient client, int numPlayers, String totemColour)
             throws RemoteException {
 
         if (nickname == null || nickname.isBlank()) {
@@ -60,7 +61,10 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
             }
         }
 
-        RmiClientHandler handler = new RmiClientHandler(nickname, client) {
+        TotemColour tc;
+        try { tc = TotemColour.valueOf(totemColour); }
+        catch (Exception e) { tc = TotemColour.RED; }
+        RmiClientHandler handler = new RmiClientHandler(nickname, client, tc) {
             @Override public void close() {
                 super.close();
                 handlers.remove(nickname);
@@ -135,8 +139,10 @@ class RmiClientHandler implements ClientConnection {
     private final java.util.concurrent.atomic.AtomicBoolean disconnectReported
             = new java.util.concurrent.atomic.AtomicBoolean(false);
 
-    RmiClientHandler(String nickname, RmiClient stub) {
+    private final TotemColour totemColour;
+    RmiClientHandler(String nickname, RmiClient stub, TotemColour totemColour) {
         this.nickname = nickname;
+        this.totemColour = totemColour;
         this.stub     = stub;
 
         // Thread daemon che invia i messaggi in coda via RMI
@@ -148,6 +154,7 @@ class RmiClientHandler implements ClientConnection {
     void        setSession(GameSession s) { this.session = s; }
     GameSession getSession()              { return session; }
 
+    @Override public TotemColour getTotemColour() { return totemColour; }
     @Override public String getNickname() { return nickname; }
 
     /**

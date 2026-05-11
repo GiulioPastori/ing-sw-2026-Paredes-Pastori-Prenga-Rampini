@@ -115,4 +115,5 @@ public class StubGameView implements GameView {
     public int requestPostRoundCardChoice(PlayerSnapshot player, List<CardSnapshot> available) {
         return -1; // stub always declines
     }
+
 }

@@ -88,4 +88,5 @@ public interface GameView {
      * Returns the card ID, or -1 to decline.
      */
     int requestPostRoundCardChoice(PlayerSnapshot player, List<CardSnapshot> available);
+
 }

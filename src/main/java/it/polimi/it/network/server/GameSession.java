@@ -92,10 +92,19 @@ public class GameSession implements GameEventListener {
         try {
             List<String>      names   = new ArrayList<>();
             List<TotemColour> colours = new ArrayList<>();
+            List<TotemColour> used    = new ArrayList<>();
             TotemColour[]     all     = TotemColour.values();
-            for (int i = 0; i < clients.size(); i++) {
-                names.add(clients.get(i).getNickname());
-                colours.add(all[i]);
+            for (ClientConnection cl : clients) {
+                names.add(cl.getNickname());
+                TotemColour preferred = cl.getTotemColour();
+                if (preferred == null || used.contains(preferred)) {
+                    // Fallback: pick first unused colour
+                    for (TotemColour tc : all) {
+                        if (!used.contains(tc)) { preferred = tc; break; }
+                    }
+                }
+                colours.add(preferred);
+                used.add(preferred);
             }
 
             var game = new GameBuilder()

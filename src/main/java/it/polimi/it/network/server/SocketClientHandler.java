@@ -1,5 +1,6 @@
 package it.polimi.it.network.server;
 
+import it.polimi.it.enums.TotemColour;
 import it.polimi.it.network.message.Message;
 
 import java.io.*;
@@ -40,6 +41,7 @@ public class SocketClientHandler implements ClientConnection, Runnable {
 
     private final Socket                 socket;
     private final String                 nickname;
+    private final TotemColour            totemColour;
     private final GameSession            session;
     private final BlockingQueue<Message> outbound = new LinkedBlockingQueue<>();
 
@@ -59,9 +61,10 @@ public class SocketClientHandler implements ClientConnection, Runnable {
     /** Timestamp dell'ultimo messaggio ricevuto dal client (qualsiasi tipo). */
     private volatile long lastSeenTime = System.currentTimeMillis();
 
-    public SocketClientHandler(Socket socket, String nickname, GameSession session) {
+    public SocketClientHandler(Socket socket, String nickname, GameSession session, TotemColour totemColour) {
         this.socket   = socket;
-        this.nickname = nickname;
+        this.nickname     = nickname;
+        this.totemColour  = totemColour;
         this.session  = session;
     }
 
@@ -152,7 +155,8 @@ public class SocketClientHandler implements ClientConnection, Runnable {
 
     // ── ClientConnection ──────────────────────────────────────────────────────
 
-    @Override public String getNickname() { return nickname; }
+    @Override public String getNickname()    { return nickname; }
+    @Override public TotemColour getTotemColour() { return totemColour; }
 
     @Override
     public void send(Message m) {

@@ -1,6 +1,7 @@
 package it.polimi.it.network.client;
 
 import it.polimi.it.network.message.Message;
+import it.polimi.it.enums.TotemColour;
 import it.polimi.it.network.rmi.RmiClient;
 import it.polimi.it.network.rmi.RmiServer;
 import it.polimi.it.network.server.RmiServerImpl;
@@ -51,12 +52,12 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
     @Override public boolean isConnected()                  { return connected; }
 
     @Override
-    public void connect(String nickname, int numPlayers) throws IOException {
+    public void connect(String nickname, int numPlayers, TotemColour totemColour) throws IOException {
         try {
             this.myNickname = nickname;
             Registry registry = LocateRegistry.getRegistry(host, rmiPort);
             serverStub = (RmiServer) registry.lookup(RmiServerImpl.REGISTRY_NAME);
-            serverStub.register(nickname, this, numPlayers);
+            serverStub.register(nickname, this, numPlayers, totemColour.name());
             connected = true;
 
             Thread t = new Thread(this::heartbeatLoop, "rmi-heartbeat");

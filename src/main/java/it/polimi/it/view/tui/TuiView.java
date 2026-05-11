@@ -2,6 +2,7 @@ package it.polimi.it.view.tui;
 
 import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
+import it.polimi.it.enums.TotemColour;
 import it.polimi.it.enums.EventType;
 import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;

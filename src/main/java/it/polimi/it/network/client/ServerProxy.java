@@ -1,5 +1,6 @@
 package it.polimi.it.network.client;
 
+import it.polimi.it.enums.TotemColour;
 import it.polimi.it.network.message.Message;
 
 import java.io.IOException;
@@ -36,7 +37,7 @@ public interface ServerProxy {
      * @param numPlayers  desired number of players (used only when creating a session)
      * @throws IOException if the connection cannot be established
      */
-    void connect(String nickname, int numPlayers) throws IOException;
+    void connect(String nickname, int numPlayers, TotemColour totemColour) throws IOException;
 
     /**
      * Sends a message to the server.

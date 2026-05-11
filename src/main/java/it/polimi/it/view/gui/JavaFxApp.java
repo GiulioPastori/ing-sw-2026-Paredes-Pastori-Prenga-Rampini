@@ -107,7 +107,7 @@ public class JavaFxApp extends Application {
         proxy.setOnDisconnect(controller::onDisconnect);
 
         try {
-            proxy.connect(p.nickname(), p.numPlayers());
+            proxy.connect(p.nickname(), p.numPlayers(), p.totemColour());
         } catch (IOException e) {
             try { proxy.disconnect(); } catch (Exception ignored) { /* best effort */ }
             reportLobbyError("Connessione fallita a " + p.host() + ":" + connectPort

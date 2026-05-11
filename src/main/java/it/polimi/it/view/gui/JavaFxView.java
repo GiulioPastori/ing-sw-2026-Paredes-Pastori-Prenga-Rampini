@@ -1,6 +1,7 @@
 package it.polimi.it.view.gui;
 
 import it.polimi.it.enums.Era;
+import it.polimi.it.enums.TotemColour;
 import it.polimi.it.enums.EventType;
 import it.polimi.it.observer.CardSnapshot;
 import it.polimi.it.observer.BoardSnapshot;
@@ -76,8 +77,8 @@ public class JavaFxView implements GameView {
      */
     private final List<Consumer<GameBoardView>> pendingActions = new ArrayList<>();
 
-    private final BlockingQueue<Integer>   cardChoiceQueue = new ArrayBlockingQueue<>(1);
-    private final BlockingQueue<Character> tileChoiceQueue = new ArrayBlockingQueue<>(1);
+    private final BlockingQueue<Integer>    cardChoiceQueue  = new ArrayBlockingQueue<>(1);
+    private final BlockingQueue<Character>  tileChoiceQueue  = new ArrayBlockingQueue<>(1);
 
     /**
      * @param primaryStage lo {@link Stage} principale dove montare la board.
@@ -102,7 +103,7 @@ public class JavaFxView implements GameView {
             try {
                 FXMLLoader loader = new FXMLLoader(
                         getClass().getResource("/it/polimi/it/view/gui/game.fxml"));
-                javafx.scene.layout.BorderPane boardRoot = loader.load();
+                javafx.scene.layout.StackPane boardRoot = loader.load();
                 GameBoardView bc = loader.getController();
                 bc.bindInputQueues(cardChoiceQueue, tileChoiceQueue);
                 bc.onGameStartingHandover(myNickname);
@@ -300,4 +301,5 @@ public class JavaFxView implements GameView {
             return -1;
         }
     }
+
 }

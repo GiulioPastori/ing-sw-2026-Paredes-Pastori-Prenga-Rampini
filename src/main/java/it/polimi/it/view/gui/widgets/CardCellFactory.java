@@ -326,18 +326,14 @@ public final class CardCellFactory {
         StackPane.setMargin(letterBadge, new Insets(4, 0, 0, 4));
         cell.getChildren().add(letterBadge);
 
-        // Totem overlay if occupied: large carved-totem image centered on
-        // the tile, plus a small coloured dot in the bottom-right corner so
-        // the colour is still legible at a glance.
+        // Totem overlay if occupied: small totem fitted inside the top-center
+        // white box on the tile artwork.
         if (!tile.isFree() && tile.placedTotem() != null) {
-            Node totem = buildTotemImage(tile.placedTotem(), TILE_H * 0.7);
-            StackPane.setAlignment(totem, Pos.CENTER);
+            double totemSize = TILE_H * 0.22;   // ~24 px -- fits the small box
+            Node totem = buildTotemImage(tile.placedTotem(), totemSize);
+            StackPane.setAlignment(totem, Pos.TOP_CENTER);
+            StackPane.setMargin(totem, new Insets(6, 0, 0, 0));
             cell.getChildren().add(totem);
-
-            StackPane dot = buildTotemBadge(tile.placedTotem(), 14);
-            StackPane.setAlignment(dot, Pos.BOTTOM_RIGHT);
-            StackPane.setMargin(dot, new Insets(0, 4, 4, 0));
-            cell.getChildren().add(dot);
         }
 
         if (onClick != null) {
