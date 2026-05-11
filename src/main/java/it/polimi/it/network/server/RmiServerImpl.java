@@ -16,13 +16,13 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Logger;
 
 /**
- * Implementazione RMI lato server.
+ * RMI implementation on the server side.
  *
- * <p>Esportata nel registry RMI sotto {@value #REGISTRY_NAME}.
- * Condivide {@link LobbyServer} con il server Socket per partite miste.
+ * <p>Exported in the RMI registry under {@value #REGISTRY_NAME}.
+ * Shares {@link LobbyServer} with the Socket server for mixed games.
  *
- * <p>Ogni client RMI è avvolto in un {@link RmiClientHandler} che implementa
- * {@link ClientConnection}, rendendo il trasporto trasparente a {@link GameSession}.
+ * <p>Each RMI client is wrapped in a {@link RmiClientHandler} that implements
+ * {@link ClientConnection}, making the transport transparent to {@link GameSession}.
  */
 public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
 
@@ -117,13 +117,12 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Avvolge un callback RMI come {@link ClientConnection}.
+ * Wraps an RMI callback as a {@link ClientConnection}.
  *
- * <p><b>Send asincrono</b>: i messaggi in uscita vengono accodati in una
- * {@link BlockingQueue} e spediti da un thread daemon separato. In questo modo
- * {@link GameSession#broadcast} non viene mai bloccato da timeout RMI o
- * eccezioni di rete, e le eccezioni durante l'invio non interrompono il flusso
- * di gioco del server.
+ * <p><b>Asynchronous send</b>: outgoing messages are queued in a
+ * {@link BlockingQueue} and sent by a separate daemon thread. In this way,
+ * {@link GameSession# broadcast} is never blocked by RMI timeouts or
+ * network exceptions, and exceptions during sending do not interrupt the server's game flow.
  */
 class RmiClientHandler implements ClientConnection {
 
@@ -158,8 +157,8 @@ class RmiClientHandler implements ClientConnection {
     @Override public String getNickname() { return nickname; }
 
     /**
-     * Aggiunge il messaggio alla coda di uscita. Non bloccante.
-     * Il thread sender si occupa dell'invio effettivo via RMI.
+     * Adds the message to the outgoing queue. Non-blocking.
+     * The sender thread takes care of the actual sending via RMI.
      */
     @Override
     public void send(Message message) {

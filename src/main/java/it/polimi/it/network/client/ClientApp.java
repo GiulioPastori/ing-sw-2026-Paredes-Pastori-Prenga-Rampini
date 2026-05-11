@@ -14,18 +14,18 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
- * Punto di ingresso del client.
+ * Entry point of the client.
  *
- * <p>Uso: {@code java -jar mesos-client.jar [host] [socketPort]}
- * (default: host=localhost, socketPort=12345; la porta RMI è socketPort+1).
+ * <p>Usage: {@code java -jar mesos-client.jar [host] [socketPort]}
+ * (default: host=localhost, socketPort=12345; the RMI port is socketPort+1).
  *
- * <p>L'app chiede da stdin se usare TUI o GUI:
+ * <p>The app asks via stdin whether to use TUI or GUI:
  * <ul>
- *   <li>TUI → continua il flusso classico su console e crea una {@link TuiView};</li>
- *   <li>GUI → cede il controllo a {@link JavaFxApp}, che si occupa di tutto
- *       (lobby + connessione + board) sul JavaFX runtime. In questo ramo
- *       gli altri input da stdin (host/porta/nickname) vengono saltati:
- *       li raccoglie la lobby grafica.</li>
+ * <li>TUI → continues the classic flow on the console and creates a {@link TuiView};</li>
+ * <li>GUI → hands over control to {@link JavaFxApp}, which takes care of everything
+ * (lobby + connection + board) on the JavaFX runtime. In this branch
+ * the other stdin inputs (host/port/nickname) are skipped:
+ * they are collected by the graphical lobby.</li>
  * </ul>
  */
 public class ClientApp {
@@ -41,15 +41,15 @@ public class ClientApp {
         boolean useGui = readLine(stdin).equals("2");
 
         if (useGui) {
-            // Cediamo il controllo a JavaFX: la lobby raccoglie host/porta/
-            // protocollo/nickname/numero giocatori e gestisce la connessione.
-            // Application.launch è bloccante e termina solo quando la finestra
-            // viene chiusa (o Platform.exit() è invocato).
+            // We hand over control to JavaFX: the lobby collects host/port/
+            // protocol/nickname/number of players and manages the connection.
+            // Application.launch is blocking and only ends when the window
+            // is closed (or Platform.exit() is invoked).
             Application.launch(JavaFxApp.class, args);
             return;
         }
 
-        // ── Ramo TUI (flusso classico) ────────────────────────────────────────
+        // ── TUI Branch (classic flow) ────────────────────────────────────────
         runTui(stdin, args);
     }
 
@@ -62,7 +62,7 @@ public class ClientApp {
         }
         int rmiPort = socketPort + 1;
 
-        // ── Trasporto ─────────────────────────────────────────────────────────
+        // ── Connection ─────────────────────────────────────────────────────────
         System.out.println("Scegli connessione:  1) Socket (TCP)   2) RMI");
         System.out.print("> ");
         String netChoice = readLine(stdin).toLowerCase();
@@ -76,14 +76,14 @@ public class ClientApp {
             nickname = readLine(stdin).trim();
         }
 
-        // ── Numero giocatori ──────────────────────────────────────────────────
+        // ── Number of players ──────────────────────────────────────────────────
         System.out.print("Numero di giocatori (2-5): ");
         int numPlayers = 2;
         try { numPlayers = Integer.parseInt(readLine(stdin).trim()); }
         catch (NumberFormatException ignored) {}
         numPlayers = Math.max(2, Math.min(5, numPlayers));
 
-        // ── Colore totem ──────────────────────────────────────────────────────────
+        // ── Colour totem ──────────────────────────────────────────────────────────
         TotemColour[] allColours = TotemColour.values();
         System.out.println("Scegli il colore del tuo totem:");
         for (int i = 0; i < allColours.length; i++) {
@@ -115,7 +115,7 @@ public class ClientApp {
             System.out.println("Connessione Socket sulla porta " + socketPort);
         }
 
-        // ── Controller + connessione ──────────────────────────────────────────
+        // ── Controller + connection ──────────────────────────────────────────
         ClientController controller = new ClientController(proxy, view, nickname);
         proxy.setOnMessage(controller::onMessage);
         proxy.setOnDisconnect(controller::onDisconnect);
@@ -136,7 +136,7 @@ public class ClientApp {
         System.out.println("Arrivederci!");
     }
 
-    /** Legge una riga da StdinReader con retry fino a quando arriva qualcosa. */
+    /** Reads a line from StdinReader with retry until something arrives. */
     private static String readLine(StdinReader stdin) {
         while (true) {
             try {

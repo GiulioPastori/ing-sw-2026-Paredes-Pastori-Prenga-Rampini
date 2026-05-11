@@ -15,20 +15,21 @@ import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 /**
- * Proxy RMI lato client.
+ * Client-side RMI Proxy.
  *
- * <p>Implementa {@link ServerProxy} (trasporto-agnostico) e {@link RmiClient}
- * (callback server → client).
+ * <p>Implements {@link ServerProxy} (transport-agnostic) and {@link RmiClient}
+ * (server → client callback).
  *
- * <p>Invia un heartbeat {@link Message#HEARTBEAT} ogni
- * {@value #HEARTBEAT_INTERVAL_MS} ms tramite {@link RmiServer#sendMessage(String)}
- * in modo che il server possa rilevare disconnessioni RMI anche in assenza di azioni.
+ * <p>Sends a heartbeat {@link Message#HEARTBEAT} every
+ * {@value #HEARTBEAT_INTERVAL_MS} ms via {@link RmiServer#sendMessage(String)}
+ * so that the server can detect RMI disconnections even in the absence of actions.
  */
+
 public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, RmiClient {
 
     private static final Logger LOG = Logger.getLogger(RmiServerProxy.class.getName());
 
-    /** Intervallo heartbeat client → server (ms). */
+    /** interval heartbeat client → server (ms). */
     private static final long HEARTBEAT_INTERVAL_MS = 5_000;
 
     private final String host;
@@ -38,7 +39,7 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
     private Consumer<Message> onMessage;
     private Runnable          onDisconnect;
     private volatile boolean  connected = false;
-    /** Nickname usato in fase di connect — serve per costruire il messaggio heartbeat. */
+    /** Nickname used during reconnection — It is used to construct the heartbeat message. */
     private String myNickname;
 
     public RmiServerProxy(String host, int rmiPort) throws RemoteException {
@@ -98,9 +99,9 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
     // ── Heartbeat periodico ───────────────────────────────────────────────────
 
     /**
-     * Invia un HEARTBEAT ogni {@value #HEARTBEAT_INTERVAL_MS} ms via RMI.
-     * Il server RMI usa {@code RmiClientHandler.send()} per rilevare disconnessioni;
-     * il fallimento della chiamata stessa basta a far scattare
+     * Sends a HEARTBEAT every {@value #HEARTBEAT_INTERVAL_MS} ms via RMI.
+     * The RMI server uses {@code RmiClientHandler.send()} to detect disconnections;
+     * the failure of the call itself is enough to trigger
      * {@link it.polimi.it.network.server.GameSession#onPlayerDisconnected(String)}.
      */
     private void heartbeatLoop() {

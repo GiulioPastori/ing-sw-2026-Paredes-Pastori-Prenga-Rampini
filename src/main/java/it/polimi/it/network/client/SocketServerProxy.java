@@ -11,21 +11,21 @@ import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 /**
- * Proxy TCP lato client.
+ * TCP proxy on the client side.
  *
- * <p>Gestisce tre thread:
+ * <p>Manages three threads:
  * <ul>
- *   <li><b>reader</b> — legge i messaggi in arrivo dal server.</li>
- *   <li><b>heartbeat</b> — invia un {@link Message#HEARTBEAT} ogni
- *       {@value #HEARTBEAT_INTERVAL_MS} ms per tenere viva la connessione
- *       e permettere al watchdog del server di rilevare disconnessioni reali.</li>
+ * <li><b>reader</b> — reads incoming messages from the server.</li>
+ * <li><b>heartbeat</b> — sends a {@link Message#HEARTBEAT} every
+ * {@value #HEARTBEAT_INTERVAL_MS} ms to keep the connection alive
+ * and allow the server watchdog to detect real disconnections.</li>
  * </ul>
  */
 public class SocketServerProxy implements ServerProxy {
 
     private static final Logger LOG = Logger.getLogger(SocketServerProxy.class.getName());
 
-    /** Intervallo di invio heartbeat dal client al server (ms). */
+    /** Interval for sending heartbeat from client to server (ms). */
     private static final long HEARTBEAT_INTERVAL_MS = 5_000;
 
     private final String host;
@@ -81,7 +81,7 @@ public class SocketServerProxy implements ServerProxy {
         try { if (socket != null) socket.close(); } catch (IOException ignored) {}
     }
 
-    // ── Lettura messaggi dal server ───────────────────────────────────────────
+    // ── reading messages from server ───────────────────────────────────────────
 
     private void readLoop() {
         try {
@@ -103,7 +103,7 @@ public class SocketServerProxy implements ServerProxy {
         }
     }
 
-    // ── Heartbeat periodico verso il server ───────────────────────────────────
+    // ── Heartbeat for server ───────────────────────────────────
 
     /**
      * Invia un {@link Message#HEARTBEAT} ogni {@value #HEARTBEAT_INTERVAL_MS} ms.

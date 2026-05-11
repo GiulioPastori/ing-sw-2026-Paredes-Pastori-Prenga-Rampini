@@ -17,17 +17,16 @@ import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 /**
- * Controller lato client.
+ * Client-side controller.
  *
- * <p>Riceve i messaggi dal server e guida la view.
+ * <p>Receives messages from the server and guides the view.
  *
- * <p><b>Regola fondamentale sull'inputExecutor:</b>
- * L'executor è <em>uno solo</em> per tutta la durata della partita e non
- * viene mai ricreato né interrotto durante il gioco. I task di input si
- * accodano naturalmente: il server invia {@code CARD_SLOT_READY} solo
- * quando è effettivamente il turno di quel giocatore, quindi non ci
- * saranno mai task "obsoleti" in coda.
- * L'executor viene terminato solo in {@link #onDisconnect()} e {@link #run()}.
+ * <p><b>Fundamental rule about the inputExecutor:</b>
+ * The executor is <em>only one</em> for the entire duration of the game and is never
+ * recreated or interrupted during play. Input tasks naturally queue up: the server sends {@code CARD_SLOT_READY} only
+ * when it is actually that player's turn, so there will
+ * never be "obsolete" tasks in the queue.
+ * The executor is terminated only in {@link #onDisconnect()} and {@link #run()}.
  */
 public class ClientController {
 
@@ -51,14 +50,14 @@ public class ClientController {
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
-    /** Chiamato quando la connessione cade. */
+    //** Called when the connection drops. */
     public void onDisconnect() {
         inputExecutor.shutdownNow();
         view.showInvalidAction("SERVER", "Connessione persa.");
         gameLatch.countDown();
     }
 
-    /** Blocca finché la partita non finisce. Da chiamare dopo proxy.connect(). */
+    /** Blocks until the game ends. To be called after proxy.connect(). */
     public void run() {
         try { gameLatch.await(); }
         catch (InterruptedException e) { Thread.currentThread().interrupt(); }
@@ -120,9 +119,9 @@ public class ClientController {
             }
             default -> LOG.warning("Tipo messaggio sconosciuto: " + msg.getType());
         }
-    } // fine dispatch()
+    } // end dispatch()
 
-    // ── Handler: piazzamento totem ────────────────────────────────────────────
+    // ── Handler: placement totem ────────────────────────────────────────────
 
     private void handleRoundStarted(Message msg) {
         totemPlacedCount = 0;
@@ -156,7 +155,7 @@ public class ClientController {
         }
     }
 
-    // ── Handler: scelta carte ─────────────────────────────────────────────────
+    // ── Handler: choose cards ─────────────────────────────────────────────────
 
     private void handleCardSlotReady(Message msg) {
         PlayerSnapshot     player        = msg.playerObj("player");
@@ -166,10 +165,10 @@ public class ClientController {
 
         view.showCardSlotReady(player, isTop, cards, visibleEvents);
 
-        // L'input viene richiesto solo al giocatore di turno.
-        // NON si fa shutdownNow/ricreazione: il server manda CARD_SLOT_READY
-        // solo quando è effettivamente il turno di questo giocatore,
-        // quindi i task si accodano correttamente senza mai essere "obsoleti".
+        /** The input is requested only from the player whose turn it is.
+// NO shutdownNow/recreation is done: the server sends CARD_SLOT_READY
+// only when it is actually this player's turn,
+// so the tasks queue correctly without ever being "obsolete". */
         if (!player.name().equals(myNickname)) return;
 
         inputExecutor.submit(() -> {
@@ -195,7 +194,7 @@ public class ClientController {
         });
     }
 
-    // ── Handler: post-round (Torre di Guardia) ────────────────────────────────
+    // ── Handler: post-round (watchtower) ────────────────────────────────
 
     private void handlePostRoundStarted(Message msg) {
         List<PlayerSnapshot> watchtower = msg.playerList("watchtowerPlayers");
