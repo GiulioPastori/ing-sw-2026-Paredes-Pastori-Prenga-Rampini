@@ -25,7 +25,7 @@
 }
 
 .lobby-title {
-    -fx-text-fill: #dcb43c;
+    -fx-text-fill: #f1050b;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 6, 0, 0, 2);
 }
 
@@ -179,11 +179,11 @@
 
 /* Caratteri */
 .card-cell.character.HUNTER   { -fx-background-color: #822d2d; }
-.card-cell.character.GATHERER { -fx-background-color: #2d5f2d; }
-.card-cell.character.SHAMAN   { -fx-background-color: #4b2d73; }
-.card-cell.character.BUILDER  { -fx-background-color: #5f4b23; }
+.card-cell.character.GATHERER { -fx-background-color: #f4430a; }
+.card-cell.character.SHAMAN   { -fx-background-color: #450d6a; }
+.card-cell.character.BUILDER  { -fx-background-color: #371502; }
 .card-cell.character.INVENTOR { -fx-background-color: #234b73; }
-.card-cell.character.ARTIST   { -fx-background-color: #733755; }
+.card-cell.character.ARTIST   { -fx-background-color: #e6d50c; }
 
 .card-label {
     -fx-text-fill: white;
@@ -316,11 +316,11 @@
     -fx-stroke-width: 1.2;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 4, 0, 1, 1);
 }
-.totem-red    { -fx-fill: #e8503a; }  /* Pantone 1788 */
-.totem-blue   { -fx-fill: #00a3c4; }  /* Pantone 3135 */
-.totem-yellow { -fx-fill: #f5b800; }  /* Pantone 7406 */
+.totem-red    { -fx-fill: #ee2737; }  /* Pantone 1788 */
+.totem-blue   { -fx-fill: #009cbd; }  /* Pantone 3135 */
+.totem-yellow { -fx-fill: #f6be00; }  /* Pantone 7406 */
 .totem-white  { -fx-fill: #e8e8e8; }  /* White */
-.totem-black  { -fx-fill: #3d1a3a; -fx-stroke: #7a3a72; }  /* Pantone 7449 */
+.totem-black  { -fx-fill: #3f2a56; }  /* Pantone 7449 */
 .totem-none   { -fx-fill: rgba(0,0,0,0.15); }
 
 /* Totem picker in the selection overlay */
@@ -446,11 +446,11 @@
     -fx-background-radius: 4;
 }
 .char-count.role-hunter   { -fx-text-fill: #ff7b6a; }
-.char-count.role-gatherer { -fx-text-fill: #7bd980; }
-.char-count.role-builder  { -fx-text-fill: #e8c43a; }
-.char-count.role-shaman   { -fx-text-fill: #c97bda; }
+.char-count.role-gatherer { -fx-text-fill: rgba(244, 67, 10, 0.69); }
+.char-count.role-builder  { -fx-text-fill: rgba(55, 21, 2, 0.77); }
+.char-count.role-shaman   { -fx-text-fill: rgba(69, 13, 106, 0.8); }
 .char-count.role-inventor { -fx-text-fill: #6ad8e0; }
-.char-count.role-artist   { -fx-text-fill: #d6669c; }
+.char-count.role-artist   { -fx-text-fill: rgba(245, 184, 0, 0.71); }
 
 /* Players bar can scroll horizontally if many players are present */
 .players-scroll {
