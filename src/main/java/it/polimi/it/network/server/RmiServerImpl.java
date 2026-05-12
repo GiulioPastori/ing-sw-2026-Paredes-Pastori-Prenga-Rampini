@@ -121,7 +121,7 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
  *
  * <p><b>Send asincrono</b>: i messaggi in uscita vengono accodati in una
  * {@link BlockingQueue} e spediti da un thread daemon separato. In questo modo
- * {@link GameSession#broadcast} non viene mai bloccato da timeout RMI o
+ * {@link GameSession#} non viene mai bloccato da timeout RMI o
  * eccezioni di rete, e le eccezioni durante l'invio non interrompono il flusso
  * di gioco del server.
  */

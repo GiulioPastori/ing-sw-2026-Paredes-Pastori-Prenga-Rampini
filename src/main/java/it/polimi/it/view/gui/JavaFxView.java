@@ -10,6 +10,7 @@ import it.polimi.it.observer.OfferTileSnapshot;
 import it.polimi.it.observer.PlayerSnapshot;
 import it.polimi.it.view.GameView;
 import it.polimi.it.view.gui.controllers.GameBoardView;
+import it.polimi.it.view.gui.controllers.LobbyController;
 import it.polimi.it.view.gui.controllers.GameOverController;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -59,7 +60,8 @@ public class JavaFxView implements GameView {
 
     private static final Logger LOG = Logger.getLogger(JavaFxView.class.getName());
 
-    private final Stage primaryStage;
+    private final Stage           primaryStage;
+    private final LobbyController lobbyController;
 
     /**
      * Set on the JavaFX thread inside {@link #showBoard(String)}.
@@ -85,7 +87,8 @@ public class JavaFxView implements GameView {
      *                     Tipicamente la stessa usata dalla lobby — la view
      *                     ne sostituisce la scena.
      */
-    public JavaFxView(Stage primaryStage) {
+    public JavaFxView(Stage primaryStage, LobbyController lobbyController) {
+        this.lobbyController = lobbyController;
         this.primaryStage = primaryStage;
     }
 
@@ -167,6 +170,13 @@ public class JavaFxView implements GameView {
     }
 
     // ── show* (push) ──────────────────────────────────────────────────────────
+
+    @Override
+    public void showLobbyUpdate(java.util.List<String> players, int needed) {
+        Platform.runLater(() -> lobbyController.showLobbyWaiting("", players, needed));
+        // Also update the in-board cover if the board is already loaded
+        whenReady(bc -> bc.updateBoardWaiting(players, needed));
+    }
 
     @Override
     public void showRoundStarted(int round, List<PlayerSnapshot> turnOrder,

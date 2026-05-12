@@ -89,4 +89,11 @@ public interface GameView {
      */
     int requestPostRoundCardChoice(PlayerSnapshot player, List<CardSnapshot> available);
 
+    /**
+     * Called when the lobby state changes (a player joined or disconnected).
+     * @param players  list of connected player nicknames
+     * @param needed   total players needed to start
+     */
+    default void showLobbyUpdate(List<String> players, int needed) {}
+
 }

@@ -124,9 +124,7 @@ public class CardLoader {
     }
 
     /**
-     * Expected format for each event entry:
-     * <pre>
-     * {
+     * Format for each event:
      *   "id":      int,
      *   "era":     "ERA_I" | "ERA_II" | "ERA_III",
      *   "type":    "SUSTENANCE" | "HUNT" | "SHAMANIC_RITUAL" | "CAVE_PAINTINGS",
@@ -136,9 +134,6 @@ public class CardLoader {
      *   // HUNT:            "prestigePerHunter": int
      *   // SHAMANIC_RITUAL: "rewardForMost": int, "penaltyForFewest": int
      *   // CAVE_PAINTINGS:  "minArtistsForBonus": int, "penaltyPoints": int,
-     *   //                  "prestigePerArtist": int
-     * }
-     * </pre>
      */
     private static Event parseEvent(JSONObject obj) {
         int       id         = obj.getInt("id");
@@ -184,9 +179,7 @@ public class CardLoader {
     }
 
     /**
-     * Expected format for each building entry:
-     * <pre>
-     * {
+     * Format for each building entry:
      *   "id":                int,
      *   "era":               "ERA_I" | "ERA_II" | "ERA_III",
      *   "foodCost":          int,
@@ -195,9 +188,7 @@ public class CardLoader {
      *
      *   // Only for buildings 206 and 302:
      *   "ppPerCharacter":       int,
-     *   "targetCharacterType":  "HUNTER" | "SHAMAN" | "ARTIST" | ...
-     * }
-     * </pre>
+     *   "targetCharacterType":  "HUNTER" | "SHAMAN" | "ARTIST" |
      */
     private static Building parseBuilding(JSONObject obj) {
         int    id          = obj.getInt("id");

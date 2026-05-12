@@ -78,11 +78,12 @@ public class ClientController {
 
     private void dispatch(Message msg) {
         switch (msg.getType()) {
-            case Message.LOBBY_UPDATE ->
-                    System.out.println("Lobby: "
-                            + msg.strList("connectedPlayers").size()
-                            + "/" + msg.num("expectedPlayers")
-                            + " — " + msg.strList("connectedPlayers"));
+            case Message.LOBBY_UPDATE -> {
+                List<String> players = msg.strList("connectedPlayers");
+                int needed = msg.num("expectedPlayers");
+                System.out.println("Lobby: " + players.size() + "/" + needed + " — " + players);
+                view.showLobbyUpdate(players, needed);
+            }
             case Message.ERROR ->
                     view.showInvalidAction("SERVER", msg.str("reason"));
             // Heartbeat e keep-alive: aggiornano solo il timestamp nel proxy, niente altro
