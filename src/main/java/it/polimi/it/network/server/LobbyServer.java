@@ -39,7 +39,7 @@ public class LobbyServer {
         this.socketPort = socketPort;
     }
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
+    // ── Lifecycle
 
     public void start() throws IOException {
         running = true;
@@ -58,7 +58,7 @@ public class LobbyServer {
 
     public void stop() { running = false; }
 
-    // ── Nickname authority (used by RmiServerImpl) ────────────────────────────
+    //  Nickname authority (used by RmiServerImpl)
 
     /**
      * Atomically claims the nickname.
@@ -75,7 +75,7 @@ public class LobbyServer {
         takenNicknames.remove(nick);
     }
 
-    // ── New connection handshake ──────────────────────────────────────────────
+    //  New connection handshake
 
     private void handleNewConnection(Socket socket) {
         try {
@@ -162,7 +162,7 @@ public class LobbyServer {
         LOG.info("Player '" + nickname + "' reconnected via Socket.");
     }
 
-    // ── Session management ────────────────────────────────────────────────────
+    //  Session management
 
     /**
      * Finds a started, non-terminated session that contains a player with the

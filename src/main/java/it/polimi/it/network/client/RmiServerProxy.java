@@ -88,14 +88,14 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
         try { UnicastRemoteObject.unexportObject(this, true); } catch (Exception ignored) {}
     }
 
-    // ── Callback RMI: server → client ─────────────────────────────────────────
+    // Callback RMI: server → client
 
     @Override
     public void receiveMessage(String json) throws RemoteException {
         if (onMessage != null) onMessage.accept(Message.decode(json));
     }
 
-    // ── Heartbeat periodico ───────────────────────────────────────────────────
+    //  Heartbeat periodico
 
     /**
      * Invia un HEARTBEAT ogni {@value #HEARTBEAT_INTERVAL_MS} ms via RMI.

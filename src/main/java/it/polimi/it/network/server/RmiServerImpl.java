@@ -40,7 +40,7 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
         LOG.info("RMI registry avviato sulla porta " + rmiPort);
     }
 
-    // ── RmiServer ─────────────────────────────────────────────────────────────
+    // RmiServer
 
     @Override
     public void register(String nickname, RmiClient client, int numPlayers, String totemColour)
@@ -101,7 +101,7 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
         }
     }
 
-    // ── Helper ────────────────────────────────────────────────────────────────
+    //  Helper
 
     private String extractPlayerName(Message msg) {
         return switch (msg.getType()) {
@@ -114,7 +114,6 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Avvolge un callback RMI come {@link ClientConnection}.

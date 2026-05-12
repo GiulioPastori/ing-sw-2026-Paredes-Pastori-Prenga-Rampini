@@ -87,7 +87,7 @@ public class SocketClientHandler implements ClientConnection, Runnable {
         }
     }
 
-    // ── Lettura ───────────────────────────────────────────────────────────────
+    //  Lettura
 
     private void readLoop() throws IOException {
         String line;
@@ -107,7 +107,7 @@ public class SocketClientHandler implements ClientConnection, Runnable {
         }
     }
 
-    // ── Scrittura ─────────────────────────────────────────────────────────────
+    //  Scrittura
 
     private void writeLoop() {
         while (!closed.get()) {
@@ -122,7 +122,7 @@ public class SocketClientHandler implements ClientConnection, Runnable {
         }
     }
 
-    // ── Watchdog ──────────────────────────────────────────────────────────────
+    //Watchdog
 
     private void watchdogLoop() {
         while (!closed.get()) {
@@ -145,7 +145,7 @@ public class SocketClientHandler implements ClientConnection, Runnable {
         }
     }
 
-    // ── Disconnessione (chiamata al massimo una volta) ─────────────────────────
+    // Disconnessione (chiamata al massimo una volta)
 
     private void reportDisconnect() {
         if (disconnectReported.compareAndSet(false, true)) {
@@ -153,7 +153,7 @@ public class SocketClientHandler implements ClientConnection, Runnable {
         }
     }
 
-    // ── ClientConnection ──────────────────────────────────────────────────────
+    // ── ClientConnection
 
     @Override public String getNickname()    { return nickname; }
     @Override public TotemColour getTotemColour() { return totemColour; }

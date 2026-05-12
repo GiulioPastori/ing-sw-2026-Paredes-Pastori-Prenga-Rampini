@@ -6,7 +6,7 @@ import it.polimi.it.enums.EventType;
 
 /**
  * Final event card. Always Era III. Placed at the bottom of the tribe deck
- * and resolved during the last round together with all visible events (rulebook p.7).
+ * and resolved during the last round together with all visible events
  */
 public class FinalEvent extends Event {
 
