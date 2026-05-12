@@ -24,7 +24,7 @@ import java.util.List;
  */
 public class Message {
 
-    // ── Types ─────────────────────────────────────────────────────────────────
+    //  Types
     // Client → Server
     public static final String JOIN        = "JOIN";
     public static final String PLACE_TOTEM = "PLACE_TOTEM";
@@ -65,7 +65,7 @@ public class Message {
     public String     getType() { return type; }
     public JSONObject getData() { return data; }
 
-    // ── Codec ─────────────────────────────────────────────────────────────────
+    // Codec
 
     /** Serialises to a single JSON line (safe for BufferedWriter.newLine). */
     public String encode() {
@@ -82,7 +82,7 @@ public class Message {
         return new Message(type, obj);
     }
 
-    // ── Client → Server factories ─────────────────────────────────────────────
+    //  Client → Server factories
 
     public static Message join(String nickname, int numPlayers, String totemColour) {
         return new Message(JOIN, new JSONObject()
@@ -119,7 +119,7 @@ public class Message {
     public static Message pong()      { return new Message(PONG,      new JSONObject()); }
     public static Message heartbeat() { return new Message(HEARTBEAT, new JSONObject()); }
 
-    // ── Server → Client factories ─────────────────────────────────────────────
+    //  Server → Client factories
 
     public static Message error(String reason) {
         return new Message(ERROR, new JSONObject().put("reason", reason));
@@ -220,7 +220,7 @@ public class Message {
                 .put("finalScores", playerListToJson(finalScores)));
     }
 
-    // ── JSON helpers ──────────────────────────────────────────────────────────
+    //  JSON helpers
 
     private static JSONObject playerToJson(PlayerSnapshot p) {
         return new JSONObject()
@@ -307,7 +307,7 @@ public class Message {
         return arr;
     }
 
-    // ── Data accessors (used by ClientController) ─────────────────────────────
+    //  Data accessors (used by ClientController)
 
     public String  str(String key)     { return data.getString(key); }
     public int     num(String key)     { return data.getInt(key); }

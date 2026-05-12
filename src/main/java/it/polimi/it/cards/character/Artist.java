@@ -7,7 +7,7 @@ import it.polimi.it.player.Player;
 
 /**
  * Cave Paintings event: number of artists vs. threshold determines PP gain/loss.
- * End of game: 10 PP for every pair of artists (integer division, rulebook p.7).
+ * End of game: 10 PP for every pair of artists
  */
 public class Artist extends Character {
 

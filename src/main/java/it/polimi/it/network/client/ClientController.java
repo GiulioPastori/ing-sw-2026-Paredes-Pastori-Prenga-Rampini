@@ -49,7 +49,7 @@ public class ClientController {
         this.myNickname = myNickname;
     }
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
+    // Lifecycle
 
     /** Chiamato quando la connessione cade. */
     public void onDisconnect() {
@@ -65,7 +65,7 @@ public class ClientController {
         finally { inputExecutor.shutdownNow(); }
     }
 
-    // ── Dispatch ──────────────────────────────────────────────────────────────
+    //  Dispatch
 
     public void onMessage(Message msg) {
         try {
@@ -122,7 +122,7 @@ public class ClientController {
         }
     } // fine dispatch()
 
-    // ── Handler: piazzamento totem ────────────────────────────────────────────
+    //  Handler: piazzamento totem
 
     private void handleRoundStarted(Message msg) {
         totemPlacedCount = 0;
@@ -156,7 +156,7 @@ public class ClientController {
         }
     }
 
-    // ── Handler: scelta carte ─────────────────────────────────────────────────
+    // Handler: scelta carte
 
     private void handleCardSlotReady(Message msg) {
         PlayerSnapshot     player        = msg.playerObj("player");
@@ -195,7 +195,7 @@ public class ClientController {
         });
     }
 
-    // ── Handler: post-round (Torre di Guardia) ────────────────────────────────
+    //  Handler: post-round (Torre di Guardia)
 
     private void handlePostRoundStarted(Message msg) {
         List<PlayerSnapshot> watchtower = msg.playerList("watchtowerPlayers");

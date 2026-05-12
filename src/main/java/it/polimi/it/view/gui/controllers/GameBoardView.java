@@ -106,7 +106,7 @@ public class GameBoardView {
         runFx(() -> bannerLabel.setText("Connesso come " + myNickname));
     }
 
-    // ── Push events from the network/view layer ───────────────────────────────
+    // Push events from the network/view layer
 
     public void onRoundStarted(int round, List<PlayerSnapshot> turnOrder, BoardSnapshot board) {
         runFx(() -> {
@@ -259,7 +259,7 @@ public class GameBoardView {
         });
     }
 
-    // ── Input prompts (called from JavaFxView; they push to queues) ───────────
+    //  Input prompts (called from JavaFxView; they push to queues)
 
     /**
      * Asks the user to pick a tile. The whole board is shown; clicks on

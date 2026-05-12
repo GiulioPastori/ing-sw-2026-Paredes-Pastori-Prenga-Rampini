@@ -18,14 +18,14 @@ import it.polimi.it.enums.TotemColour;
  */
 public final class AnsiStyle {
 
-    // ── Reset / styles ────────────────────────────────────────────────────────
+    //  Reset / styles
     static final String RESET     = "\u001B[0m";
     static final String BOLD      = "\u001B[1m";
     static final String DIM       = "\u001B[2m";
     static final String ITALIC    = "\u001B[3m";
     static final String UNDERLINE = "\u001B[4m";
 
-    // ── Foreground colours ───────────────────────────────────────────────────
+    //  Foreground colours
     static final String FG_BLACK   = "\u001B[30m";
     static final String FG_RED     = "\u001B[31m";
     static final String FG_GREEN   = "\u001B[32m";
@@ -47,7 +47,7 @@ public final class AnsiStyle {
 
     private AnsiStyle() { /* utility */ }
 
-    // ── Convenience wrappers ──────────────────────────────────────────────────
+    //  Convenience wrappers
 
     /** Wraps {@code text} between {@code style} and {@link #RESET}. */
     static String paint(String style, String text) {
@@ -59,7 +59,7 @@ public final class AnsiStyle {
         return (bold ? BOLD : "") + colour + text + RESET;
     }
 
-    // ── Emoji / labels per role/era ──────────────────────────────────────────
+    //  Emoji / labels per role/era
 
     /** Emoji rappresentativa del ruolo del personaggio. */
     static String emoji(CharacterType t) {

@@ -1,8 +1,7 @@
 package it.polimi.it.actions;
 
 /**
- * Action: the player places their totem on an offer tile.
- *
+ * the player places their totem on an offer tile.
  * Carries only the tile letter (a char), which is the natural identifier
  * both for the game rules and for network serialisation.
  * Game resolves the letter to the concrete OfferTile internally.

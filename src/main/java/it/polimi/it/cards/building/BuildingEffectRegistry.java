@@ -12,29 +12,7 @@ import java.util.Map;
  * Centralised registry of all building effects.
  *
  * Maps each buildingId to the corresponding BuildingEffect.
- *
- * === ERA I ===
- * 101: Each new complete set of 6 types → +5 food (not retroactive)
- * 102: Sustenance → -1 food per Gatherer
- * 103: Shamanic Ritual → immune to minimum penalty
- * 104: Turn order → +1 food landing on a food-bonus space
- * 105: Inventor pair with same icon → +3 food (not retroactive)
- * 106: Sustenance → -1 food per Artist
- *
- * === ERA II ===
- * 201: Shamanic Ritual → doubles majority reward
- * 202: Hunt → +1 food and +1 PP per Hunter
- * 203: End of game → double PP from Builder cards
- * 204: Cave Paintings → +1 food per Artist
- * 205: End of game → 6 PP per complete set of 6 types
- * 206: Sustenance → -1 food per Inventor
- * 207: Shamanic Ritual → +3 virtual star icons
- *
- * === ERA III ===
- * 301: End of game → 25 fixed PP  (carried by finalPoints in JSON; no scorer needed)
- * 302: Watchtower → extra post-round action
- * 303-308: End of game → PP per character of indicated type
- *          (placeholder scorers overridden by CardLoader at load time)
+
  */
 public final class BuildingEffectRegistry {
 

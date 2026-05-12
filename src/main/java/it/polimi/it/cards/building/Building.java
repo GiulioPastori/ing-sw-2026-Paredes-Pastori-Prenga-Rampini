@@ -16,7 +16,7 @@ import it.polimi.it.tiles.TurnPosition;
  * 2. Index into BuildingEffectRegistry to retrieve the card's special effect.
  *
  * The effective food cost is the base cost minus the total builder discount
- * accumulated in the player's tribe (never below 0, rulebook p.5).
+ * accumulated in the player's tribe.
  */
 public class Building extends Card {
 
