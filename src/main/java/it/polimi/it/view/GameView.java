@@ -1,7 +1,6 @@
 package it.polimi.it.view;
 
 import it.polimi.it.enums.Era;
-import it.polimi.it.network.server.persistence.LeaderboardEntry;
 import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;
 import it.polimi.it.observer.PlayerSnapshot;
@@ -65,32 +64,6 @@ public interface GameView {
     void showInvalidAction(String playerName, String reason);
 
     void showGameEnded(List<PlayerSnapshot> winners, List<PlayerSnapshot> finalScores);
-
-    /**
-     * Displays the persistent leaderboard delivered by the server after a
-     * game ends (FA "Classifica partite su DB").
-     *
-     * <p>The same method is invoked on every client: each instance receives
-     * its own {@code recipient}, score and rank, plus the same global
-     * leaderboard restricted to games with the same number of players.
-     *
-     * @param recipient    nickname this leaderboard message is addressed to
-     * @param myScore      final score the recipient obtained in this game
-     * @param myRank       1-based position of the recipient among all the
-     *                     games with the given size; -1 if unknown
-     * @param totalEntries total number of recorded scores for that size
-     * @param numPlayers   number of players the game had
-     * @param leaderboard  ranked entries for games with that many players
-     */
-    default void showLeaderboard(String recipient,
-                                 int myScore,
-                                 int myRank,
-                                 int totalEntries,
-                                 int numPlayers,
-                                 List<LeaderboardEntry> leaderboard) {
-        // Default: no-op so implementations that don't care about the
-        // leaderboard (e.g. legacy stubs) keep compiling unchanged.
-    }
 
     // ── Input methods (local / single-player use) ─────────────────────────────
 

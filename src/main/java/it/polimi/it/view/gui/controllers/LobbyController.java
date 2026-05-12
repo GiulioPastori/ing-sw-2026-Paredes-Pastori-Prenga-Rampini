@@ -29,7 +29,11 @@ import java.util.function.Consumer;
  */
 public class LobbyController {
 
-    @FXML private VBox              root;
+    @FXML private javafx.scene.layout.StackPane root;
+    @FXML private javafx.scene.layout.VBox  formPane;
+    @FXML private javafx.scene.layout.StackPane waitingPane;
+    @FXML private Label             waitingTitle;
+    @FXML private Label             waitingPlayers;
     @FXML private TextField         hostField;
     @FXML private TextField         portField;
     @FXML private TextField         nicknameField;
@@ -145,6 +149,17 @@ public class LobbyController {
         });
     }
 
+    /** Called when the server confirms the player joined and reports lobby state. */
+    public void showLobbyWaiting(String message, java.util.List<String> players, int needed) {
+        runFx(() -> {
+            formPane.setVisible(false);
+            waitingPane.setVisible(true);
+            waitingTitle.setText("In attesa degli altri giocatori…");
+            waitingPlayers.setText(
+                    String.join("  ·  ", players) + "  (" + players.size() + "/" + needed + ")");
+        });
+    }
+
     public void showError(String msg) {
         runFx(() -> {
             connectButton.setDisable(false);
@@ -168,7 +183,7 @@ public class LobbyController {
         });
     }
 
-    public VBox getRoot() { return root; }
+    public javafx.scene.layout.StackPane getRoot() { return root; }
 
     private static void runFx(Runnable r) {
         if (Platform.isFxApplicationThread()) r.run();

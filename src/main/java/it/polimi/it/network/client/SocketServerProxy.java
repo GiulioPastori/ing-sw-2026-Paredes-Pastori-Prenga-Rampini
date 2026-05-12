@@ -81,7 +81,7 @@ public class SocketServerProxy implements ServerProxy {
         try { if (socket != null) socket.close(); } catch (IOException ignored) {}
     }
 
-    // ── Lettura messaggi dal server ───────────────────────────────────────────
+    //  Lettura messaggi dal server
 
     private void readLoop() {
         try {
@@ -103,7 +103,7 @@ public class SocketServerProxy implements ServerProxy {
         }
     }
 
-    // ── Heartbeat periodico verso il server ───────────────────────────────────
+    //  Heartbeat periodico verso il server
 
     /**
      * Invia un {@link Message#HEARTBEAT} ogni {@value #HEARTBEAT_INTERVAL_MS} ms.

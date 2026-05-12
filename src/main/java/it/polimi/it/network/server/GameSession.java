@@ -79,7 +79,7 @@ public class GameSession implements GameEventListener {
         this.leaderboardRepository = leaderboardRepository;
     }
 
-    // ── Connection ────────────────────────────────────────────────────────────
+    //  Connection
 
     public synchronized void addClient(ClientConnection c) {
         if (terminated || started) return;
@@ -113,7 +113,7 @@ public class GameSession implements GameEventListener {
     public int getExpectedPlayers()            { return expectedPlayers; }
     public synchronized boolean hasPlayer(String nick) { return clientMap.containsKey(nick); }
 
-    // ── Game startup ──────────────────────────────────────────────────────────
+    //  Game startup
 
     private void startGame() {
         try {
@@ -157,7 +157,7 @@ public class GameSession implements GameEventListener {
         }
     }
 
-    // ── Message handling ──────────────────────────────────────────────────────
+    //  Message handling
 
     /**
      * Routes an incoming client message to the {@link GameController}.
@@ -211,7 +211,7 @@ public class GameSession implements GameEventListener {
         }
     }
 
-    // ── GameEventListener (network broadcaster) ───────────────────────────────
+    //  GameEventListener (network broadcaster)
 
     /**
      * Converts model events to network messages and broadcasts them to all clients.
@@ -337,7 +337,7 @@ public class GameSession implements GameEventListener {
         }
     }
 
-    // ── Disconnection ─────────────────────────────────────────────────────────
+    //  Disconnection
 
     public synchronized void onPlayerDisconnected(String nick) {
         if (terminated) return;
@@ -368,7 +368,7 @@ public class GameSession implements GameEventListener {
         }
     }
 
-    // ── Internal ──────────────────────────────────────────────────────────────
+    //  Internal
 
     private void terminate(String reason) {
         terminated = true;

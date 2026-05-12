@@ -11,7 +11,7 @@ import java.util.List;
  * implements this interface with its own calculation logic over all players.
  *
  * Events are resolved at the end of a round on the bottom row
- * (or on both rows during the final round, rulebook p.7).
+ * (or on both rows during the final round)
  */
 public interface EventStrategy {
 

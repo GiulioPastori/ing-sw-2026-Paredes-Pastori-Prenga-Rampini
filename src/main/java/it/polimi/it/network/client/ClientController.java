@@ -60,7 +60,7 @@ public class ClientController {
         this.myNickname = myNickname;
     }
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
+    // Lifecycle
 
     /** Chiamato quando la connessione cade. */
     public void onDisconnect() {
@@ -80,7 +80,7 @@ public class ClientController {
         }
     }
 
-    // ── Dispatch ──────────────────────────────────────────────────────────────
+    //  Dispatch
 
     public void onMessage(Message msg) {
         try {
@@ -93,11 +93,12 @@ public class ClientController {
 
     private void dispatch(Message msg) {
         switch (msg.getType()) {
-            case Message.LOBBY_UPDATE ->
-                    System.out.println("Lobby: "
-                            + msg.strList("connectedPlayers").size()
-                            + "/" + msg.num("expectedPlayers")
-                            + " — " + msg.strList("connectedPlayers"));
+            case Message.LOBBY_UPDATE -> {
+                List<String> players = msg.strList("connectedPlayers");
+                int needed = msg.num("expectedPlayers");
+                System.out.println("Lobby: " + players.size() + "/" + needed + " — " + players);
+                view.showLobbyUpdate(players, needed);
+            }
             case Message.ERROR ->
                     view.showInvalidAction("SERVER", msg.str("reason"));
             // Heartbeat e keep-alive: aggiornano solo il timestamp nel proxy, niente altro
@@ -155,7 +156,7 @@ public class ClientController {
         }
     } // fine dispatch()
 
-    // ── Handler: piazzamento totem ────────────────────────────────────────────
+    //  Handler: piazzamento totem
 
     private void handleRoundStarted(Message msg) {
         totemPlacedCount = 0;
@@ -189,7 +190,7 @@ public class ClientController {
         }
     }
 
-    // ── Handler: scelta carte ─────────────────────────────────────────────────
+    // Handler: scelta carte
 
     private void handleCardSlotReady(Message msg) {
         PlayerSnapshot     player        = msg.playerObj("player");
@@ -228,7 +229,7 @@ public class ClientController {
         });
     }
 
-    // ── Handler: post-round (Torre di Guardia) ────────────────────────────────
+    //  Handler: post-round (Torre di Guardia)
 
     private void handlePostRoundStarted(Message msg) {
         List<PlayerSnapshot> watchtower = msg.playerList("watchtowerPlayers");

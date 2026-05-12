@@ -12,7 +12,7 @@ import java.util.List;
  *
  * There are 4 event types (Sustenance, Hunt, Shamanic Ritual, Cave Paintings),
  * one per type per era (12 event cards total in the tribe deck).
- * Event cards can never be taken by players (rulebook p.4).
+ * Event cards can never be taken by players
  * Resolution logic is delegated to an EventStrategy.
  */
 public class Event extends Card {
