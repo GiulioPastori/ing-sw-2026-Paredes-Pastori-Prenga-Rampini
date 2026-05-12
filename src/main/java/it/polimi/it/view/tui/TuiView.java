@@ -4,6 +4,7 @@ import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.TotemColour;
 import it.polimi.it.enums.EventType;
+import it.polimi.it.network.server.persistence.LeaderboardEntry;
 import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;
 import it.polimi.it.observer.OfferTileSnapshot;
@@ -12,6 +13,7 @@ import it.polimi.it.observer.TurnOrderTileSnapshot;
 import it.polimi.it.view.CardLocalization;
 import it.polimi.it.view.GameView;
 
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -185,6 +187,61 @@ public class TuiView implements GameView {
         finalScores.stream()
                 .sorted((a, b) -> b.prestigePoints() - a.prestigePoints())
                 .forEach(p -> printBoxBody("  " + formatPlayer(p)));
+        printBoxBottom();
+    }
+
+    /** Date formatter for leaderboard entries (date only, locale-neutral). */
+    private static final DateTimeFormatter LEADERBOARD_DATE_FMT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+    /** How many rows of the global leaderboard to show before truncating. */
+    private static final int LEADERBOARD_MAX_ROWS = 10;
+
+    @Override
+    public void showLeaderboard(String recipient,
+                                int myScore,
+                                int myRank,
+                                int totalEntries,
+                                int numPlayers,
+                                List<LeaderboardEntry> leaderboard) {
+        println("");
+        printBoxTop("CLASSIFICA — Partite a " + numPlayers + " giocatori");
+        // Personal summary
+        String rankText = myRank > 0
+                ? "#" + myRank + " su " + totalEntries
+                : "non disponibile";
+        printBoxBody(paint(FG_B_CYAN, true, "Sei " + recipient
+                + " — punteggio: " + myScore
+                + " — posizione: " + rankText));
+        printBoxBody("");
+        if (leaderboard == null || leaderboard.isEmpty()) {
+            printBoxBody(paint(DIM, "Nessuna partita registrata."));
+        } else {
+            printBoxBody(paint(FG_B_YELLOW, "  #   Giocatore         PP    Data"));
+            int shown = 0;
+            for (LeaderboardEntry e : leaderboard) {
+                if (shown++ >= LEADERBOARD_MAX_ROWS) break;
+                String name = e.nickname();
+                if (name.length() > 16) name = name.substring(0, 15) + "…";
+                String row = String.format("  %-3d %-16s %5d  %s",
+                        e.rank(),
+                        name,
+                        e.finalScore(),
+                        e.playedAt() == null ? "—" : LEADERBOARD_DATE_FMT.format(e.playedAt()));
+                // Highlight the recipient's own row(s)
+                if (recipient != null && recipient.equals(e.nickname())
+                        && e.finalScore() == myScore) {
+                    printBoxBody(paint(FG_B_GREEN, true, row));
+                } else {
+                    printBoxBody(row);
+                }
+            }
+            if (leaderboard.size() > LEADERBOARD_MAX_ROWS) {
+                printBoxBody(paint(DIM,
+                        "  … (" + (leaderboard.size() - LEADERBOARD_MAX_ROWS)
+                                + " righe non mostrate)"));
+            }
+        }
         printBoxBottom();
     }
 

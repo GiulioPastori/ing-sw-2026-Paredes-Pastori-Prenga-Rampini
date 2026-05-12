@@ -5,13 +5,19 @@ import it.polimi.it.GameController;
 import it.polimi.it.actions.*;
 import it.polimi.it.enums.TotemColour;
 import it.polimi.it.network.message.Message;
+import it.polimi.it.network.server.persistence.LeaderboardEntry;
+import it.polimi.it.network.server.persistence.LeaderboardRepository;
 import it.polimi.it.observer.GameEvent;
 import it.polimi.it.observer.GameEventListener;
+import it.polimi.it.observer.PlayerSnapshot;
 import it.polimi.it.validation.ValidationResult;
 import it.polimi.it.view.StubGameView;
 
+import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -27,6 +33,18 @@ import java.util.logging.Logger;
  * {@link GameEventListener} <em>alongside</em> the controller so it can
  * serialise and broadcast events; the controller handles local view feedback
  * (validation errors, logging via {@link StubGameView}).
+ *
+ * <p>When the {@link GameEvent.GameEnded} event arrives the session also:
+ * <ul>
+ *   <li>persists every player's score to the leaderboard table via the
+ *       injected {@link LeaderboardRepository};</li>
+ *   <li>computes each player's rank among all the games with the same
+ *       number of participants;</li>
+ *   <li>sends every client a {@code LEADERBOARD} message containing both
+ *       their personal rank and the complete ranking for that game size.</li>
+ * </ul>
+ * The persistence step is best-effort: failures are logged but do not abort
+ * the game.
  */
 public class GameSession implements GameEventListener {
 
@@ -40,6 +58,9 @@ public class GameSession implements GameEventListener {
     /** The MVC controller — the single point of entry for all game actions. */
     private GameController controller;
 
+    /** Repository for the leaderboard (may be {@code null} if the DB is down). */
+    private final LeaderboardRepository leaderboardRepository;
+
     private boolean started    = false;
     private boolean terminated = false;
     private boolean suspended  = false;
@@ -48,8 +69,14 @@ public class GameSession implements GameEventListener {
             Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> timeoutFuture;
 
+    /** Backward-compatible constructor (no DB persistence). */
     public GameSession(int expectedPlayers) {
-        this.expectedPlayers = expectedPlayers;
+        this(expectedPlayers, null);
+    }
+
+    public GameSession(int expectedPlayers, LeaderboardRepository leaderboardRepository) {
+        this.expectedPlayers       = expectedPlayers;
+        this.leaderboardRepository = leaderboardRepository;
     }
 
     // ── Connection ────────────────────────────────────────────────────────────
@@ -221,10 +248,93 @@ public class GameSession implements GameEventListener {
             case GameEvent.GameEnded e -> {
                 terminated = true;
                 scheduler.shutdownNow();
+                // Persist + push the per-player leaderboard BEFORE broadcasting
+                // the gameEnded message: the client expects the leaderboard to
+                // arrive shortly after the gameEnded screen, in a separate
+                // message it can correlate by nickname.
                 yield Message.gameEnded(e.winners(), e.finalScores());
             }
         };
         broadcast(msg);
+
+        // Side effect: when the game is over, persist + send the leaderboard.
+        if (event instanceof GameEvent.GameEnded ended) {
+            persistAndBroadcastLeaderboard(ended.finalScores());
+        }
+    }
+
+    /**
+     * Saves the results of the just-finished game and broadcasts one
+     * personalised {@code LEADERBOARD} message to every connected client.
+     *
+     * <p>Every player receives:
+     * <ul>
+     *   <li>their final score (already known from the game-ended message,
+     *       repeated here for self-containment);</li>
+     *   <li>their 1-based rank across all the games with the same number of
+     *       participants;</li>
+     *   <li>the total number of recorded entries for that game size;</li>
+     *   <li>the full leaderboard for that game size.</li>
+     * </ul>
+     *
+     * <p>If the repository is unavailable (DB down at startup or transient
+     * error here) the method logs the issue and returns silently: clients
+     * will simply not receive the {@code LEADERBOARD} message.
+     */
+    private void persistAndBroadcastLeaderboard(List<PlayerSnapshot> finalScores) {
+        if (leaderboardRepository == null) {
+            LOG.fine("Leaderboard repository not available — skipping persistence.");
+            return;
+        }
+        if (finalScores == null || finalScores.isEmpty()) return;
+
+        LocalDateTime playedAt = LocalDateTime.now();
+        int numPlayers = expectedPlayers;
+
+        // Build the entries to persist
+        List<LeaderboardEntry> entries = new ArrayList<>();
+        for (PlayerSnapshot p : finalScores) {
+            entries.add(LeaderboardEntry.of(
+                    p.name(), p.prestigePoints(), numPlayers, playedAt));
+        }
+
+        try {
+            leaderboardRepository.saveGameResults(entries, numPlayers);
+        } catch (SQLException e) {
+            LOG.log(Level.WARNING, "Cannot persist leaderboard: " + e.getMessage(), e);
+            return;
+        }
+
+        // Fetch the global leaderboard for this game size once.
+        List<LeaderboardEntry> leaderboard;
+        int totalEntries;
+        try {
+            leaderboard  = leaderboardRepository.getLeaderboard(numPlayers);
+            totalEntries = leaderboardRepository.countEntries(numPlayers);
+        } catch (SQLException e) {
+            LOG.log(Level.WARNING, "Cannot read leaderboard: " + e.getMessage(), e);
+            return;
+        }
+
+        // Send one personalised message per client
+        for (PlayerSnapshot p : finalScores) {
+            int rank;
+            try {
+                rank = leaderboardRepository.getPlayerRank(
+                        p.name(), p.prestigePoints(), numPlayers, playedAt);
+            } catch (SQLException e) {
+                LOG.log(Level.WARNING, "Cannot compute rank for " + p.name() + ": "
+                        + e.getMessage(), e);
+                continue;
+            }
+
+            ClientConnection conn = clientMap.get(p.name());
+            if (conn != null) {
+                conn.send(Message.leaderboard(
+                        p.name(), p.prestigePoints(), rank, totalEntries,
+                        numPlayers, leaderboard));
+            }
+        }
     }
 
     // ── Disconnection ─────────────────────────────────────────────────────────

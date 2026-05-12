@@ -2,24 +2,37 @@ package it.polimi.it.network.server;
 
 import it.polimi.it.CardLoader;
 import it.polimi.it.cards.Card;
+import it.polimi.it.network.server.persistence.DatabaseConfig;
+import it.polimi.it.network.server.persistence.DatabaseInitializer;
+import it.polimi.it.network.server.persistence.LeaderboardRepository;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.sql.SQLException;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * GameServer encapsulates the complete server startup:
  * - Loads cards from JSON
+ * - Bootstraps the leaderboard database (FA "Classifica partite su DB")
  * - Starts the LobbyServer (Socket TCP)
  * - Starts the RMI registry alongside
  *
- * Both Socket and RMI clients can connect to the same LobbyServer
+ * <p>Both Socket and RMI clients can connect to the same LobbyServer
  * and play in the same game session.
  *
- * Usage:
+ * <p>The leaderboard storage is created — empty — on the first server launch
+ * (database name embeds the group identifier, e.g. {@code GC45_Mesos_DB},
+ * to avoid collisions on a shared DBMS). If the DBMS is unreachable the
+ * server still starts, but the leaderboard feature is disabled for that run.
+ *
+ * <p>Usage:
+ * <pre>
  *   GameServer server = new GameServer(12345, 12346, "src/main/resources/cards.json");
  *   server.start(); // blocks until stop() is called
+ * </pre>
  */
 public class GameServer {
 
@@ -29,7 +42,8 @@ public class GameServer {
     private final int    rmiPort;
     private final String cardsJsonPath;
 
-    private LobbyServer lobbyServer;
+    private LobbyServer           lobbyServer;
+    private LeaderboardRepository leaderboardRepository;
 
     public GameServer(int socketPort, int rmiPort, String cardsJsonPath) {
         this.socketPort    = socketPort;
@@ -50,10 +64,17 @@ public class GameServer {
         ServerApp.setCardList(cards);
         LOG.info("Loaded " + cards.size() + " cards from " + cardsJsonPath);
 
-        // 2. Create lobby server (manages sessions for both Socket and RMI)
-        lobbyServer = new LobbyServer(socketPort);
+        // 2. Bootstrap the leaderboard database (additional functionality).
+        //    Done before opening the network so that any misconfiguration is
+        //    surfaced early. A DB failure does NOT prevent the server from
+        //    running: the leaderboard repository simply stays null and
+        //    GameSession will skip the related operations.
+        leaderboardRepository = bootstrapLeaderboard();
 
-        // 3. Start RMI registry alongside
+        // 3. Create lobby server (manages sessions for both Socket and RMI)
+        lobbyServer = new LobbyServer(socketPort, leaderboardRepository);
+
+        // 4. Start RMI registry alongside
         try {
             new RmiServerImpl(lobbyServer, rmiPort);
             LOG.info("RMI registry started on port " + rmiPort);
@@ -62,12 +83,35 @@ public class GameServer {
                     + " — Socket-only mode.");
         }
 
-        // 4. Register shutdown hook
+        // 5. Register shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
 
-        // 5. Start accepting TCP connections (blocks here)
+        // 6. Start accepting TCP connections (blocks here)
         LOG.info("Mesos server ready  Socket=" + socketPort + "  RMI=" + rmiPort);
         lobbyServer.start();
+    }
+
+    /**
+     * Verifies that the leaderboard database exists (creating it empty if
+     * not, as required by the spec) and returns a repository that the game
+     * sessions can use to persist results and serve rankings.
+     *
+     * @return the configured repository, or {@code null} if the DBMS could
+     *         not be reached
+     */
+    private LeaderboardRepository bootstrapLeaderboard() {
+        DatabaseConfig config = DatabaseConfig.load();
+        DatabaseInitializer init = new DatabaseInitializer(config);
+        try {
+            init.initialise();
+            LOG.info("Leaderboard database ready (" + config.databaseName() + ").");
+            return new LeaderboardRepository(config);
+        } catch (SQLException e) {
+            LOG.log(Level.WARNING,
+                    "Leaderboard DB unavailable — the server will run without it. "
+                            + "Cause: " + e.getMessage(), e);
+            return null;
+        }
     }
 
     /**
@@ -77,5 +121,10 @@ public class GameServer {
     public void stop() {
         if (lobbyServer != null) lobbyServer.stop();
         LOG.info("Server stopped.");
+    }
+
+    /** @return the leaderboard repository, or {@code null} if the DB is unavailable. */
+    public LeaderboardRepository getLeaderboardRepository() {
+        return leaderboardRepository;
     }
 }

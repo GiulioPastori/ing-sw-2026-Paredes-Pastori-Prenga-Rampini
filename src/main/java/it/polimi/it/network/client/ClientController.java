@@ -4,6 +4,7 @@ import it.polimi.it.enums.Era;
 import it.polimi.it.enums.TotemColour;
 import it.polimi.it.enums.EventType;
 import it.polimi.it.network.message.Message;
+import it.polimi.it.network.server.persistence.LeaderboardEntry;
 import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;
 import it.polimi.it.observer.PlayerSnapshot;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
@@ -42,6 +44,15 @@ public class ClientController {
 
     private final CountDownLatch  gameLatch     = new CountDownLatch(1);
     private final ExecutorService inputExecutor = Executors.newSingleThreadExecutor();
+    /** Used to enforce a deadline after GAME_ENDED to wait for the optional LEADERBOARD. */
+    private final java.util.concurrent.ScheduledExecutorService postGameScheduler =
+            java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "client-postgame-timeout");
+                t.setDaemon(true);
+                return t;
+            });
+    /** Set to true when GAME_ENDED has been processed, used to gate LEADERBOARD handling. */
+    private volatile boolean gameEndedReceived = false;
 
     public ClientController(ServerProxy proxy, GameView view, String myNickname) {
         this.proxy      = proxy;
@@ -54,6 +65,7 @@ public class ClientController {
     /** Chiamato quando la connessione cade. */
     public void onDisconnect() {
         inputExecutor.shutdownNow();
+        postGameScheduler.shutdownNow();
         view.showInvalidAction("SERVER", "Connessione persa.");
         gameLatch.countDown();
     }
@@ -62,7 +74,10 @@ public class ClientController {
     public void run() {
         try { gameLatch.await(); }
         catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-        finally { inputExecutor.shutdownNow(); }
+        finally {
+            inputExecutor.shutdownNow();
+            postGameScheduler.shutdownNow();
+        }
     }
 
     // ── Dispatch ──────────────────────────────────────────────────────────────
@@ -112,7 +127,25 @@ public class ClientController {
                 view.showGameEnded(
                         msg.playerList("winners"),
                         msg.playerList("finalScores"));
-                gameLatch.countDown();
+                gameEndedReceived = true;
+                // Wait up to 5 s for the optional LEADERBOARD message that the
+                // server sends right after GAME_ENDED when the leaderboard DB
+                // is enabled. If it never arrives (DB down on the server side)
+                // we release the latch ourselves so the client shuts down.
+                postGameScheduler.schedule(() -> {
+                    if (gameLatch.getCount() > 0) gameLatch.countDown();
+                }, 5, TimeUnit.SECONDS);
+            }
+            case Message.LEADERBOARD -> {
+                List<LeaderboardEntry> entries = msg.leaderboardList("entries");
+                view.showLeaderboard(
+                        msg.str("recipient"),
+                        msg.num("myScore"),
+                        msg.num("myRank"),
+                        msg.num("totalEntries"),
+                        msg.num("numPlayers"),
+                        entries);
+                if (gameEndedReceived) gameLatch.countDown();
             }
             case Message.PLAYER_DISCONNECTED -> {
                 view.showInvalidAction("DISCONNECT", msg.str("nickname"));

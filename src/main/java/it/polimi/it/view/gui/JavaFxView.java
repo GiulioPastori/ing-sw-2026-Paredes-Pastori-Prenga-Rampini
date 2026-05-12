@@ -3,6 +3,7 @@ package it.polimi.it.view.gui;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.TotemColour;
 import it.polimi.it.enums.EventType;
+import it.polimi.it.network.server.persistence.LeaderboardEntry;
 import it.polimi.it.observer.CardSnapshot;
 import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;
@@ -67,6 +68,14 @@ public class JavaFxView implements GameView {
      * with the drain of {@link #pendingActions}.
      */
     private volatile GameBoardView boardController;
+
+    /**
+     * Reference to the GameOverController of the most recent game-over scene.
+     * Used by {@link #showLeaderboard} to push the leaderboard into the
+     * already-displayed end-of-game view. {@code volatile} because it is set
+     * on the JavaFX thread and read from the network thread.
+     */
+    private volatile GameOverController gameOverController;
 
     /** Lock that protects the controller-pending-queue handover. */
     private final Object lock = new Object();
@@ -244,8 +253,11 @@ public class JavaFxView implements GameView {
                 VBox root = loader.load();
                 GameOverController c = loader.getController();
                 c.setResults(winners, finalScores);
+                // Keep a reference so a later LEADERBOARD message can populate
+                // the bottom panel of this same scene.
+                gameOverController = c;
 
-                Scene scene = new Scene(root, 640, 640);
+                Scene scene = new Scene(root, 640, 720);
                 scene.getStylesheets().add(
                         getClass().getResource("/it/polimi/it/view/gui/styles.css").toExternalForm());
                 primaryStage.setScene(scene);
@@ -254,6 +266,29 @@ public class JavaFxView implements GameView {
                 LOG.log(Level.SEVERE, "Impossibile caricare gameover.fxml", e);
             }
         }));
+    }
+
+    @Override
+    public void showLeaderboard(String recipient,
+                                int myScore,
+                                int myRank,
+                                int totalEntries,
+                                int numPlayers,
+                                List<LeaderboardEntry> leaderboard) {
+        // Forward to the GameOverController of the current scene.
+        // If GAME_ENDED has not been processed yet (race), retry on the FX
+        // thread after a short delay — the GameOver scene is loaded
+        // synchronously, so a single runLater is enough in practice.
+        Platform.runLater(() -> {
+            GameOverController c = gameOverController;
+            if (c != null) {
+                c.setLeaderboard(recipient, myScore, myRank, totalEntries,
+                        numPlayers, leaderboard);
+            } else {
+                LOG.warning("Leaderboard arrived before GameOver scene was ready — "
+                        + "ignoring (this should not normally happen).");
+            }
+        });
     }
 
     // ── request* (pull, blocking) ─────────────────────────────────────────────

@@ -2,6 +2,7 @@ package it.polimi.it.network.message;
 
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.EventType;
+import it.polimi.it.network.server.persistence.LeaderboardEntry;
 import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;
 import it.polimi.it.observer.OfferTileSnapshot;
@@ -10,6 +11,8 @@ import it.polimi.it.observer.TurnOrderTileSnapshot;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,6 +52,8 @@ public class Message {
     public static final String ROUND_ENDED             = "ROUND_ENDED";
     public static final String GAME_ENDED              = "GAME_ENDED";
     public static final String PLAYER_DISCONNECTED     = "PLAYER_DISCONNECTED";
+    /** Leaderboard delivered to every client after a game ends (FA "Classifica DB"). */
+    public static final String LEADERBOARD             = "LEADERBOARD";
     // Mantenuti per retrocompatibilità RMI (vecchi client)
     public static final String PING = "PING";
     public static final String PONG = "PONG";
@@ -220,7 +225,48 @@ public class Message {
                 .put("finalScores", playerListToJson(finalScores)));
     }
 
+    /**
+     * Builds a personalised {@code LEADERBOARD} message for one player.
+     *
+     * @param recipient     nickname of the player this message is addressed to
+     * @param myScore       final score the recipient obtained in this game
+     * @param myRank        1-based rank of the recipient among all games of
+     *                      the same size (use {@code -1} if unknown)
+     * @param totalEntries  total number of recorded scores for that size
+     * @param numPlayers    number of players the game had
+     * @param leaderboard   full leaderboard for the given game size
+     */
+    public static Message leaderboard(String recipient,
+                                      int myScore, int myRank, int totalEntries,
+                                      int numPlayers,
+                                      List<LeaderboardEntry> leaderboard) {
+        return new Message(LEADERBOARD, new JSONObject()
+                .put("recipient",     recipient)
+                .put("myScore",       myScore)
+                .put("myRank",        myRank)
+                .put("totalEntries",  totalEntries)
+                .put("numPlayers",    numPlayers)
+                .put("entries",       leaderboardEntriesToJson(leaderboard)));
+    }
+
     // ── JSON helpers ──────────────────────────────────────────────────────────
+
+    private static final DateTimeFormatter ISO_LOCAL_DT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+
+    private static JSONObject leaderboardEntryToJson(LeaderboardEntry e) {
+        return new JSONObject()
+                .put("rank",       e.rank())
+                .put("nickname",   e.nickname())
+                .put("finalScore", e.finalScore())
+                .put("numPlayers", e.numPlayers())
+                .put("playedAt",   e.playedAt() == null ? "" : e.playedAt().format(ISO_LOCAL_DT));
+    }
+
+    private static JSONArray leaderboardEntriesToJson(List<LeaderboardEntry> list) {
+        JSONArray arr = new JSONArray();
+        if (list != null) list.forEach(e -> arr.put(leaderboardEntryToJson(e)));
+        return arr;
+    }
 
     private static JSONObject playerToJson(PlayerSnapshot p) {
         return new JSONObject()
@@ -409,6 +455,29 @@ public class Message {
 
     public List<CardSnapshot> cardList(String key) {
         return parseCardArray(data.getJSONArray(key));
+    }
+
+    /**
+     * Reads a list of {@link LeaderboardEntry} from a JSON array field.
+     * Used by the client controller to handle {@link #LEADERBOARD} messages.
+     */
+    public List<LeaderboardEntry> leaderboardList(String key) {
+        JSONArray arr = data.getJSONArray(key);
+        List<LeaderboardEntry> list = new ArrayList<>();
+        for (int i = 0; i < arr.length(); i++) {
+            JSONObject o = arr.getJSONObject(i);
+            String     ts = o.optString("playedAt", "");
+            LocalDateTime playedAt = ts.isBlank()
+                    ? null
+                    : LocalDateTime.parse(ts, ISO_LOCAL_DT);
+            list.add(new LeaderboardEntry(
+                    o.getInt("rank"),
+                    o.getString("nickname"),
+                    o.getInt("finalScore"),
+                    o.getInt("numPlayers"),
+                    playedAt));
+        }
+        return list;
     }
 
     /** Reads a single PlayerSnapshot from a nested object (not array). */

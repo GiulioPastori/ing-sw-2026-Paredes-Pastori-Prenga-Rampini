@@ -2,6 +2,7 @@ package it.polimi.it.network.server;
 
 import it.polimi.it.enums.TotemColour;
 import it.polimi.it.network.message.Message;
+import it.polimi.it.network.server.persistence.LeaderboardRepository;
 
 import java.io.*;
 import java.net.*;
@@ -19,24 +20,43 @@ import java.util.logging.Logger;
  * authority on unique nicknames — eliminating the collision bug where an RMI
  * player could join with the same name as an already-connected Socket player.
  *
- *
+ * <p>The lobby holds a (possibly {@code null}) {@link LeaderboardRepository}
+ * provided by {@link GameServer} and forwards it to every new
+ * {@link GameSession}; sessions use it to persist game results and serve
+ * end-of-game rankings (FA "Classifica partite su DB").
  */
 public class LobbyServer {
 
     private static final Logger LOG = Logger.getLogger(LobbyServer.class.getName());
 
-    private final int             socketPort;
-    private final ExecutorService threadPool      = Executors.newCachedThreadPool();
-    private final List<GameSession> waitingSessions = new ArrayList<>();
-    private final List<GameSession> activeSessions  = new ArrayList<>();
+    private final int                   socketPort;
+    private final ExecutorService       threadPool      = Executors.newCachedThreadPool();
+    private final List<GameSession>     waitingSessions = new ArrayList<>();
+    private final List<GameSession>     activeSessions  = new ArrayList<>();
 
     /** Single authoritative set — shared with RmiServerImpl via claimNickname/releaseNickname. */
     private final Set<String> takenNicknames = ConcurrentHashMap.newKeySet();
 
+    /** Repository injected by GameServer; may be {@code null} when the DB is unreachable. */
+    private final LeaderboardRepository leaderboardRepository;
+
     private volatile boolean running = false;
 
+    /** Backward-compatible constructor (no leaderboard). */
     public LobbyServer(int socketPort) {
-        this.socketPort = socketPort;
+        this(socketPort, null);
+    }
+
+    /**
+     * Full constructor.
+     *
+     * @param socketPort            TCP port the lobby listens on
+     * @param leaderboardRepository repository used by GameSession to persist
+     *                              results; pass {@code null} to disable
+     */
+    public LobbyServer(int socketPort, LeaderboardRepository leaderboardRepository) {
+        this.socketPort            = socketPort;
+        this.leaderboardRepository = leaderboardRepository;
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -191,7 +211,7 @@ public class LobbyServer {
         }
 
         int n = (requestedPlayers >= 2 && requestedPlayers <= 5) ? requestedPlayers : 2;
-        GameSession session = new GameSession(n);
+        GameSession session = new GameSession(n, leaderboardRepository);
         waitingSessions.add(session);
         activeSessions.add(session);
         LOG.info("Created new GameSession for " + n + " players.");
