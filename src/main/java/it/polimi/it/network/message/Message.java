@@ -49,6 +49,7 @@ public class Message {
     public static final String ROUND_ENDED             = "ROUND_ENDED";
     public static final String GAME_ENDED              = "GAME_ENDED";
     public static final String PLAYER_DISCONNECTED     = "PLAYER_DISCONNECTED";
+    public static final String PLAYER_RECONNECTED      = "PLAYER_RECONNECTED";
     // Mantenuti per retrocompatibilità RMI (vecchi client)
     public static final String PING = "PING";
     public static final String PONG = "PONG";
@@ -86,9 +87,9 @@ public class Message {
 
     public static Message join(String nickname, int numPlayers, String totemColour) {
         return new Message(JOIN, new JSONObject()
-                .put("nickname",     nickname)
-                .put("numPlayers",   numPlayers)
-                .put("totemColour",  totemColour));
+                .put("nickname", nickname)
+                .put("numPlayers", numPlayers)
+                .put("totemColour", totemColour));
     }
 
     public static Message placeTotem(String playerName, char tileLetter) {
@@ -131,9 +132,14 @@ public class Message {
                 .put("expectedPlayers", expected));
     }
 
-    public static Message playerDisconnected(String reason) {
+    public static Message playerDisconnected(String nickname) {
         return new Message(PLAYER_DISCONNECTED, new JSONObject()
-                .put("nickname", reason));
+                .put("nickname", nickname));
+    }
+
+    public static Message playerReconnected(String nickname) {
+        return new Message(PLAYER_RECONNECTED, new JSONObject()
+                .put("nickname", nickname));
     }
 
     public static Message roundStarted(int round,
@@ -289,15 +295,6 @@ public class Message {
                 .put("effectDescription", c.effectDescription());
         if (c.characterType() != null)
             obj.put("characterType", c.characterType().name());
-        if (c.details() != null) {
-            CardSnapshot.CharacterDetails d = c.details();
-            obj.put("details", new JSONObject()
-                    .put("triggerIcon",      d.triggerIcon())
-                    .put("starIcons",        d.starIcons())
-                    .put("inventionIcon",    d.inventionIcon())
-                    .put("buildingDiscount", d.buildingDiscount())
-                    .put("builderPoints",    d.builderPoints()));
-        }
         return obj;
     }
 
@@ -374,41 +371,56 @@ public class Message {
                 bottomCards);
     }
 
-    /** Shared deserialiser for a single card JSON object. */
-    private static CardSnapshot parseCard(JSONObject o) {
-        String ct = o.optString("characterType", "");
-        CardSnapshot.CharacterDetails details = null;
-        if (o.has("details")) {
-            JSONObject d = o.getJSONObject("details");
-            details = new CardSnapshot.CharacterDetails(
-                    d.optBoolean("triggerIcon",     false),
-                    d.optInt    ("starIcons",       0),
-                    d.optString ("inventionIcon",   ""),
-                    d.optInt    ("buildingDiscount", 0),
-                    d.optInt    ("builderPoints",   0));
-        }
-        return new CardSnapshot(
-                o.getInt("id"),
-                Era.valueOf(o.getString("era")),
-                CardSnapshot.Type.valueOf(o.getString("type")),
-                ct.isEmpty() ? null : it.polimi.it.enums.CharacterType.valueOf(ct),
-                o.getInt("foodCost"),
-                o.getInt("finalPoints"),
-                o.getString("effectDescription"),
-                details);
-    }
-
     /** Deserializza un JSONArray di carte in List<CardSnapshot>. */
     private static List<CardSnapshot> parseCardArray(JSONArray arr) {
         List<CardSnapshot> list = new ArrayList<>();
+
         for (int i = 0; i < arr.length(); i++) {
-            list.add(parseCard(arr.getJSONObject(i)));
+            JSONObject o = arr.getJSONObject(i);
+
+            String ct = o.optString("characterType", "");
+
+            list.add(new CardSnapshot(
+                    o.getInt("id"),
+                    it.polimi.it.enums.Era.valueOf(o.getString("era")),
+                    CardSnapshot.Type.valueOf(o.getString("type")),
+                    ct.isEmpty()
+                            ? null
+                            : it.polimi.it.enums.CharacterType.valueOf(ct),
+                    o.getInt("foodCost"),
+                    o.getInt("finalPoints"),
+                    o.getString("effectDescription"),
+                    null
+            ));
         }
+
         return list;
     }
 
     public List<CardSnapshot> cardList(String key) {
-        return parseCardArray(data.getJSONArray(key));
+        JSONArray arr = data.getJSONArray(key);
+        List<CardSnapshot> list = new ArrayList<>();
+
+        for (int i = 0; i < arr.length(); i++) {
+            JSONObject o = arr.getJSONObject(i);
+
+            String ct = o.optString("characterType", "");
+
+            list.add(new CardSnapshot(
+                    o.getInt("id"),
+                    Era.valueOf(o.getString("era")),
+                    CardSnapshot.Type.valueOf(o.getString("type")),
+                    ct.isEmpty()
+                            ? null
+                            : it.polimi.it.enums.CharacterType.valueOf(ct),
+                    o.getInt("foodCost"),
+                    o.getInt("finalPoints"),
+                    o.getString("effectDescription"),
+                    null
+            ));
+        }
+
+        return list;
     }
 
     /** Reads a single PlayerSnapshot from a nested object (not array). */
@@ -418,7 +430,22 @@ public class Message {
 
     /** Reads a single CardSnapshot from a nested object (not array). */
     public CardSnapshot cardObj(String key) {
-        return parseCard(data.getJSONObject(key));
+        JSONObject o = data.getJSONObject(key);
+
+        String ct = o.optString("characterType", "");
+
+        return new CardSnapshot(
+                o.getInt("id"),
+                Era.valueOf(o.getString("era")),
+                CardSnapshot.Type.valueOf(o.getString("type")),
+                ct.isEmpty()
+                        ? null
+                        : it.polimi.it.enums.CharacterType.valueOf(ct),
+                o.getInt("foodCost"),
+                o.getInt("finalPoints"),
+                o.getString("effectDescription"),
+                null
+        );
     }
 
     /** Reads a TurnOrderTileSnapshot from a nested object. */

@@ -1,7 +1,6 @@
 package it.polimi.it.network.client;
 
 import it.polimi.it.enums.Era;
-import it.polimi.it.enums.TotemColour;
 import it.polimi.it.enums.EventType;
 import it.polimi.it.network.message.Message;
 import it.polimi.it.observer.BoardSnapshot;
@@ -17,16 +16,24 @@ import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 /**
- * Client-side controller.
+ * Controller lato client.
  *
- * <p>Receives messages from the server and guides the view.
+ * <p>Riceve i messaggi dal server e guida la view.
  *
- * <p><b>Fundamental rule about the inputExecutor:</b>
- * The executor is <em>only one</em> for the entire duration of the game and is never
- * recreated or interrupted during play. Input tasks naturally queue up: the server sends {@code CARD_SLOT_READY} only
- * when it is actually that player's turn, so there will
- * never be "obsolete" tasks in the queue.
- * The executor is terminated only in {@link #onDisconnect()} and {@link #run()}.
+ * <p><b>Regola fondamentale sull'inputExecutor:</b>
+ * L'executor è <em>uno solo</em> per tutta la durata della partita e non
+ * viene mai ricreato né interrotto durante il gioco. I task di input si
+ * accodano naturalmente: il server invia {@code CARD_SLOT_READY} solo
+ * quando è effettivamente il turno di quel giocatore, quindi non ci
+ * saranno mai task "obsoleti" in coda.
+ * L'executor viene terminato solo in {@link #onDisconnect()} e {@link #run()}.
+ *
+ * <p><b>Gestione disconnessioni mid-game:</b>
+ * {@code PLAYER_DISCONNECTED} non termina più il client: mostra un avviso
+ * tramite {@link GameView#showPlayerDisconnected(String)} e continua.
+ * Solo se il server disconnette <em>noi stessi</em> (nickname == myNickname)
+ * il latch viene abbassato e il client si chiude.
+ * {@code PLAYER_RECONNECTED} notifica la view senza interrompere il gioco.
  */
 public class ClientController {
 
@@ -50,14 +57,14 @@ public class ClientController {
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
-    //** Called when the connection drops. */
+    /** Chiamato quando la connessione cade (dal proxy). */
     public void onDisconnect() {
         inputExecutor.shutdownNow();
         view.showInvalidAction("SERVER", "Connessione persa.");
         gameLatch.countDown();
     }
 
-    /** Blocks until the game ends. To be called after proxy.connect(). */
+    /** Blocca finché la partita non finisce. Da chiamare dopo proxy.connect(). */
     public void run() {
         try { gameLatch.await(); }
         catch (InterruptedException e) { Thread.currentThread().interrupt(); }
@@ -82,46 +89,77 @@ public class ClientController {
                             + msg.strList("connectedPlayers").size()
                             + "/" + msg.num("expectedPlayers")
                             + " — " + msg.strList("connectedPlayers"));
+
             case Message.ERROR ->
                     view.showInvalidAction("SERVER", msg.str("reason"));
+
             // Heartbeat e keep-alive: aggiornano solo il timestamp nel proxy, niente altro
             case Message.HEARTBEAT, Message.PING, Message.PONG -> { /* ignorati */ }
+
             case Message.ROUND_STARTED      -> handleRoundStarted(msg);
             case Message.TOTEM_PLACED       -> handleTotemPlaced(msg);
             case Message.CARD_SLOT_READY    -> handleCardSlotReady(msg);
+
             case Message.CARD_ACQUIRED ->
                     view.showCardAcquired(msg.playerObj("player"), msg.cardObj("card"));
+
             case Message.CARD_ACQUISITION_FAILED -> handleCardAcquisitionFailed(msg);
+
             case Message.TOTEM_RETURNED ->
                     view.showTotemReturnedToTurnOrder(
                             msg.playerObj("player"),
                             msg.num("position"),
                             msg.boardObj("board"));
+
             case Message.POST_ROUND_STARTED -> handlePostRoundStarted(msg);
+
             case Message.EVENT_RESOLVED ->
                     view.showEventResolved(
                             msg.num("eventId"),
                             Era.valueOf(msg.str("era")),
                             EventType.valueOf(msg.str("eventType")));
+
             case Message.ERA_CHANGED ->
                     view.showEraChanged(Era.valueOf(msg.str("newEra")));
+
             case Message.ROUND_ENDED ->
                     view.showRoundEnded(msg.num("round"));
+
             case Message.GAME_ENDED -> {
                 view.showGameEnded(
                         msg.playerList("winners"),
                         msg.playerList("finalScores"));
                 gameLatch.countDown();
             }
+
             case Message.PLAYER_DISCONNECTED -> {
-                view.showInvalidAction("DISCONNECT", msg.str("nickname"));
-                gameLatch.countDown();
+                // The server sends the disconnected player's nickname.
+                // If it's our own nickname the server is telling us we were kicked —
+                // close the client. Otherwise just notify the view and keep playing.
+                String who = msg.str("nickname");
+                if (who.equals(myNickname)) {
+                    view.showInvalidAction("DISCONNECT", "Sei stato disconnesso dal server.");
+                    gameLatch.countDown();
+                } else {
+                    view.showPlayerDisconnected(who);
+                }
             }
+
+            case Message.PLAYER_RECONNECTED -> {
+                String who = msg.str("nickname");
+                if (who.equals(myNickname)) {
+                    // We just reconnected — the server will replay state events.
+                    view.showInvalidAction("RECONNECT", "Sei tornato in gioco!");
+                } else {
+                    view.showPlayerReconnected(who);
+                }
+            }
+
             default -> LOG.warning("Tipo messaggio sconosciuto: " + msg.getType());
         }
-    } // end dispatch()
+    }
 
-    // ── Handler: placement totem ────────────────────────────────────────────
+    // ── Handler: piazzamento totem ────────────────────────────────────────────
 
     private void handleRoundStarted(Message msg) {
         totemPlacedCount = 0;
@@ -129,6 +167,7 @@ public class ClientController {
         BoardSnapshot board = msg.boardObj("board");
         view.showRoundStarted(msg.num("round"), currentTurnOrder, board);
 
+        // Ask for input only if we are first in turn order.
         if (!currentTurnOrder.isEmpty()
                 && currentTurnOrder.get(0).name().equals(myNickname)) {
             final PlayerSnapshot me = currentTurnOrder.get(0);
@@ -155,7 +194,7 @@ public class ClientController {
         }
     }
 
-    // ── Handler: choose cards ─────────────────────────────────────────────────
+    // ── Handler: scelta carte ─────────────────────────────────────────────────
 
     private void handleCardSlotReady(Message msg) {
         PlayerSnapshot     player        = msg.playerObj("player");
@@ -165,10 +204,10 @@ public class ClientController {
 
         view.showCardSlotReady(player, isTop, cards, visibleEvents);
 
-        /** The input is requested only from the player whose turn it is.
-// NO shutdownNow/recreation is done: the server sends CARD_SLOT_READY
-// only when it is actually this player's turn,
-// so the tasks queue correctly without ever being "obsolete". */
+        // L'input viene richiesto solo al giocatore di turno.
+        // NON si fa shutdownNow/ricreazione: il server manda CARD_SLOT_READY
+        // solo quando è effettivamente il turno di questo giocatore,
+        // quindi i task si accodano correttamente senza mai essere "obsoleti".
         if (!player.name().equals(myNickname)) return;
 
         inputExecutor.submit(() -> {
@@ -194,7 +233,7 @@ public class ClientController {
         });
     }
 
-    // ── Handler: post-round (watchtower) ────────────────────────────────
+    // ── Handler: post-round (Torre di Guardia) ────────────────────────────────
 
     private void handlePostRoundStarted(Message msg) {
         List<PlayerSnapshot> watchtower = msg.playerList("watchtowerPlayers");

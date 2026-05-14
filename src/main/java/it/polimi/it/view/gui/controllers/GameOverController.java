@@ -20,11 +20,11 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Controller della schermata di fine partita.
+ * End-game screen controller.
  *
- * <p>Riceve la lista dei vincitori e la classifica finale, popola la
- * {@link TableView} con i punteggi e mette in risalto le righe corrispondenti
- * ai vincitori.
+ * <p>Receives the list of winners and the final ranking, populates the
+ * {@link TableView} with the scores, and highlights the rows corresponding
+ * to the winners.
  */
 public class GameOverController {
 
@@ -37,7 +37,7 @@ public class GameOverController {
     @FXML private TableColumn<Row, Number> ppCol;
     @FXML private TableColumn<Row, Number> foodCol;
 
-    /** POJO/record-like riga della classifica. Espone proprietà JavaFX. */
+    /** POJO/record-like row of the ranking. Exposes JavaFX properties. */
     public static class Row {
         private final SimpleIntegerProperty rank = new SimpleIntegerProperty();
         private final SimpleStringProperty  name = new SimpleStringProperty();
@@ -67,7 +67,7 @@ public class GameOverController {
         ppCol  .setCellValueFactory(new PropertyValueFactory<>("pp"));
         foodCol.setCellValueFactory(new PropertyValueFactory<>("food"));
 
-        // Evidenzia la riga vincitrice via classe CSS
+        // Highlight the winning row via CSS class
         scoreTable.setRowFactory(tv -> {
             TableRow<Row> tableRow = new TableRow<>() {
                 @Override

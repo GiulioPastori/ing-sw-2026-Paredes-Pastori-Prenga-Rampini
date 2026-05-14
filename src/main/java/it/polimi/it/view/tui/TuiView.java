@@ -193,6 +193,19 @@ public class TuiView implements GameView {
         println(paint(FG_B_RED, true, "[!] ") + paint(FG_B_RED, playerName) + ": " + reason);
     }
 
+    @Override
+    public void showPlayerDisconnected(String nickname) {
+        println(paint(FG_B_RED, true, "⚡ ") + paint(FG_B_RED, true, nickname)
+                + paint(FG_RED, " si è disconnesso.")
+                + paint(DIM, " Il gioco continua senza di lui."));
+    }
+
+    @Override
+    public void showPlayerReconnected(String nickname) {
+        println(paint(FG_B_GREEN, true, "✓ ") + paint(FG_B_GREEN, true, nickname)
+                + paint(FG_B_GREEN, " si è riconnesso."));
+    }
+
     // ── Input ─────────────────────────────────────────────────────────────────
 
     @Override

@@ -133,14 +133,17 @@ public class LobbyServer {
                 }
             };
 
+            threadPool.submit(handler);
+
             session.addClient(handler);
+
             // FIX #3: move out of waiting list once the session is full
             if (!session.hasRoom()) {
                 synchronized (LobbyServer.this) {
                     waitingSessions.remove(session);
                 }
             }
-            threadPool.submit(handler);
+
             LOG.info("Player '" + nickname + "' connected via Socket.");
 
         } catch (IOException e) {
@@ -187,7 +190,9 @@ public class LobbyServer {
         waitingSessions.removeIf(s -> s.isTerminated() || s.isStarted());
 
         for (GameSession s : waitingSessions) {
-            if (s.hasRoom()) return s;
+            if (s.hasRoom() && s.getExpectedPlayers() == requestedPlayers) {
+                return s;
+            }
         }
 
         int n = (requestedPlayers >= 2 && requestedPlayers <= 5) ? requestedPlayers : 2;

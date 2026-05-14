@@ -186,6 +186,16 @@ public class Game {
                 + " top=" + next.getTopRowCards()
                 + " bot=" + next.getBottomRowCards());
 
+        // Auto-skip: if the tile's owner is disconnected, return their totem
+        // immediately (no card slot, no input wait) and move to the next tile.
+        if (disconnectedPlayers.contains(actor.getName())) {
+            LOG.info("[advanceToNext] " + actor.getName()
+                    + " e' disconnesso — tessera saltata automaticamente.");
+            returnTotemToTurnOrder(actor, next);
+            advanceToNextOccupiedTile();
+            return;
+        }
+
         if (next.isFoodOnly()) {
             actor.addFood(3);
             returnTotemToTurnOrder(actor, next);
@@ -534,18 +544,43 @@ public class Game {
 
     public void markDisconnected(String nickname) {
         disconnectedPlayers.add(nickname);
-        if (currentPhase == Phase.RESOLVING_ACTIONS
-                && currentTileState != null
-                && currentTileState.getActingPlayer().getName().equals(nickname)) {
-            while (!currentTileState.isExhausted()) {
-                boolean fromTop = currentTileState.remainingTopCards() > 0;
-                if (fromTop) currentTileState.consumeTopSlot();
-                else         currentTileState.consumeBottomSlot();
+
+        if (currentPhase == Phase.PLACING_TOTEMS) {
+            // If the disconnected player hasn't placed yet, place automatically.
+            boolean alreadyPlaced = board.getOfferTiles().getAllTiles().stream()
+                    .filter(t -> !t.isFree())
+                    .map(t -> getPlayerByTotem(t.getPlacedTotem()))
+                    .anyMatch(p -> p.getName().equals(nickname));
+            if (!alreadyPlaced) {
+                Player p = findPlayer(nickname);
+                List<OfferTile> free = board.getOfferTiles().getFreeTiles();
+                if (!free.isEmpty()) {
+                    OfferTile tile = free.get(0);
+                    board.getOfferTiles().placeTotem(p, tile);
+                    publish(new GameEvent.TotemPlaced(
+                            PlayerSnapshot.of(p), tile.getLetter(), BoardSnapshot.of(board)));
+                    // Check whether all totems are now placed.
+                    long placed = board.getOfferTiles().getAllTiles().stream()
+                            .filter(t -> !t.isFree()).count();
+                    if (placed == players.size()) {
+                        beginActionPhase();
+                    }
+                }
             }
-            returnTotemToTurnOrder(
-                    currentTileState.getActingPlayer(), currentTileState.getTile());
-            currentTileState = null;
-            advanceToNextOccupiedTile();
+
+        } else if (currentPhase == Phase.RESOLVING_ACTIONS) {
+            // Case A: the disconnected player is the current actor — skip their tile.
+            if (currentTileState != null
+                    && currentTileState.getActingPlayer().getName().equals(nickname)) {
+                returnTotemToTurnOrder(
+                        currentTileState.getActingPlayer(), currentTileState.getTile());
+                currentTileState = null;
+                advanceToNextOccupiedTile();
+            }
+            // Case B: the player is waiting in queue (their totem is on a later tile).
+            // advanceToNextOccupiedTile() already checks disconnectedPlayers and auto-skips,
+            // so no extra action is needed here — the skip happens when we reach their tile.
+
         } else if (currentPhase == Phase.POST_ROUND && pendingPostRound != null) {
             pendingPostRound.removeIf(p -> p.getName().equals(nickname));
             if (pendingPostRound.isEmpty()) endRound();
