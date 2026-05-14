@@ -63,23 +63,6 @@ public interface GameView {
 
     void showInvalidAction(String playerName, String reason);
 
-    /**
-     * Called when another player disconnects mid-game.
-     * The game continues; implementors should notify the user without stopping input.
-     * Default implementation falls back to showInvalidAction so existing views compile.
-     */
-    default void showPlayerDisconnected(String nickname) {
-        showInvalidAction("DISCONNECT", nickname + " si è disconnesso. Il gioco continua.");
-    }
-
-    /**
-     * Called when a previously disconnected player reconnects mid-game.
-     * Default implementation falls back to showInvalidAction so existing views compile.
-     */
-    default void showPlayerReconnected(String nickname) {
-        showInvalidAction("RECONNECT", nickname + " si è riconnesso.");
-    }
-
     void showGameEnded(List<PlayerSnapshot> winners, List<PlayerSnapshot> finalScores);
 
     // ── Input methods (local / single-player use) ─────────────────────────────
@@ -105,4 +88,5 @@ public interface GameView {
      * Returns the card ID, or -1 to decline.
      */
     int requestPostRoundCardChoice(PlayerSnapshot player, List<CardSnapshot> available);
+
 }

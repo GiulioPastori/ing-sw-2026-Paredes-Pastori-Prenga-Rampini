@@ -13,6 +13,9 @@
 <?import javafx.scene.layout.VBox?>
 
 <!-- Root: StackPane so the event overlay can sit above everything -->
+<?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
 <StackPane xmlns="http://javafx.com/javafx"
            xmlns:fx="http://javafx.com/fxml"
            fx:controller="it.polimi.it.view.gui.controllers.GameBoardView"
@@ -85,6 +88,23 @@
         <VBox fx:id="eventOverlayBox" alignment="CENTER" spacing="16" styleClass="event-overlay-box">
             <Label fx:id="eventOverlayTitle" styleClass="event-overlay-title" text=""/>
             <Label fx:id="eventOverlayName"  styleClass="event-overlay-name"  text=""/>
+        </VBox>
+    </StackPane>
+
+    <!-- WAITING COVER: shown until ROUND_STARTED, then hidden -->
+    <StackPane fx:id="boardWaitingPane" styleClass="waiting-pane">
+        <ImageView preserveRatio="true" fitWidth="1280" fitHeight="800"
+                   styleClass="waiting-cover">
+            <image><Image url="@/it/polimi/it/view/gui/mesos_cover.png"/></image>
+        </ImageView>
+        <Region styleClass="waiting-gradient" StackPane.alignment="BOTTOM_CENTER"
+                prefHeight="260" maxWidth="1280"/>
+        <VBox alignment="BOTTOM_CENTER" spacing="12" StackPane.alignment="BOTTOM_CENTER">
+            <padding><Insets bottom="50"/></padding>
+            <Label fx:id="boardWaitingTitle" text="In attesa degli altri giocatori…"
+                   styleClass="waiting-title"/>
+            <Label fx:id="boardWaitingPlayers" text="" styleClass="waiting-players"/>
+            <ProgressIndicator styleClass="waiting-spinner" prefWidth="40" prefHeight="40"/>
         </VBox>
     </StackPane>
 

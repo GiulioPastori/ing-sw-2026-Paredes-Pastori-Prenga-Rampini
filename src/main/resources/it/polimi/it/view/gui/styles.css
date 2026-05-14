@@ -25,7 +25,7 @@
 }
 
 .lobby-title {
-    -fx-text-fill: #f1050b;
+    -fx-text-fill: #dcb43c;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 6, 0, 0, 2);
 }
 
@@ -173,17 +173,29 @@
     -fx-cursor: hand;
 }
 
-.card-cell.disabled    { -fx-opacity: 0.55; -fx-cursor: default; }
-.card-cell.selectable:hover  { -fx-effect: dropshadow(gaussian, #dcb43c, 12, 0, 0, 0); }
+.card-cell.disabled {
+    -fx-opacity: 0.42;
+    -fx-cursor: default;
+    -fx-effect: null;
+}
+.card-cell.selectable {
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, #dcb43c, 6, 0.3, 0, 0);
+}
+.card-cell.selectable:hover {
+    -fx-effect: dropshadow(gaussian, #dcb43c, 20, 0.7, 0, 0);
+    -fx-scale-x: 1.06;
+    -fx-scale-y: 1.06;
+}
 .card-cell.event       { -fx-background-color: #6b362f; }
 
 /* Caratteri */
 .card-cell.character.HUNTER   { -fx-background-color: #822d2d; }
-.card-cell.character.GATHERER { -fx-background-color: #f4430a; }
-.card-cell.character.SHAMAN   { -fx-background-color: #450d6a; }
-.card-cell.character.BUILDER  { -fx-background-color: #371502; }
+.card-cell.character.GATHERER { -fx-background-color: #2d5f2d; }
+.card-cell.character.SHAMAN   { -fx-background-color: #4b2d73; }
+.card-cell.character.BUILDER  { -fx-background-color: #5f4b23; }
 .card-cell.character.INVENTOR { -fx-background-color: #234b73; }
-.card-cell.character.ARTIST   { -fx-background-color: #e6d50c; }
+.card-cell.character.ARTIST   { -fx-background-color: #733755; }
 
 .card-label {
     -fx-text-fill: white;
@@ -316,11 +328,11 @@
     -fx-stroke-width: 1.2;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 4, 0, 1, 1);
 }
-.totem-red    { -fx-fill: #ee2737; }  /* Pantone 1788 */
-.totem-blue   { -fx-fill: #009cbd; }  /* Pantone 3135 */
-.totem-yellow { -fx-fill: #f6be00; }  /* Pantone 7406 */
+.totem-red    { -fx-fill: #e8503a; }  /* Pantone 1788 */
+.totem-blue   { -fx-fill: #00a3c4; }  /* Pantone 3135 */
+.totem-yellow { -fx-fill: #f5b800; }  /* Pantone 7406 */
 .totem-white  { -fx-fill: #e8e8e8; }  /* White */
-.totem-black  { -fx-fill: #3f2a56; }  /* Pantone 7449 */
+.totem-black  { -fx-fill: #3d1a3a; -fx-stroke: #7a3a72; }  /* Pantone 7449 */
 .totem-none   { -fx-fill: rgba(0,0,0,0.15); }
 
 /* Totem picker in the selection overlay */
@@ -446,11 +458,11 @@
     -fx-background-radius: 4;
 }
 .char-count.role-hunter   { -fx-text-fill: #ff7b6a; }
-.char-count.role-gatherer { -fx-text-fill: rgba(244, 67, 10, 0.69); }
-.char-count.role-builder  { -fx-text-fill: rgba(55, 21, 2, 0.77); }
-.char-count.role-shaman   { -fx-text-fill: rgba(69, 13, 106, 0.8); }
+.char-count.role-gatherer { -fx-text-fill: #7bd980; }
+.char-count.role-builder  { -fx-text-fill: #e8c43a; }
+.char-count.role-shaman   { -fx-text-fill: #c97bda; }
 .char-count.role-inventor { -fx-text-fill: #6ad8e0; }
-.char-count.role-artist   { -fx-text-fill: rgba(245, 184, 0, 0.71); }
+.char-count.role-artist   { -fx-text-fill: #d6669c; }
 
 /* Players bar can scroll horizontally if many players are present */
 .players-scroll {
@@ -672,4 +684,82 @@
     -fx-border-width: 2.5;
     -fx-border-radius: 50%;
     -fx-background-radius: 50%;
+}
+
+/* ── Player panel — own tribe cards ─────────────────────────────────────── */
+.player-panel.mine {
+    -fx-border-color: #dcb43c;
+    -fx-border-width: 2;
+    -fx-border-radius: 6;
+    -fx-background-color: rgba(220,180,60,0.06);
+    -fx-background-radius: 6;
+}
+
+.tribe-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-padding: 0;
+    -fx-max-height: 82px;
+}
+.tribe-scroll .viewport { -fx-background-color: transparent; }
+
+.tribe-eye-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #a08040;
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
+    -fx-padding: 0 2 0 2;
+}
+.tribe-eye-btn:hover {
+    -fx-text-fill: #dcb43c;
+    -fx-scale-x: 1.2;
+    -fx-scale-y: 1.2;
+}
+
+/* ── Tribe popup ─────────────────────────────────────────────────────────── */
+.tribe-popup-root {
+    -fx-background-color: #1e110a;
+}
+.tribe-popup-title {
+    -fx-text-fill: #f0e0a0;
+    -fx-font-size: 18px;
+    -fx-font-family: "Georgia";
+}
+.tribe-popup-section {
+    -fx-text-fill: #a08040;
+    -fx-font-size: 13px;
+    -fx-font-style: italic;
+    -fx-font-family: "Georgia";
+}
+.tribe-popup-empty {
+    -fx-text-fill: #806040;
+    -fx-font-size: 13px;
+    -fx-font-style: italic;
+}
+
+/* ── Waiting screen ──────────────────────────────────────────────────────── */
+.waiting-pane {
+    -fx-background-color: black;
+}
+.waiting-cover {
+    -fx-opacity: 1;
+}
+.waiting-gradient {
+    -fx-background-color: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.0) 100%);
+}
+.waiting-title {
+    -fx-text-fill: #f0e0a0;
+    -fx-font-size: 22px;
+    -fx-font-family: "Georgia";
+    -fx-font-style: italic;
+    -fx-effect: dropshadow(gaussian, black, 8, 0.8, 0, 0);
+}
+.waiting-players {
+    -fx-text-fill: #dcb43c;
+    -fx-font-size: 14px;
+    -fx-font-family: "Georgia";
+    -fx-effect: dropshadow(gaussian, black, 6, 0.8, 0, 0);
+}
+.waiting-spinner {
+    -fx-progress-color: #dcb43c;
 }

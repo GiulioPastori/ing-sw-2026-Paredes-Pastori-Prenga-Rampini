@@ -11,31 +11,32 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
-/** TCP handler on the server side for a single connected client.
-        *
-        * <p>Three threads per client:
-        * <ul>
-* <li><b>reader</b> – reads incoming messages (main thread via {@link #run()}).</li>
-        * <li><b>writer</b> – empties the outgoing {@link BlockingQueue}.</li>
-        * <li><b>watchdog</b> – checks every {@value #WATCHDOG_INTERVAL_MS} ms if the client
-* has sent at least one message in the last {@value #HEARTBEAT_TIMEOUT_MS} ms;
-* if it expires, closes the connection.</li>
-        * </ul>
-        *
-        * thanks to {@link AtomicBoolean} {@code disconnectReported}: both the readLoop
-* and the watchdog can detect the disconnection, but only the first to do so
-* notifies the session.*/
-
+/**
+ * Gestore TCP lato server per un singolo client connesso.
+ *
+ * <p>Tre thread per client:
+ * <ul>
+ *   <li><b>reader</b> – legge i messaggi in arrivo (thread principale via {@link #run()}).</li>
+ *   <li><b>writer</b> – svuota la coda di uscita {@link BlockingQueue}.</li>
+ *   <li><b>watchdog</b> – controlla ogni {@value #WATCHDOG_INTERVAL_MS} ms se il client
+ *       ha inviato almeno un messaggio negli ultimi {@value #HEARTBEAT_TIMEOUT_MS} ms;
+ *       se scade, chiude la connessione.</li>
+ * </ul>
+ *
+ * grazie all'{@link AtomicBoolean} {@code disconnectReported}: sia il readLoop
+ * che il watchdog possono rilevare la disconnessione, ma solo il primo a farlo
+ * notifica la sessione.
+ */
 public class SocketClientHandler implements ClientConnection, Runnable {
 
     private static final Logger LOG = Logger.getLogger(SocketClientHandler.class.getName());
 
-    /** Watchdog control interval (ms). */
+    /** Intervallo di controllo del watchdog (ms). */
     static final long WATCHDOG_INTERVAL_MS = 5_000;
 
-    /** Maximum silence from the client before considering it disconnected (ms).
-     * With heartbeat every 5s on the client side, 30s = 6 heartbeat tolerance —
-     * enough for a slow but responsive user in case of a real crash. */
+    /** Silenzio massimo dal client prima di considerarlo disconnesso (ms).
+     *  Con heartbeat ogni 5s lato client, 30s = 6 heartbeat di tolleranza —
+     *  abbastanza per un utente lento ma reattivo in caso di crash reale. */
     static final long HEARTBEAT_TIMEOUT_MS = 30_000;
 
     private final Socket                 socket;
@@ -47,17 +48,17 @@ public class SocketClientHandler implements ClientConnection, Runnable {
     private BufferedReader reader;
     private PrintWriter    writer;
 
-    /** true after close(): prevents multiple close operations. */
+    /** true dopo close(): impedisce operazioni multiple di chiusura. */
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     /**
-     * true after the first disconnection report to the session.
-     * Ensures that {@link GameSession#onPlayerDisconnected(String)} is
-     * invoked only once even if both readLoop and watchdog detect it.
+     * true dopo la prima segnalazione di disconnessione alla sessione.
+     * Garantisce che {@link GameSession#onPlayerDisconnected(String)} venga
+     * invocata una sola volta anche se readLoop e watchdog la rilevano entrambi.
      */
     private final AtomicBoolean disconnectReported = new AtomicBoolean(false);
 
-    /** Timestamp of the last message received from the client (any type). */
+    /** Timestamp dell'ultimo messaggio ricevuto dal client (qualsiasi tipo). */
     private volatile long lastSeenTime = System.currentTimeMillis();
 
     public SocketClientHandler(Socket socket, String nickname, GameSession session, TotemColour totemColour) {
@@ -86,7 +87,7 @@ public class SocketClientHandler implements ClientConnection, Runnable {
         }
     }
 
-    // ── Reading ───────────────────────────────────────────────────────────────
+    // ── Lettura ───────────────────────────────────────────────────────────────
 
     private void readLoop() throws IOException {
         String line;
@@ -106,7 +107,7 @@ public class SocketClientHandler implements ClientConnection, Runnable {
         }
     }
 
-    // ── writing ─────────────────────────────────────────────────────────────
+    // ── Scrittura ─────────────────────────────────────────────────────────────
 
     private void writeLoop() {
         while (!closed.get()) {
@@ -144,7 +145,7 @@ public class SocketClientHandler implements ClientConnection, Runnable {
         }
     }
 
-    // ── Disconnection (call maximum one time) ─────────────────────────
+    // ── Disconnessione (chiamata al massimo una volta) ─────────────────────────
 
     private void reportDisconnect() {
         if (disconnectReported.compareAndSet(false, true)) {

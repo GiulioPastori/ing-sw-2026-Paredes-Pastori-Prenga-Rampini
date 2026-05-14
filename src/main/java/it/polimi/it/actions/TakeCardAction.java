@@ -1,7 +1,7 @@
 package it.polimi.it.actions;
 
 /**
- * Action: the player takes a card from the board.
+ *the player takes a card from the board.
  *
  * Carries the card ID (integer) and which row it belongs to.
  * The ID is the natural network key — compact, unambiguous, and directly

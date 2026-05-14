@@ -17,7 +17,6 @@ import java.util.Map;
 
 /**
  * Ground truth of the current game state (the Board).
- *
  * Holds the observable state of the table:
  * - the tribe deck
  * - the top row and bottom row of visible cards
@@ -26,9 +25,8 @@ import java.util.Map;
  * - the Turn Order Tile
  * - the current era
  *
- * Board does not contain complex game logic: it exposes methods to
- * modify and query state. Orchestration logic (event order, era change,
- * etc.) lives in Game.
+ * Board exposes methods to modify and query state.
+ * Event order, era change,etc. lives in Game.
  */
 public class Board {
 
@@ -50,8 +48,8 @@ public class Board {
 
     /**
      * Bottom row: cards that moved down from the top row last round.
-     * Buildings never move to the bottom row and are not discarded
-     * with characters (rulebook p.6-7).
+     * Buildings not move to the bottom row and are not discarded
+     * with characters
      */
     private final List<Card> bottomRow;
 

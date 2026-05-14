@@ -15,7 +15,6 @@ import java.util.List;
  *
  * Building effects that modify this event:
  * - Building 202/306: for each hunter, +1 food and +1 PP additional
- *   (stacks with base effect, giving +2 food total and base PP+1 per hunter)
  */
 public class Hunt implements EventStrategy {
 

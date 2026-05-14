@@ -40,6 +40,7 @@ public class JavaFxApp extends Application {
     private static final Logger LOG = Logger.getLogger(JavaFxApp.class.getName());
 
     private Stage primaryStage;
+    private LobbyController lobbyController;
 
     @Override
     public void start(Stage stage) throws IOException {
@@ -47,10 +48,10 @@ public class JavaFxApp extends Application {
 
         FXMLLoader loader = new FXMLLoader(
                 getClass().getResource("/it/polimi/it/view/gui/lobby.fxml"));
-        VBox lobbyRoot = loader.load();
-        LobbyController lobby = loader.getController();
+        javafx.scene.layout.StackPane lobbyRoot = loader.load();
+        this.lobbyController = loader.getController();
 
-        lobby.setOnConnectRequest(this::handleConnect);
+        lobbyController.setOnConnectRequest(this::handleConnect);
 
         Scene scene = new Scene(lobbyRoot);
         scene.getStylesheets().add(
@@ -101,7 +102,7 @@ public class JavaFxApp extends Application {
         // Crea la View JavaFX prima di tentare la connessione, così il
         // ClientController può chiamarne i metodi non appena arrivano i primi
         // messaggi del server.
-        JavaFxView view = new JavaFxView(primaryStage);
+        JavaFxView view = new JavaFxView(primaryStage, lobbyController);
         ClientController controller = new ClientController(proxy, view, p.nickname());
         proxy.setOnMessage(controller::onMessage);
         proxy.setOnDisconnect(controller::onDisconnect);

@@ -5,10 +5,8 @@ import it.polimi.it.enums.Era;
 import it.polimi.it.player.Player;
 
 /**
- * Character card: Builder.
- *
  * During the game: reduces the food cost of every building acquired.
- * End of game: contributes fixed prestige points (rulebook p.7).
+ * End of game: contributes fixed prestige points.
  */
 public class Builder extends Character {
 

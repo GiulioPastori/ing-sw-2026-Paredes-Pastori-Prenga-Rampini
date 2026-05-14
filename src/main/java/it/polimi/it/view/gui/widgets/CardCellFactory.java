@@ -11,7 +11,11 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
+import javafx.scene.control.Button;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tooltip;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
@@ -22,6 +26,7 @@ import javafx.scene.text.TextAlignment;
 import javafx.util.Duration;
 
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -140,21 +145,7 @@ public final class CardCellFactory {
             cell.getChildren().add(box);
         }
 
-        // Character details strip overlaid at the bottom (e.g. "★★★", "TRIG",
-        // "INV-A"). Always added when details are non-trivial so the user can
-        // see at a glance what makes this character valuable.
-        if (card.type() == CardSnapshot.Type.CHARACTER) {
-            HBox strip = buildCharacterIconStrip(card);
-            if (strip != null) {
-                StackPane.setAlignment(strip, Pos.BOTTOM_CENTER);
-                StackPane.setMargin(strip, new Insets(0, 0, 4, 0));
-                cell.getChildren().add(strip);
-            }
-        }
-
-        // Tooltip: italian description for buildings, role for characters,
-        // event type for events. Useful both on the offer rows and on the
-        // small tribe thumbnails.
+        // Tooltip only — no overlay strip on the card image
         attachTooltip(cell, card);
 
         if (onClick != null && !card.isEvent()) {
@@ -186,7 +177,7 @@ public final class CardCellFactory {
 
         switch (card.characterType()) {
             case HUNTER -> {
-                if (d.triggerIcon()) strip.getChildren().add(badge("🎯", "char-trigger"));
+                if (d.triggerIcon()) strip.getChildren().add(badge("◎", "char-trigger"));
                 else                 return null;
             }
             case SHAMAN -> {
@@ -196,14 +187,14 @@ public final class CardCellFactory {
             }
             case INVENTOR -> {
                 if (d.inventionIcon().isEmpty()) return null;
-                strip.getChildren().add(badge("💡 " + d.inventionIcon(), "char-invention"));
+                strip.getChildren().add(badge("✦ " + d.inventionIcon(), "char-invention"));
             }
             case BUILDER -> {
                 if (d.buildingDiscount() != 0)
-                    strip.getChildren().add(badge("🔨 -" + d.buildingDiscount() + " 🍖",
+                    strip.getChildren().add(badge("⚒ -" + d.buildingDiscount() + " ◆",
                             "char-discount"));
                 if (d.builderPoints() != 0)
-                    strip.getChildren().add(badge("⭐ +" + d.builderPoints(),
+                    strip.getChildren().add(badge("★ +" + d.builderPoints(),
                             "char-pp"));
                 if (strip.getChildren().isEmpty()) return null;
             }
@@ -223,7 +214,7 @@ public final class CardCellFactory {
     private static void attachTooltip(StackPane cell, CardSnapshot card) {
         String text = switch (card.type()) {
             case BUILDING  -> "Edificio #" + card.id()
-                    + "\nCosto: " + card.foodCost() + " 🍖   PP: " + card.finalPoints()
+                    + "\nCosto: " + card.foodCost() + " ◆   PP: " + card.finalPoints()
                     + "\n" + CardLocalization.buildingDescription(card.id(), card.effectDescription());
             case CHARACTER -> characterTooltip(card);
             case EVENT     -> "Evento  (id " + card.id() + ", " + card.era() + ")"
@@ -256,12 +247,12 @@ public final class CardCellFactory {
             case BUILDER  -> {
                 StringBuilder sb = new StringBuilder();
                 if (d.buildingDiscount() != 0)
-                    sb.append("\n🔨 Sconto edifici: -").append(d.buildingDiscount()).append(" 🍖");
+                    sb.append("\n⚒ Sconto edifici: -").append(d.buildingDiscount()).append(" ◆");
                 if (d.builderPoints() != 0)
-                    sb.append("\n⭐ Fine partita: +").append(d.builderPoints()).append(" PP");
+                    sb.append("\n★ Fine partita: +").append(d.builderPoints()).append(" PP");
                 yield sb.toString();
             }
-            case GATHERER -> "\n🌾 Sostentamento: -3 🍖 per ogni Raccoglitore";
+            case GATHERER -> "\n◈ Sostentamento: -3 ◆ per ogni Raccoglitore";
             case ARTIST   -> "\n🎨 Fine partita: 10 PP per ogni coppia di Artisti";
         };
         return header + tail;
@@ -542,70 +533,113 @@ public final class CardCellFactory {
      * thumbnails with tooltips). The whole panel is highlighted when the
      * player is the active one this turn.
      */
-    public static VBox buildPlayerPanel(PlayerSnapshot p, boolean active) {
+    /**
+     * Builds the player panel shown at the bottom of the board.
+     *
+     * @param p        the player snapshot
+     * @param active   true if this player is the current active player
+     * @param isMe     true if this panel belongs to the local player
+     * @param onViewTribe  callback invoked when the user clicks "view tribe";
+     *                     receives the PlayerSnapshot. May be null (button hidden).
+     */
+    public static VBox buildPlayerPanel(PlayerSnapshot p, boolean active,
+                                        boolean isMe,
+                                        Consumer<PlayerSnapshot> onViewTribe) {
         VBox panel = new VBox(6);
         panel.getStyleClass().add("player-panel");
         if (active) panel.getStyleClass().add("active");
+        if (isMe)   panel.getStyleClass().add("mine");
         panel.setAlignment(Pos.TOP_CENTER);
         panel.setPadding(new Insets(8));
 
-        // Header: totem + name
+        // ── Header: totem + name + (eye button for other players) ────────────
         HBox header = new HBox(8);
         header.setAlignment(Pos.CENTER_LEFT);
         header.getChildren().add(buildTotemBadge(p.totemColour(), 18));
         Label name = new Label(p.name());
         name.getStyleClass().add("player-name");
         header.getChildren().add(name);
+
+        if (onViewTribe != null) {
+            Region spacer = new Region();
+            HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
+            Button eyeBtn = new Button("👁");
+            eyeBtn.getStyleClass().add("tribe-eye-btn");
+            eyeBtn.setOnAction(e -> onViewTribe.accept(p));
+            Tooltip.install(eyeBtn, new Tooltip("Vedi tribù di " + p.name()));
+            header.getChildren().addAll(spacer, eyeBtn);
+        }
         panel.getChildren().add(header);
 
-        // Stats: Cibo / PP — both icon and number; CSS class .emoji-text
-        // ensures the bundled emoji font is applied to the glyph
+        // ── Stats ─────────────────────────────────────────────────────────────
         HBox stats = new HBox(10);
         stats.setAlignment(Pos.CENTER_LEFT);
         Label food = new Label("🍖 " + p.food());
         food.getStyleClass().addAll("player-food", "emoji-text");
-        Label pp   = new Label("⭐ " + p.prestigePoints());
+        Label pp = new Label("⭐ " + p.prestigePoints());
         pp.getStyleClass().addAll("player-pp", "emoji-text");
         stats.getChildren().addAll(food, pp);
         panel.getChildren().add(stats);
 
-        // Character count by role: e.g. 🏹 ×2  🌾 ×1
-        if (!p.tribeCharacters().isEmpty()) {
-            HBox chars = new HBox(6);
-            chars.setAlignment(Pos.CENTER_LEFT);
-            chars.setStyle("-fx-flex-wrap: wrap;");
-            Map<CharacterType, Integer> counts = new HashMap<>();
-            for (CardSnapshot c : p.tribeCharacters()) {
-                if (c.characterType() == null) continue;
-                counts.merge(c.characterType(), 1, Integer::sum);
+        // ── Tribe cards (my panel) or compact summary (others) ───────────────
+        if (isMe) {
+            // Show actual card images for own tribe
+            List<CardSnapshot> allCards = new ArrayList<>(p.tribeCharacters());
+            allCards.addAll(p.tribeBuildings());
+            if (!allCards.isEmpty()) {
+                ScrollPane scroll = new ScrollPane();
+                scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+                scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+                scroll.setFitToHeight(true);
+                scroll.setMaxHeight(TRIBE_CARD_H + 6);
+                scroll.getStyleClass().add("tribe-scroll");
+                HBox cards = new HBox(4);
+                cards.setAlignment(Pos.CENTER_LEFT);
+                for (CardSnapshot card : allCards) {
+                    cards.getChildren().add(buildCard(card, null, TRIBE_CARD_W, TRIBE_CARD_H));
+                }
+                scroll.setContent(cards);
+                panel.getChildren().add(scroll);
             }
-            for (CharacterType ct : CharacterType.values()) {
-                int n = counts.getOrDefault(ct, 0);
-                if (n == 0) continue;
-                Label l = new Label(roleEmoji(ct) + " ×" + n);
-                l.getStyleClass().addAll("char-count", "emoji-text",
-                        "role-" + ct.name().toLowerCase());
-                Tooltip.install(l, new Tooltip(roleNameIt(ct) + ": " + n));
-                chars.getChildren().add(l);
-            }
-            panel.getChildren().add(chars);
+        } else {
+            // Compact: role emoji counts
+            if (!p.tribeCharacters().isEmpty()) {
+                HBox chars = new HBox(6);
+                chars.setAlignment(Pos.CENTER_LEFT);
+                Map<CharacterType, Integer> counts = new HashMap<>();
+                for (CardSnapshot cs : p.tribeCharacters()) {
+                    if (cs.characterType() == null) continue;
+                    counts.merge(cs.characterType(), 1, Integer::sum);
+                }
+                for (CharacterType ct : CharacterType.values()) {
+                    int n = counts.getOrDefault(ct, 0);
+                    if (n == 0) continue;
+                    Label l = new Label(roleEmoji(ct) + " ×" + n);
+                    l.getStyleClass().addAll("char-count", "emoji-text",
+                            "role-" + ct.name().toLowerCase());
+                    chars.getChildren().add(l);
+                }
+                panel.getChildren().add(chars);
 
-            // Aggregated character detail
-            HBox agg = buildCharacterAggregateRow(p);
-            if (agg != null) panel.getChildren().add(agg);
-        }
-
-        // Building thumbnails
-        if (!p.tribeBuildings().isEmpty()) {
-            HBox blds = new HBox(4);
-            blds.setAlignment(Pos.CENTER_LEFT);
-            for (CardSnapshot b : p.tribeBuildings()) {
-                blds.getChildren().add(buildCard(b, null, TRIBE_CARD_W, TRIBE_CARD_H));
+                HBox agg = buildCharacterAggregateRow(p);
+                if (agg != null) panel.getChildren().add(agg);
             }
-            panel.getChildren().add(blds);
+            if (!p.tribeBuildings().isEmpty()) {
+                HBox blds = new HBox(4);
+                blds.setAlignment(Pos.CENTER_LEFT);
+                for (CardSnapshot b : p.tribeBuildings()) {
+                    blds.getChildren().add(buildCard(b, null, TRIBE_CARD_W, TRIBE_CARD_H));
+                }
+                panel.getChildren().add(blds);
+            }
         }
 
         return panel;
+    }
+
+    /** Overload for backward compat — no tribe viewer, not marked as mine. */
+    public static VBox buildPlayerPanel(PlayerSnapshot p, boolean active) {
+        return buildPlayerPanel(p, active, false, null);
     }
 
     /**
@@ -638,7 +672,7 @@ public final class CardCellFactory {
         if (triggers > 0)          row.getChildren().add(badge("🎯 ×" + triggers,           "char-trigger"));
         if (!inventions.isEmpty()) row.getChildren().add(badge("💡 ×" + inventions.size(), "char-invention"));
         if (builderDiscount > 0)   row.getChildren().add(badge("🔨 -" + builderDiscount,    "char-discount"));
-        if (builderPoints > 0)     row.getChildren().add(badge("⭐ +" + builderPoints,      "char-pp"));
+        if (builderPoints > 0)     row.getChildren().add(badge("★ +" + builderPoints,      "char-pp"));
         return row;
     }
 

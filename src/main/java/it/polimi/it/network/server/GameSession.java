@@ -27,16 +27,11 @@ import java.util.logging.Logger;
  * {@link GameEventListener} <em>alongside</em> the controller so it can
  * serialise and broadcast events; the controller handles local view feedback
  * (validation errors, logging via {@link StubGameView}).
- *
- * <p><b>Disconnection policy (≥ 3 players):</b> when a player disconnects the
- * game keeps running — the model auto-places their totem and skips their turns.
- * The game is only suspended when exactly 1 connected player remains, and
- * terminated after {@value #TIMEOUT_SECONDS} seconds without reconnection.
  */
 public class GameSession implements GameEventListener {
 
     private static final Logger LOG             = Logger.getLogger(GameSession.class.getName());
-    private static final long   TIMEOUT_SECONDS = 120;
+    private static final long   TIMEOUT_SECONDS = 1000;
 
     private final int                           expectedPlayers;
     private final List<ClientConnection>        clients   = new CopyOnWriteArrayList<>();
@@ -77,23 +72,11 @@ public class GameSession implements GameEventListener {
         if (old != null) { clients.remove(old); old.close(); }
         clients.add(c);
         clientMap.put(nick, c);
-
         if (timeoutFuture != null) { timeoutFuture.cancel(false); timeoutFuture = null; }
         if (controller != null) controller.getGame().markReconnected(nick);
-
-        boolean wasSuspended = suspended;
         suspended = false;
-
-        LOG.info("'" + nick + "' reconnected. Active players: " + connectedCount());
-
-        // Notify the reconnecting client and all others
-        c.send(Message.playerReconnected(nick));
-        broadcast(Message.playerReconnected(nick));
-
-        if (wasSuspended) {
-            LOG.info("Game resumed after reconnection of '" + nick + "'.");
-            broadcast(Message.error("Partita ripresa — " + nick + " si è riconnesso."));
-        }
+        LOG.info("'" + nick + "' reconnected.");
+        c.send(Message.error("Welcome back, " + nick + "! Game resumed."));
     }
 
     public synchronized boolean hasRoom()      { return !started && !terminated && clients.size() < expectedPlayers; }
@@ -102,14 +85,6 @@ public class GameSession implements GameEventListener {
     public synchronized boolean isSuspended()  { return suspended; }
     public int getExpectedPlayers()            { return expectedPlayers; }
     public synchronized boolean hasPlayer(String nick) { return clientMap.containsKey(nick); }
-
-    /** Returns the number of currently connected (not disconnected) players. */
-    private long connectedCount() {
-        if (controller == null) return clients.size();
-        return clients.stream()
-                .filter(c -> !controller.getGame().isDisconnected(c.getNickname()))
-                .count();
-    }
 
     // ── Game startup ──────────────────────────────────────────────────────────
 
@@ -257,58 +232,30 @@ public class GameSession implements GameEventListener {
     public synchronized void onPlayerDisconnected(String nick) {
         if (terminated) return;
         LOG.warning("'" + nick + "' disconnected.");
-
-        // If the game hasn't started yet, abort immediately.
-        if (!started || controller == null) {
-            terminate("Giocatore '" + nick + "' ha abbandonato prima dell'inizio.");
-            return;
-        }
-
-        // Notify all clients that this player disconnected (game continues).
-        broadcast(Message.playerDisconnected(nick));
-
-        // Advance the game model: auto-place totem / skip turn for the disconnected player.
+        broadcast(Message.playerDisconnected(nick + " disconnected."));
+        if (!started || controller == null) { terminate("Player left before game started."); return; }
         controller.getGame().markDisconnected(nick);
-
-        long active = connectedCount();
-
+        long active = clients.stream()
+                .filter(c -> !controller.getGame().isDisconnected(c.getNickname())).count();
         if (active == 0) {
-            terminate("Tutti i giocatori si sono disconnessi.");
-            return;
+            terminate("All players disconnected.");
+        } else if (active == 1) {
+            suspended = true;
+            broadcast(Message.error("Game suspended — waiting for reconnection (" +
+                    TIMEOUT_SECONDS + "s timeout)."));
+            timeoutFuture = scheduler.schedule(() -> {
+                synchronized (GameSession.this) {
+                    if (terminated || !suspended) return;
+                    clients.stream()
+                            .filter(c -> !controller.getGame().isDisconnected(c.getNickname()))
+                            .findFirst()
+                            .ifPresent(w -> {
+                                broadcast(Message.error(w.getNickname() + " wins by default."));
+                                terminate("Timeout.");
+                            });
+                }
+            }, TIMEOUT_SECONDS, TimeUnit.SECONDS);
         }
-
-        // ≥ 2 connected players: game continues uninterrupted.
-        if (active >= 2) {
-            LOG.info("'" + nick + "' disconnesso — la partita continua con "
-                    + active + " giocatori attivi.");
-            // Cancel any previous single-survivor timeout that may still be pending.
-            if (timeoutFuture != null) {
-                timeoutFuture.cancel(false);
-                timeoutFuture = null;
-            }
-            suspended = false;
-            return;
-        }
-
-        // Exactly 1 connected player left: suspend and wait for reconnection.
-        suspended = true;
-        String survivor = clients.stream()
-                .filter(c -> !controller.getGame().isDisconnected(c.getNickname()))
-                .map(ClientConnection::getNickname)
-                .findFirst()
-                .orElse("?");
-
-        broadcast(Message.error("Partita sospesa — in attesa di riconnessione ("
-                + TIMEOUT_SECONDS + "s). Giocatore rimasto: " + survivor));
-        LOG.warning("Solo 1 giocatore rimasto — partita sospesa per " + TIMEOUT_SECONDS + "s.");
-
-        timeoutFuture = scheduler.schedule(() -> {
-            synchronized (GameSession.this) {
-                if (terminated || !suspended) return;
-                broadcast(Message.error(survivor + " vince per abbandono degli avversari (timeout)."));
-                terminate("Timeout riconnessione.");
-            }
-        }, TIMEOUT_SECONDS, TimeUnit.SECONDS);
     }
 
     // ── Internal ──────────────────────────────────────────────────────────────

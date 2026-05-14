@@ -5,10 +5,9 @@ import it.polimi.it.enums.Era;
 import it.polimi.it.player.Player;
 
 /**
- * Character card: Shaman.
- *
+
  * Shamans show 1–3 star icons. The total across the tribe determines the
- * outcome of the Shamanic Ritual event (rulebook p.6).
+ * outcome of the Shamanic Ritual event
  * No immediate effect; no direct contribution to the final score.
  */
 public class Shaman extends Character {

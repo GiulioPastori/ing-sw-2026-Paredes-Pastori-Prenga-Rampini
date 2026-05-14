@@ -76,6 +76,8 @@ public class GameBoardView {
     @FXML private Button     passButton;
     @FXML private Button     declineButton;
 
+    @FXML private StackPane  boardWaitingPane;
+    @FXML private Label      boardWaitingPlayers;
     @FXML private StackPane  eventOverlay;
     @FXML private VBox       eventOverlayBox;
     @FXML private Label      eventOverlayTitle;
@@ -106,10 +108,22 @@ public class GameBoardView {
         runFx(() -> bannerLabel.setText("Connesso come " + myNickname));
     }
 
+    /** Called by JavaFxView.showLobbyUpdate to update the in-board waiting text. */
+    public void updateBoardWaiting(java.util.List<String> players, int needed) {
+        runFx(() -> {
+            if (boardWaitingPane != null) {
+                boardWaitingPane.setVisible(true);
+                boardWaitingPlayers.setText(
+                        String.join("  ·  ", players) + "  (" + players.size() + "/" + needed + ")");
+            }
+        });
+    }
+
     // ── Push events from the network/view layer ───────────────────────────────
 
     public void onRoundStarted(int round, List<PlayerSnapshot> turnOrder, BoardSnapshot board) {
         runFx(() -> {
+            boardWaitingPane.setVisible(false);
             roundLabel.setText("Round " + round);
             // Refresh the player order from this round's turn order; preserve
             // tribes by replacing whole snapshots.
@@ -443,8 +457,83 @@ public class GameBoardView {
         playersBox.getChildren().clear();
         for (PlayerSnapshot p : players.values()) {
             boolean active = p.name().equals(activePlayer);
-            playersBox.getChildren().add(CardCellFactory.buildPlayerPanel(p, active));
+            boolean isMe   = p.name().equals(myNickname);
+            Consumer<PlayerSnapshot> onView = isMe ? null : this::showTribeOverlay;
+            playersBox.getChildren().add(
+                    CardCellFactory.buildPlayerPanel(p, active, isMe, onView));
         }
+    }
+
+    private void showTribeOverlay(PlayerSnapshot p) {
+        // Build a popup stage with the player's full tribe
+        javafx.stage.Stage popup = new javafx.stage.Stage();
+        popup.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+        popup.setTitle("Tribù di " + p.name());
+
+        VBox root = new VBox(12);
+        root.getStyleClass().add("tribe-popup-root");
+        root.setPadding(new javafx.geometry.Insets(16));
+
+        // Header
+        HBox header = new HBox(10);
+        header.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        header.getChildren().add(
+                it.polimi.it.view.gui.widgets.CardCellFactory.buildTotemBadge(p.totemColour(), 28));
+        Label title = new Label(p.name());
+        title.getStyleClass().add("tribe-popup-title");
+        header.getChildren().add(title);
+        root.getChildren().add(header);
+
+        // Characters
+        if (!p.tribeCharacters().isEmpty()) {
+            Label lbl = new Label("Personaggi");
+            lbl.getStyleClass().add("tribe-popup-section");
+            root.getChildren().add(lbl);
+            HBox chars = new HBox(8);
+            chars.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+            for (it.polimi.it.observer.CardSnapshot card : p.tribeCharacters()) {
+                chars.getChildren().add(
+                        it.polimi.it.view.gui.widgets.CardCellFactory
+                                .buildCard(card, null, 90, 126));
+            }
+            javafx.scene.control.ScrollPane sp = new javafx.scene.control.ScrollPane(chars);
+            sp.setHbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.AS_NEEDED);
+            sp.setVbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.NEVER);
+            sp.setFitToHeight(true);
+            root.getChildren().add(sp);
+        }
+
+        // Buildings
+        if (!p.tribeBuildings().isEmpty()) {
+            Label lbl = new Label("Edifici");
+            lbl.getStyleClass().add("tribe-popup-section");
+            root.getChildren().add(lbl);
+            HBox blds = new HBox(8);
+            blds.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+            for (it.polimi.it.observer.CardSnapshot card : p.tribeBuildings()) {
+                blds.getChildren().add(
+                        it.polimi.it.view.gui.widgets.CardCellFactory
+                                .buildCard(card, null, 90, 126));
+            }
+            javafx.scene.control.ScrollPane sp = new javafx.scene.control.ScrollPane(blds);
+            sp.setHbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.AS_NEEDED);
+            sp.setVbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.NEVER);
+            sp.setFitToHeight(true);
+            root.getChildren().add(sp);
+        }
+
+        if (p.tribeCharacters().isEmpty() && p.tribeBuildings().isEmpty()) {
+            Label empty = new Label("Tribù vuota");
+            empty.getStyleClass().add("tribe-popup-empty");
+            root.getChildren().add(empty);
+        }
+
+        javafx.scene.Scene scene = new javafx.scene.Scene(root);
+        scene.getStylesheets().add(
+                getClass().getResource("/it/polimi/it/view/gui/styles.css").toExternalForm());
+        popup.setScene(scene);
+        popup.setResizable(false);
+        popup.show();
     }
 
     // ── Utils ─────────────────────────────────────────────────────────────────

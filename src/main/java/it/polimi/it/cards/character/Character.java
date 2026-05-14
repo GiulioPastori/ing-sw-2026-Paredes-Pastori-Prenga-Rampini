@@ -16,7 +16,7 @@ import it.polimi.it.player.Player;
  * - Builder/Gatherer/Artist: unused (0)
  *
  * Acquiring a character has no food cost, but during the Sustenance event
- * each character in the tribe must be fed (rulebook p.6).
+ * each character in the tribe must be fed.
  */
 public abstract class Character extends Card {
 

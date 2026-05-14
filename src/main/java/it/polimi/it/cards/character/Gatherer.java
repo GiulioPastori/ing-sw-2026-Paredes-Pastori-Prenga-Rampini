@@ -7,7 +7,7 @@ import it.polimi.it.player.Player;
 /**
  * Character card: Gatherer.
  *
- * Sustenance event (rulebook p.6): each gatherer provides a discount of
+ * Sustenance event: each gatherer provides a discount of
  * {@value #FOOD_DISCOUNT_PER_GATHERER} food on the total amount to pay.
  * No immediate effect; no direct contribution to the final score.
  */

@@ -1,6 +1,7 @@
 package it.polimi.it.network.client;
 
 import it.polimi.it.enums.Era;
+import it.polimi.it.enums.TotemColour;
 import it.polimi.it.enums.EventType;
 import it.polimi.it.network.message.Message;
 import it.polimi.it.observer.BoardSnapshot;
@@ -27,13 +28,6 @@ import java.util.logging.Logger;
  * quando è effettivamente il turno di quel giocatore, quindi non ci
  * saranno mai task "obsoleti" in coda.
  * L'executor viene terminato solo in {@link #onDisconnect()} e {@link #run()}.
- *
- * <p><b>Gestione disconnessioni mid-game:</b>
- * {@code PLAYER_DISCONNECTED} non termina più il client: mostra un avviso
- * tramite {@link GameView#showPlayerDisconnected(String)} e continua.
- * Solo se il server disconnette <em>noi stessi</em> (nickname == myNickname)
- * il latch viene abbassato e il client si chiude.
- * {@code PLAYER_RECONNECTED} notifica la view senza interrompere il gioco.
  */
 public class ClientController {
 
@@ -57,7 +51,7 @@ public class ClientController {
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
-    /** Chiamato quando la connessione cade (dal proxy). */
+    /** Chiamato quando la connessione cade. */
     public void onDisconnect() {
         inputExecutor.shutdownNow();
         view.showInvalidAction("SERVER", "Connessione persa.");
@@ -89,75 +83,44 @@ public class ClientController {
                             + msg.strList("connectedPlayers").size()
                             + "/" + msg.num("expectedPlayers")
                             + " — " + msg.strList("connectedPlayers"));
-
             case Message.ERROR ->
                     view.showInvalidAction("SERVER", msg.str("reason"));
-
             // Heartbeat e keep-alive: aggiornano solo il timestamp nel proxy, niente altro
             case Message.HEARTBEAT, Message.PING, Message.PONG -> { /* ignorati */ }
-
             case Message.ROUND_STARTED      -> handleRoundStarted(msg);
             case Message.TOTEM_PLACED       -> handleTotemPlaced(msg);
             case Message.CARD_SLOT_READY    -> handleCardSlotReady(msg);
-
             case Message.CARD_ACQUIRED ->
                     view.showCardAcquired(msg.playerObj("player"), msg.cardObj("card"));
-
             case Message.CARD_ACQUISITION_FAILED -> handleCardAcquisitionFailed(msg);
-
             case Message.TOTEM_RETURNED ->
                     view.showTotemReturnedToTurnOrder(
                             msg.playerObj("player"),
                             msg.num("position"),
                             msg.boardObj("board"));
-
             case Message.POST_ROUND_STARTED -> handlePostRoundStarted(msg);
-
             case Message.EVENT_RESOLVED ->
                     view.showEventResolved(
                             msg.num("eventId"),
                             Era.valueOf(msg.str("era")),
                             EventType.valueOf(msg.str("eventType")));
-
             case Message.ERA_CHANGED ->
                     view.showEraChanged(Era.valueOf(msg.str("newEra")));
-
             case Message.ROUND_ENDED ->
                     view.showRoundEnded(msg.num("round"));
-
             case Message.GAME_ENDED -> {
                 view.showGameEnded(
                         msg.playerList("winners"),
                         msg.playerList("finalScores"));
                 gameLatch.countDown();
             }
-
             case Message.PLAYER_DISCONNECTED -> {
-                // The server sends the disconnected player's nickname.
-                // If it's our own nickname the server is telling us we were kicked —
-                // close the client. Otherwise just notify the view and keep playing.
-                String who = msg.str("nickname");
-                if (who.equals(myNickname)) {
-                    view.showInvalidAction("DISCONNECT", "Sei stato disconnesso dal server.");
-                    gameLatch.countDown();
-                } else {
-                    view.showPlayerDisconnected(who);
-                }
+                view.showInvalidAction("DISCONNECT", msg.str("nickname"));
+                gameLatch.countDown();
             }
-
-            case Message.PLAYER_RECONNECTED -> {
-                String who = msg.str("nickname");
-                if (who.equals(myNickname)) {
-                    // We just reconnected — the server will replay state events.
-                    view.showInvalidAction("RECONNECT", "Sei tornato in gioco!");
-                } else {
-                    view.showPlayerReconnected(who);
-                }
-            }
-
             default -> LOG.warning("Tipo messaggio sconosciuto: " + msg.getType());
         }
-    }
+    } // fine dispatch()
 
     // ── Handler: piazzamento totem ────────────────────────────────────────────
 
@@ -167,7 +130,6 @@ public class ClientController {
         BoardSnapshot board = msg.boardObj("board");
         view.showRoundStarted(msg.num("round"), currentTurnOrder, board);
 
-        // Ask for input only if we are first in turn order.
         if (!currentTurnOrder.isEmpty()
                 && currentTurnOrder.get(0).name().equals(myNickname)) {
             final PlayerSnapshot me = currentTurnOrder.get(0);

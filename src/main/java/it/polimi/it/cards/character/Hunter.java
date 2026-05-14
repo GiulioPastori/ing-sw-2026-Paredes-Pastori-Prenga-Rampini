@@ -7,11 +7,11 @@ import it.polimi.it.player.Player;
 /**
  * Character card: Hunter.
  *
- * Immediate effect (rulebook p.5): if this hunter carries the trigger icon,
+ * Immediate effect: if this hunter carries the trigger icon,
  * the player immediately takes 1 food for every hunter currently in their tribe
  * (including this one, which has already been added).
  *
- * Hunt event (rulebook p.6): for each hunter in the tribe the player takes
+ * Hunt event: for each hunter in the tribe the player takes
  * 1 food and gains the prestige points shown on the event card.
  */
 public class Hunter extends Character {

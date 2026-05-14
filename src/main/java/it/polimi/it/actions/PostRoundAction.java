@@ -1,7 +1,7 @@
 package it.polimi.it.actions;
 
 /**
- * Action: the player uses the Watchtower building to take one extra card
+ * the player uses the Watchtower building to take one extra card
  * from the top row after all totems have been repositioned.
  *
  * @param playerName name of the acting player

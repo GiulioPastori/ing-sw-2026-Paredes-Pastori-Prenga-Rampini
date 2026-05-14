@@ -16,7 +16,6 @@ import java.util.List;
  *
  * Building effects that modify this event:
  * - Building 204: takes 1 food for each artist in the tribe
- *   (regardless of the PP bonus/penalty, always fires)
  */
 public class CavePaintings implements EventStrategy {
 
@@ -42,7 +41,7 @@ public class CavePaintings implements EventStrategy {
                 player.addPrestigePoints(artistCount * prestigePerArtist);
             }
 
-            // Building 204: +1 food for each artist (always fires, even with 0 artists)
+            // Building 204: +1 food for each artist
             player.getTribe().getBuildings().stream()
                     .filter(b -> b.triggersOnEvent(EventType.CAVE_PAINTINGS))
                     .forEach(b -> b.applyEventHook(player, EventType.CAVE_PAINTINGS));
