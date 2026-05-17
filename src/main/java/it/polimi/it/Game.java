@@ -146,12 +146,16 @@ public class Game {
                 action.tileLetter(),
                 BoardSnapshot.of(board)));
 
-        // Bug fix 2: the Offer Track always has players+1 tiles, so one tile is
-        // always left free. The action phase starts when all PLAYERS have placed,
-        // not when all tiles are occupied.
-        long totalPlaced = board.getOfferTiles().getAllTiles().stream()
-                .filter(t -> !t.isFree()).count();
-        if (totalPlaced == players.size()) {
+        // Start action phase when all CONNECTED players have placed.
+        // Disconnected players skip placement, so count only connected ones.
+        long connTotal = players.stream()
+                .filter(p -> !disconnectedPlayers.contains(p.getName())).count();
+        long connPlaced = board.getOfferTiles().getAllTiles().stream()
+                .filter(t -> !t.isFree())
+                .map(t -> getPlayerByTotem(t.getPlacedTotem()))
+                .filter(p -> !disconnectedPlayers.contains(p.getName()))
+                .count();
+        if (connTotal == 0 || connPlaced == connTotal) {
             beginActionPhase();
         }
         return ValidationResult.ok();
@@ -546,26 +550,19 @@ public class Game {
         disconnectedPlayers.add(nickname);
 
         if (currentPhase == Phase.PLACING_TOTEMS) {
-            // If the disconnected player hasn't placed yet, place automatically.
-            boolean alreadyPlaced = board.getOfferTiles().getAllTiles().stream()
+            // Disconnected player skips placement:
+            // - not yet placed → totem stays in TurnOrderTile (nothing to do)
+            // - already placed → totem stays on tile; advanceToNextOccupiedTile skips it
+            // Either way, check if all remaining connected players have placed.
+            long connTotal = players.stream()
+                    .filter(p -> !disconnectedPlayers.contains(p.getName())).count();
+            long connPlaced = board.getOfferTiles().getAllTiles().stream()
                     .filter(t -> !t.isFree())
                     .map(t -> getPlayerByTotem(t.getPlacedTotem()))
-                    .anyMatch(p -> p.getName().equals(nickname));
-            if (!alreadyPlaced) {
-                Player p = findPlayer(nickname);
-                List<OfferTile> free = board.getOfferTiles().getFreeTiles();
-                if (!free.isEmpty()) {
-                    OfferTile tile = free.get(0);
-                    board.getOfferTiles().placeTotem(p, tile);
-                    publish(new GameEvent.TotemPlaced(
-                            PlayerSnapshot.of(p), tile.getLetter(), BoardSnapshot.of(board)));
-                    // Check whether all totems are now placed.
-                    long placed = board.getOfferTiles().getAllTiles().stream()
-                            .filter(t -> !t.isFree()).count();
-                    if (placed == players.size()) {
-                        beginActionPhase();
-                    }
-                }
+                    .filter(p -> !disconnectedPlayers.contains(p.getName()))
+                    .count();
+            if (connTotal == 0 || connPlaced == connTotal) {
+                beginActionPhase();
             }
 
         } else if (currentPhase == Phase.RESOLVING_ACTIONS) {
@@ -596,21 +593,13 @@ public class Game {
     }
 
     private void autoPlaceDisconnectedTotems() {
-        for (Player p : getPlacementOrder()) {
-            if (!disconnectedPlayers.contains(p.getName())) continue;
-            List<OfferTile> free = board.getOfferTiles().getFreeTiles();
-            if (free.isEmpty()) break;
-            OfferTile tile = free.get(0);
-            board.getOfferTiles().placeTotem(p, tile);
-            publish(new GameEvent.TotemPlaced(
-                    PlayerSnapshot.of(p), tile.getLetter(), BoardSnapshot.of(board)));
-            long placed = board.getOfferTiles().getAllTiles().stream()
-                    .filter(t -> !t.isFree()).count();
-            if (placed == players.size()) {
-                beginActionPhase();
-                return;
-            }
-        }
+        // Disconnected players do NOT place a totem:
+        // - Before placing: totem stays in TurnOrderTile.
+        // - After placing: totem stays on the chosen tile; action phase skips them.
+        // Edge case: if everyone is disconnected, start action phase to unblock.
+        long connected = players.stream()
+                .filter(p -> !disconnectedPlayers.contains(p.getName())).count();
+        if (connected == 0) beginActionPhase();
     }
 
     // ── Public getters ────────────────────────────────────────────────────────
@@ -619,17 +608,8 @@ public class Game {
     public int          getCurrentRound() { return currentRound; }
     public List<Player> getPlayers()      { return List.copyOf(players); }
 
-    /** Snapshot of the current board state — used for reconnect resync. */
     public BoardSnapshot getBoardSnapshot() { return BoardSnapshot.of(board); }
 
-    /** Ordered list of player snapshots in current turn order — used for reconnect resync. */
-    public List<it.polimi.it.observer.PlayerSnapshot> getPlayerSnapshots() {
-        return players.stream()
-                .map(it.polimi.it.observer.PlayerSnapshot::of)
-                .toList();
-    }
-
-    /** Current placement order snapshots — used for reconnect resync. */
     public List<it.polimi.it.observer.PlayerSnapshot> getTurnOrderSnapshots() {
         return getPlacementOrder().stream()
                 .map(it.polimi.it.observer.PlayerSnapshot::of)

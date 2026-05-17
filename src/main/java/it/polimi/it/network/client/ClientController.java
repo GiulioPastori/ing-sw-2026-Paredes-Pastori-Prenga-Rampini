@@ -40,6 +40,7 @@ public class ClientController {
     private List<PlayerSnapshot>        currentTurnOrder      = new ArrayList<>();
     private final java.util.Set<String> alreadyPlaced         = new java.util.HashSet<>();
     private final java.util.Set<String> disconnectedNicknames = new java.util.HashSet<>();
+    private volatile BoardSnapshot      lastBoard             = null;
 
     private final CountDownLatch  gameLatch     = new CountDownLatch(1);
     private final ExecutorService inputExecutor = Executors.newSingleThreadExecutor();
@@ -119,12 +120,13 @@ public class ClientController {
             case Message.PLAYER_DISCONNECTED -> {
                 String who = msg.str("nickname");
                 if (who.equals(myNickname)) {
-                    // We were kicked — close the client.
                     view.showInvalidAction("DISCONNECT", "Sei stato disconnesso dal server.");
                     gameLatch.countDown();
                 } else {
                     disconnectedNicknames.add(who);
                     view.showPlayerDisconnected(who);
+                    // Re-prompt placement in case it was this player's turn.
+                    if (lastBoard != null) promptNextTotemPlacement(lastBoard);
                 }
             }
             case Message.PLAYER_RECONNECTED -> {
@@ -146,6 +148,7 @@ public class ClientController {
         alreadyPlaced.clear();
         currentTurnOrder = msg.playerList("turnOrder");
         BoardSnapshot board = msg.boardObj("board");
+        lastBoard = board;
         view.showRoundStarted(msg.num("round"), currentTurnOrder, board);
         promptNextTotemPlacement(board);
     }
@@ -153,30 +156,16 @@ public class ClientController {
     private void handleTotemPlaced(Message msg) {
         PlayerSnapshot placed = msg.playerObj("player");
         BoardSnapshot  board  = msg.boardObj("board");
+        lastBoard = board;
         view.showTotemPlaced(placed, msg.ch("tileLetter"), board);
         alreadyPlaced.add(placed.name());
         promptNextTotemPlacement(board);
     }
 
-    /**
-     * Finds the next player in currentTurnOrder who has not yet placed
-     * and is not disconnected, then asks for input if it is our turn.
-     *
-     * Disconnected players are skipped silently: the server will auto-place
-     * them and send a TOTEM_PLACED event, which calls this method again.
-     * This correctly handles disconnected players anywhere in the order.
-     */
-    /**
-     * Finds the next player in currentTurnOrder who has not yet placed
-     * and is not disconnected, then asks for input if it is our turn.
-     * Disconnected players are skipped entirely — the server no longer
-     * places their totem, so no TOTEM_PLACED event will arrive for them.
-     */
     private void promptNextTotemPlacement(BoardSnapshot board) {
         for (PlayerSnapshot p : currentTurnOrder) {
             if (alreadyPlaced.contains(p.name())) continue;
-            if (disconnectedNicknames.contains(p.name())) continue; // skip disconnected
-            // Next connected player who must place
+            if (disconnectedNicknames.contains(p.name())) continue;
             if (p.name().equals(myNickname)) {
                 final PlayerSnapshot me = p;
                 final BoardSnapshot  b  = board;
