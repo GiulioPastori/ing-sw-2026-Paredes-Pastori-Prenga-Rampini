@@ -111,7 +111,7 @@ public class LobbyServer {
             // Reconnection check first (nickname already taken but in an active session)
             GameSession reconnectTarget = findSessionForReconnection(nickname);
             if (reconnectTarget != null) {
-                handleReconnection(socket, nickname, reconnectTarget);
+                handleReconnection(socket, nickname, reconnectTarget, reader, writer);
                 return;
             }
 
@@ -125,7 +125,8 @@ public class LobbyServer {
 
             GameSession session = getOrCreateSession(numPlayers);
 
-            SocketClientHandler handler = new SocketClientHandler(socket, nickname, session, totemColour) {
+            SocketClientHandler handler = new SocketClientHandler(
+                    socket, nickname, session, totemColour, reader, writer) {
                 @Override public void close() {
                     super.close();
                     if (session.isTerminated())
@@ -152,8 +153,10 @@ public class LobbyServer {
         }
     }
 
-    private void handleReconnection(Socket socket, String nickname, GameSession session) {
-        SocketClientHandler handler = new SocketClientHandler(socket, nickname, session, null) {
+    private void handleReconnection(Socket socket, String nickname, GameSession session,
+                                    BufferedReader reader, PrintWriter writer) {
+        SocketClientHandler handler = new SocketClientHandler(
+                socket, nickname, session, null, reader, writer) {
             @Override public void close() {
                 super.close();
                 if (session.isTerminated())

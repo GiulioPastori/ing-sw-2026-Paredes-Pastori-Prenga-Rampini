@@ -186,7 +186,7 @@ class RmiClientHandler implements ClientConnection {
 
     private void reportDisconnect() {
         if (disconnectReported.compareAndSet(false, true) && session != null) {
-            session.onPlayerDisconnected(nickname);
+            session.onPlayerDisconnected(nickname, this);
         }
     }
 

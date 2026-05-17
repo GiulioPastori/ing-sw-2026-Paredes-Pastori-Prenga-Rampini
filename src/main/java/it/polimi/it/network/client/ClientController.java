@@ -78,11 +78,12 @@ public class ClientController {
 
     private void dispatch(Message msg) {
         switch (msg.getType()) {
-            case Message.LOBBY_UPDATE ->
-                    System.out.println("Lobby: "
-                            + msg.strList("connectedPlayers").size()
-                            + "/" + msg.num("expectedPlayers")
-                            + " — " + msg.strList("connectedPlayers"));
+            case Message.LOBBY_UPDATE -> {
+                var players = msg.strList("connectedPlayers");
+                var needed  = msg.num("expectedPlayers");
+                System.out.println("Lobby: " + players.size() + "/" + needed + " — " + players);
+                view.showLobbyUpdate(players, needed);
+            }
             case Message.ERROR ->
                     view.showInvalidAction("SERVER", msg.str("reason"));
             // Heartbeat e keep-alive: aggiornano solo il timestamp nel proxy, niente altro
@@ -115,8 +116,23 @@ public class ClientController {
                 gameLatch.countDown();
             }
             case Message.PLAYER_DISCONNECTED -> {
-                view.showInvalidAction("DISCONNECT", msg.str("nickname"));
-                gameLatch.countDown();
+                String who = msg.str("nickname");
+                if (who.equals(myNickname)) {
+                    // We were kicked — close the client.
+                    view.showInvalidAction("DISCONNECT", "Sei stato disconnesso dal server.");
+                    gameLatch.countDown();
+                } else {
+                    // Another player disconnected — game continues.
+                    view.showPlayerDisconnected(who);
+                }
+            }
+            case Message.PLAYER_RECONNECTED -> {
+                String who = msg.str("nickname");
+                if (who.equals(myNickname)) {
+                    view.showInvalidAction("RECONNECT", "Sei tornato in gioco!");
+                } else {
+                    view.showPlayerReconnected(who);
+                }
             }
             default -> LOG.warning("Tipo messaggio sconosciuto: " + msg.getType());
         }

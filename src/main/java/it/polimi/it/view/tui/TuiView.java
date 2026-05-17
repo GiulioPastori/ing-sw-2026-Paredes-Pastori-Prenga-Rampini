@@ -2,7 +2,6 @@ package it.polimi.it.view.tui;
 
 import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
-import it.polimi.it.enums.TotemColour;
 import it.polimi.it.enums.EventType;
 import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;
@@ -193,6 +192,7 @@ public class TuiView implements GameView {
         println(paint(FG_B_RED, true, "[!] ") + paint(FG_B_RED, playerName) + ": " + reason);
     }
 
+
     @Override
     public void showPlayerDisconnected(String nickname) {
         println(paint(FG_B_RED, true, "⚡ ") + paint(FG_B_RED, true, nickname)
@@ -285,6 +285,11 @@ public class TuiView implements GameView {
                 print(paint(FG_RED, "Inserisci un numero. Riprova: "));
             }
         }
+    }
+
+    @Override
+    public void showLobbyUpdate(List<String> players, int needed) {
+
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

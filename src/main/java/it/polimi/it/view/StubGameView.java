@@ -95,6 +95,16 @@ public class StubGameView implements GameView {
         System.out.println();
     }
 
+    @Override
+    public void showPlayerDisconnected(String nickname) {
+
+    }
+
+    @Override
+    public void showPlayerReconnected(String nickname) {
+
+    }
+
     // Input stubs — always pick first available option
 
     @Override
@@ -116,4 +126,8 @@ public class StubGameView implements GameView {
         return -1; // stub always declines
     }
 
+    @Override
+    public void showLobbyUpdate(List<String> players, int needed) {
+        // stub/no-op
+    }
 }

@@ -81,6 +81,9 @@ public class JavaFxView implements GameView {
     private final BlockingQueue<Integer>   cardChoiceQueue = new ArrayBlockingQueue<>(1);
     private final BlockingQueue<Character> tileChoiceQueue = new ArrayBlockingQueue<>(1);
 
+    private final java.util.concurrent.CountDownLatch gameStartedLatch =
+            new java.util.concurrent.CountDownLatch(1);
+
     /**
      * @param primaryStage lo {@link Stage} principale dove montare la board.
      *                     Tipicamente la stessa usata dalla lobby — la view
@@ -100,6 +103,8 @@ public class JavaFxView implements GameView {
      * disponibile e qualsiasi evento precedentemente accodato viene replayato.
      */
     public void showBoard(String myNickname) {
+        try { gameStartedLatch.await(); }
+        catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
         CountDownLatch ready = new CountDownLatch(1);
         Platform.runLater(() -> {
             try {
@@ -161,16 +166,17 @@ public class JavaFxView implements GameView {
 
     // ── show* (push) ──────────────────────────────────────────────────────────
 
+
     @Override
     public void showLobbyUpdate(java.util.List<String> players, int needed) {
-        Platform.runLater(() -> lobbyController.showLobbyWaiting("", players, needed));
-        // Also update the in-board cover if the board is already loaded
-        whenReady(bc -> bc.updateBoardWaiting(players, needed));
+        if (gameStartedLatch.getCount() > 0)
+            Platform.runLater(() -> lobbyController.showLobbyWaiting("", players, needed));
     }
 
     @Override
     public void showRoundStarted(int round, List<PlayerSnapshot> turnOrder,
                                  BoardSnapshot board) {
+        gameStartedLatch.countDown();
         whenReady(bc -> bc.onRoundStarted(round, turnOrder, board));
     }
 
@@ -230,10 +236,12 @@ public class JavaFxView implements GameView {
         whenReady(bc -> bc.onInvalidAction(playerName, reason));
     }
 
+
     @Override
     public void showPlayerDisconnected(String nickname) {
         whenReady(bc -> bc.onPlayerDisconnected(nickname));
     }
+
 
     @Override
     public void showPlayerReconnected(String nickname) {

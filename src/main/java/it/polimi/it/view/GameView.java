@@ -63,6 +63,19 @@ public interface GameView {
 
     void showInvalidAction(String playerName, String reason);
 
+    /** Called when another player disconnects — game continues. */
+    default void showPlayerDisconnected(String nickname) {
+        showInvalidAction("DISCONNECT", nickname + " si è disconnesso. Il gioco continua.");
+    }
+
+    /** Called when a disconnected player reconnects. */
+    default void showPlayerReconnected(String nickname) {
+        showInvalidAction("RECONNECT", nickname + " si è riconnesso.");
+    }
+
+    /** Called with lobby player list while waiting for the game to start. */
+    default void showLobbyUpdate(java.util.List<String> players, int needed) {}
+
     void showGameEnded(List<PlayerSnapshot> winners, List<PlayerSnapshot> finalScores);
 
     // ── Input methods (local / single-player use) ─────────────────────────────
