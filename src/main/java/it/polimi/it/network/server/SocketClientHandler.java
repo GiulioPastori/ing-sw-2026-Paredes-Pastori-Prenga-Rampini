@@ -106,6 +106,7 @@ public class SocketClientHandler implements ClientConnection, Runnable {
     // ── Lettura ───────────────────────────────────────────────────────────────
 
     private void readLoop() throws IOException {
+        LOG.info("READ LOOP START " + nickname);
         String line;
         while (!closed.get() && (line = reader.readLine()) != null) {
             lastSeenTime = System.currentTimeMillis(); // qualsiasi dato = client vivo
@@ -126,6 +127,7 @@ public class SocketClientHandler implements ClientConnection, Runnable {
     // ── Scrittura ─────────────────────────────────────────────────────────────
 
     private void writeLoop() {
+        LOG.info("WRITE LOOP START " + nickname);
         while (!closed.get()) {
             try {
                 Message msg = outbound.take();

@@ -37,8 +37,9 @@ public class ClientController {
     private final GameView    view;
     private final String      myNickname;
 
-    private List<PlayerSnapshot> currentTurnOrder = new ArrayList<>();
-    private int                  totemPlacedCount  = 0;
+    private List<PlayerSnapshot>        currentTurnOrder      = new ArrayList<>();
+    private final java.util.Set<String> alreadyPlaced         = new java.util.HashSet<>();
+    private final java.util.Set<String> disconnectedNicknames = new java.util.HashSet<>();
 
     private final CountDownLatch  gameLatch     = new CountDownLatch(1);
     private final ExecutorService inputExecutor = Executors.newSingleThreadExecutor();
@@ -122,12 +123,13 @@ public class ClientController {
                     view.showInvalidAction("DISCONNECT", "Sei stato disconnesso dal server.");
                     gameLatch.countDown();
                 } else {
-                    // Another player disconnected — game continues.
+                    disconnectedNicknames.add(who);
                     view.showPlayerDisconnected(who);
                 }
             }
             case Message.PLAYER_RECONNECTED -> {
                 String who = msg.str("nickname");
+                disconnectedNicknames.remove(who);
                 if (who.equals(myNickname)) {
                     view.showInvalidAction("RECONNECT", "Sei tornato in gioco!");
                 } else {
@@ -141,34 +143,49 @@ public class ClientController {
     // ── Handler: piazzamento totem ────────────────────────────────────────────
 
     private void handleRoundStarted(Message msg) {
-        totemPlacedCount = 0;
+        alreadyPlaced.clear();
         currentTurnOrder = msg.playerList("turnOrder");
         BoardSnapshot board = msg.boardObj("board");
         view.showRoundStarted(msg.num("round"), currentTurnOrder, board);
-
-        if (!currentTurnOrder.isEmpty()
-                && currentTurnOrder.get(0).name().equals(myNickname)) {
-            final PlayerSnapshot me = currentTurnOrder.get(0);
-            inputExecutor.submit(() -> {
-                char chosen = view.requestOfferTileChoice(me, board);
-                proxy.send(Message.placeTotem(myNickname, chosen));
-            });
-        }
+        promptNextTotemPlacement(board);
     }
 
     private void handleTotemPlaced(Message msg) {
-        BoardSnapshot board = msg.boardObj("board");
-        view.showTotemPlaced(msg.playerObj("player"), msg.ch("tileLetter"), board);
-        totemPlacedCount++;
+        PlayerSnapshot placed = msg.playerObj("player");
+        BoardSnapshot  board  = msg.boardObj("board");
+        view.showTotemPlaced(placed, msg.ch("tileLetter"), board);
+        alreadyPlaced.add(placed.name());
+        promptNextTotemPlacement(board);
+    }
 
-        if (totemPlacedCount < currentTurnOrder.size()) {
-            PlayerSnapshot next = currentTurnOrder.get(totemPlacedCount);
-            if (next.name().equals(myNickname)) {
+    /**
+     * Finds the next player in currentTurnOrder who has not yet placed
+     * and is not disconnected, then asks for input if it is our turn.
+     *
+     * Disconnected players are skipped silently: the server will auto-place
+     * them and send a TOTEM_PLACED event, which calls this method again.
+     * This correctly handles disconnected players anywhere in the order.
+     */
+    /**
+     * Finds the next player in currentTurnOrder who has not yet placed
+     * and is not disconnected, then asks for input if it is our turn.
+     * Disconnected players are skipped entirely — the server no longer
+     * places their totem, so no TOTEM_PLACED event will arrive for them.
+     */
+    private void promptNextTotemPlacement(BoardSnapshot board) {
+        for (PlayerSnapshot p : currentTurnOrder) {
+            if (alreadyPlaced.contains(p.name())) continue;
+            if (disconnectedNicknames.contains(p.name())) continue; // skip disconnected
+            // Next connected player who must place
+            if (p.name().equals(myNickname)) {
+                final PlayerSnapshot me = p;
+                final BoardSnapshot  b  = board;
                 inputExecutor.submit(() -> {
-                    char chosen = view.requestOfferTileChoice(next, board);
+                    char chosen = view.requestOfferTileChoice(me, b);
                     proxy.send(Message.placeTotem(myNickname, chosen));
                 });
             }
+            return;
         }
     }
 

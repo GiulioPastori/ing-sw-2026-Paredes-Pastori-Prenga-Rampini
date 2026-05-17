@@ -163,8 +163,10 @@ public class LobbyServer {
                     releaseNickname(nickname);
             }
         };
-        session.reconnectClient(handler);
+        // Submit thread FIRST so writeLoop is running before reconnectClient()
+        // calls c.send() — otherwise messages are lost.
         threadPool.submit(handler);
+        session.reconnectClient(handler);
         LOG.info("Player '" + nickname + "' reconnected via Socket.");
     }
 

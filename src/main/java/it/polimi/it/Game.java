@@ -618,4 +618,21 @@ public class Game {
     public boolean      isGameOver()      { return gameOver; }
     public int          getCurrentRound() { return currentRound; }
     public List<Player> getPlayers()      { return List.copyOf(players); }
+
+    /** Snapshot of the current board state — used for reconnect resync. */
+    public BoardSnapshot getBoardSnapshot() { return BoardSnapshot.of(board); }
+
+    /** Ordered list of player snapshots in current turn order — used for reconnect resync. */
+    public List<it.polimi.it.observer.PlayerSnapshot> getPlayerSnapshots() {
+        return players.stream()
+                .map(it.polimi.it.observer.PlayerSnapshot::of)
+                .toList();
+    }
+
+    /** Current placement order snapshots — used for reconnect resync. */
+    public List<it.polimi.it.observer.PlayerSnapshot> getTurnOrderSnapshots() {
+        return getPlacementOrder().stream()
+                .map(it.polimi.it.observer.PlayerSnapshot::of)
+                .toList();
+    }
 }

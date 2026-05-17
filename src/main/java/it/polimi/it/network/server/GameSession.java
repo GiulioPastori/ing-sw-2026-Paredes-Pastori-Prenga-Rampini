@@ -88,6 +88,14 @@ public class GameSession implements GameEventListener {
             LOG.info("Game resumed after reconnection of '" + nick + "'.");
             broadcast(Message.error("Partita ripresa — " + nick + " si è riconnesso."));
         }
+        // Resync the reconnecting client with current game state.
+        if (controller != null && !controller.getGame().isGameOver()) {
+            var game = controller.getGame();
+            c.send(Message.roundStarted(
+                    game.getCurrentRound(),
+                    game.getTurnOrderSnapshots(),
+                    game.getBoardSnapshot()));
+        }
     }
 
     public synchronized boolean hasRoom()      { return !started && !terminated && clients.size() < expectedPlayers; }
@@ -103,8 +111,8 @@ public class GameSession implements GameEventListener {
      */
     private long connectedCount() {
         if (controller == null) return clientMap.size();
-        return clientMap.keySet().stream()
-                .filter(nick -> !controller.getGame().isDisconnected(nick))
+        return clients.stream()
+                .filter(c -> !controller.getGame().isDisconnected(c.getNickname()))
                 .count();
     }
 
@@ -279,9 +287,7 @@ public class GameSession implements GameEventListener {
 
         broadcast(Message.playerDisconnected(nick));
         controller.getGame().markDisconnected(nick);
-
-        // Remove from clientMap so connectedCount() and broadcast() ignore it.
-        clientMap.remove(nick);
+        // Keep nick in clientMap so reconnection is possible (hasPlayer check).
         clients.remove(source);
 
         long active = connectedCount();
@@ -299,7 +305,8 @@ public class GameSession implements GameEventListener {
         }
         // 1 player left: suspend and start reconnection timeout.
         suspended = true;
-        String survivor = clientMap.keySet().stream().findFirst().orElse("?");
+        String survivor = clients.stream().map(ClientConnection::getNickname)
+                .findFirst().orElse("?");
         broadcast(Message.error("Partita sospesa — in attesa di riconnessione ("
                 + TIMEOUT_SECONDS + "s). Giocatore rimasto: " + survivor));
         LOG.warning("Solo 1 giocatore rimasto — partita sospesa per " + TIMEOUT_SECONDS + "s.");
@@ -326,6 +333,6 @@ public class GameSession implements GameEventListener {
 
     private void broadcast(Message msg) {
         // clientMap always holds only current (non-stale) handlers.
-        clientMap.values().forEach(c -> c.send(msg));
+        clients.forEach(c -> c.send(msg));
     }
 }
