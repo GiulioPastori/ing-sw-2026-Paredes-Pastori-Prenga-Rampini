@@ -62,19 +62,35 @@ public class SocketClientHandler implements ClientConnection, Runnable {
     private volatile long lastSeenTime = System.currentTimeMillis();
 
     public SocketClientHandler(Socket socket, String nickname, GameSession session, TotemColour totemColour) {
-        this.socket   = socket;
-        this.nickname     = nickname;
-        this.totemColour  = totemColour;
-        this.session  = session;
+        this.socket      = socket;
+        this.nickname    = nickname;
+        this.totemColour = totemColour;
+        this.session     = session;
+    }
+
+    /** Used by LobbyServer after the JOIN handshake — reuses already-opened streams. */
+    public SocketClientHandler(Socket socket, String nickname, GameSession session,
+                               TotemColour totemColour,
+                               BufferedReader prebuiltReader, PrintWriter prebuiltWriter) {
+        this.socket      = socket;
+        this.nickname    = nickname;
+        this.totemColour = totemColour;
+        this.session     = session;
+        this.reader      = prebuiltReader;
+        this.writer      = prebuiltWriter;
     }
 
     @Override
     public void run() {
+        LOG.info("CONNECT nick=" + nickname
+                + " handler=" + System.identityHashCode(this));
         try {
-            reader = new BufferedReader(
-                    new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-            writer = new PrintWriter(
-                    new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true);
+            if (reader == null)
+                reader = new BufferedReader(
+                        new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+            if (writer == null)
+                writer = new PrintWriter(
+                        new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true);
 
             new Thread(this::writeLoop,    "writer-"   + nickname).start();
             new Thread(this::watchdogLoop, "watchdog-" + nickname).start();
@@ -87,9 +103,10 @@ public class SocketClientHandler implements ClientConnection, Runnable {
         }
     }
 
-    //  Lettura
+    // ── Lettura ───────────────────────────────────────────────────────────────
 
     private void readLoop() throws IOException {
+        LOG.info("READ LOOP START " + nickname);
         String line;
         while (!closed.get() && (line = reader.readLine()) != null) {
             lastSeenTime = System.currentTimeMillis(); // qualsiasi dato = client vivo
@@ -107,9 +124,10 @@ public class SocketClientHandler implements ClientConnection, Runnable {
         }
     }
 
-    //  Scrittura
+    // ── Scrittura ─────────────────────────────────────────────────────────────
 
     private void writeLoop() {
+        LOG.info("WRITE LOOP START " + nickname);
         while (!closed.get()) {
             try {
                 Message msg = outbound.take();
@@ -122,7 +140,7 @@ public class SocketClientHandler implements ClientConnection, Runnable {
         }
     }
 
-    //Watchdog
+    // ── Watchdog ──────────────────────────────────────────────────────────────
 
     private void watchdogLoop() {
         while (!closed.get()) {
@@ -145,15 +163,17 @@ public class SocketClientHandler implements ClientConnection, Runnable {
         }
     }
 
-    // Disconnessione (chiamata al massimo una volta)
+    // ── Disconnessione (chiamata al massimo una volta) ─────────────────────────
 
     private void reportDisconnect() {
         if (disconnectReported.compareAndSet(false, true)) {
-            session.onPlayerDisconnected(nickname);
+            LOG.info("DISCONNECT nick=" + nickname
+                    + " handler=" + System.identityHashCode(this));
+            session.onPlayerDisconnected(nickname, this);
         }
     }
 
-    // ── ClientConnection
+    // ── ClientConnection ──────────────────────────────────────────────────────
 
     @Override public String getNickname()    { return nickname; }
     @Override public TotemColour getTotemColour() { return totemColour; }
@@ -166,6 +186,10 @@ public class SocketClientHandler implements ClientConnection, Runnable {
     @Override
     public void close() {
         if (closed.compareAndSet(false, true)) {
+            // shutdownInput/Output first: unblocks readLine() and flushes writer
+            // without relying on close() order — avoids silent blocking.
+            try { socket.shutdownInput();  } catch (IOException ignored) {}
+            try { socket.shutdownOutput(); } catch (IOException ignored) {}
             try { if (reader != null) reader.close(); } catch (IOException ignored) {}
             try { if (writer != null) writer.close(); } catch (Exception  ignored) {}
             try { socket.close(); }                     catch (IOException ignored) {}

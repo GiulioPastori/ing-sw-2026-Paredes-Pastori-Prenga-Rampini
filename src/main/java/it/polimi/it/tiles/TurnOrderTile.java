@@ -7,12 +7,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Bonus per spazio basati sulle tessere fisiche del gioco:
- *   2 giocatori: [+1] [-1/-2PP]
- *   3 giocatori: [+2] [ 0 ] [-1/-2PP]
- *   4 giocatori: [+2] [+1] [ 0 ] [-1/-2PP]
- *   5 giocatori: [+3] [+1] [ 0 ] [ 0 ] [-1/-2PP]
+ * Space bonuses based on the game's physical tiles:
+ * 2 players: [+1] [-1/-2VP]
+ * 3 players: [+2] [ 0 ] [-1/-2VP]
+ * 4 players: [+2] [+1] [ 0 ] [-1/-2VP]
+ * 5 players: [+3] [+1] [ 0 ] [ 0 ] [-1/-2VP]
  */
+
 public class TurnOrderTile {
 
     private static final int LAST_PLACE_PP_PENALTY = -2;

@@ -273,6 +273,27 @@ public class GameBoardView {
         });
     }
 
+    /**
+     * Called when another player disconnects mid-game.
+     * Shows a non-blocking banner and logs the event; the game continues.
+     */
+    public void onPlayerDisconnected(String nickname) {
+        runFx(() -> {
+            log("⚡ " + nickname + " si è disconnesso. Il gioco continua.");
+            flashBanner("⚡ " + nickname + " disconnesso — la partita prosegue");
+        });
+    }
+
+    /**
+     * Called when a previously disconnected player reconnects mid-game.
+     */
+    public void onPlayerReconnected(String nickname) {
+        runFx(() -> {
+            log("✓ " + nickname + " si è riconnesso.");
+            flashBanner("✓ " + nickname + " è tornato in gioco");
+        });
+    }
+
     // ── Input prompts (called from JavaFxView; they push to queues) ───────────
 
     /**

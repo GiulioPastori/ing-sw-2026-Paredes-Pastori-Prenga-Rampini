@@ -131,7 +131,7 @@ public class LobbyServer {
             // Reconnection check first (nickname already taken but in an active session)
             GameSession reconnectTarget = findSessionForReconnection(nickname);
             if (reconnectTarget != null) {
-                handleReconnection(socket, nickname, reconnectTarget);
+                handleReconnection(socket, nickname, reconnectTarget, reader, writer);
                 return;
             }
 
@@ -145,7 +145,8 @@ public class LobbyServer {
 
             GameSession session = getOrCreateSession(numPlayers);
 
-            SocketClientHandler handler = new SocketClientHandler(socket, nickname, session, totemColour) {
+            SocketClientHandler handler = new SocketClientHandler(
+                    socket, nickname, session, totemColour, reader, writer) {
                 @Override public void close() {
                     super.close();
                     if (session.isTerminated())
@@ -153,14 +154,17 @@ public class LobbyServer {
                 }
             };
 
+            threadPool.submit(handler);
+
             session.addClient(handler);
+
             // FIX #3: move out of waiting list once the session is full
             if (!session.hasRoom()) {
                 synchronized (LobbyServer.this) {
                     waitingSessions.remove(session);
                 }
             }
-            threadPool.submit(handler);
+
             LOG.info("Player '" + nickname + "' connected via Socket.");
 
         } catch (IOException e) {
@@ -169,16 +173,20 @@ public class LobbyServer {
         }
     }
 
-    private void handleReconnection(Socket socket, String nickname, GameSession session) {
-        SocketClientHandler handler = new SocketClientHandler(socket, nickname, session, null) {
+    private void handleReconnection(Socket socket, String nickname, GameSession session,
+                                    BufferedReader reader, PrintWriter writer) {
+        SocketClientHandler handler = new SocketClientHandler(
+                socket, nickname, session, null, reader, writer) {
             @Override public void close() {
                 super.close();
                 if (session.isTerminated())
                     releaseNickname(nickname);
             }
         };
-        session.reconnectClient(handler);
+        // Submit thread FIRST so writeLoop is running before reconnectClient()
+        // calls c.send() — otherwise messages are lost.
         threadPool.submit(handler);
+        session.reconnectClient(handler);
         LOG.info("Player '" + nickname + "' reconnected via Socket.");
     }
 
@@ -207,7 +215,9 @@ public class LobbyServer {
         waitingSessions.removeIf(s -> s.isTerminated() || s.isStarted());
 
         for (GameSession s : waitingSessions) {
-            if (s.hasRoom()) return s;
+            if (s.hasRoom() && s.getExpectedPlayers() == requestedPlayers) {
+                return s;
+            }
         }
 
         int n = (requestedPlayers >= 2 && requestedPlayers <= 5) ? requestedPlayers : 2;

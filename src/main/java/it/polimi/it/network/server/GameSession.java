@@ -49,7 +49,7 @@ import java.util.logging.Logger;
 public class GameSession implements GameEventListener {
 
     private static final Logger LOG             = Logger.getLogger(GameSession.class.getName());
-    private static final long   TIMEOUT_SECONDS = 1000;
+    private static final long   TIMEOUT_SECONDS = 120;
 
     private final int                           expectedPlayers;
     private final List<ClientConnection>        clients   = new CopyOnWriteArrayList<>();
@@ -79,7 +79,7 @@ public class GameSession implements GameEventListener {
         this.leaderboardRepository = leaderboardRepository;
     }
 
-    //  Connection
+    // ── Connection ────────────────────────────────────────────────────────────
 
     public synchronized void addClient(ClientConnection c) {
         if (terminated || started) return;
@@ -96,14 +96,33 @@ public class GameSession implements GameEventListener {
         if (terminated) return;
         String nick = c.getNickname();
         ClientConnection old = clientMap.get(nick);
+        // Replace old handler in both collections atomically (synchronized).
+        // The old handler may still be alive (watchdog), but once removed from
+        // clientMap its subsequent onPlayerDisconnected call will be rejected
+        // by the identity check (source != current).
         if (old != null) { clients.remove(old); old.close(); }
         clients.add(c);
         clientMap.put(nick, c);
         if (timeoutFuture != null) { timeoutFuture.cancel(false); timeoutFuture = null; }
         if (controller != null) controller.getGame().markReconnected(nick);
+        boolean wasSuspended = suspended;
         suspended = false;
-        LOG.info("'" + nick + "' reconnected.");
-        c.send(Message.error("Welcome back, " + nick + "! Game resumed."));
+        LOG.info("RECONNECT nick=" + nick
+                + " handler=" + System.identityHashCode(c));
+        c.send(Message.playerReconnected(nick));
+        broadcast(Message.playerReconnected(nick));
+        if (wasSuspended) {
+            LOG.info("Game resumed after reconnection of '" + nick + "'.");
+            broadcast(Message.error("Partita ripresa — " + nick + " si è riconnesso."));
+        }
+        // Resync the reconnecting client with current game state.
+        if (controller != null && !controller.getGame().isGameOver()) {
+            var game = controller.getGame();
+            c.send(Message.roundStarted(
+                    game.getCurrentRound(),
+                    game.getTurnOrderSnapshots(),
+                    game.getBoardSnapshot()));
+        }
     }
 
     public synchronized boolean hasRoom()      { return !started && !terminated && clients.size() < expectedPlayers; }
@@ -113,7 +132,18 @@ public class GameSession implements GameEventListener {
     public int getExpectedPlayers()            { return expectedPlayers; }
     public synchronized boolean hasPlayer(String nick) { return clientMap.containsKey(nick); }
 
-    //  Game startup
+    /**
+     * Number of players currently connected (not marked disconnected in the model).
+     * Uses clientMap — always holds the CURRENT handler per nickname, never stale ones.
+     */
+    private long connectedCount() {
+        if (controller == null) return clientMap.size();
+        return clients.stream()
+                .filter(c -> !controller.getGame().isDisconnected(c.getNickname()))
+                .count();
+    }
+
+    // ── Game startup ──────────────────────────────────────────────────────────
 
     private void startGame() {
         try {
@@ -157,7 +187,7 @@ public class GameSession implements GameEventListener {
         }
     }
 
-    //  Message handling
+    // ── Message handling ──────────────────────────────────────────────────────
 
     /**
      * Routes an incoming client message to the {@link GameController}.
@@ -211,7 +241,7 @@ public class GameSession implements GameEventListener {
         }
     }
 
-    //  GameEventListener (network broadcaster)
+    // ── GameEventListener (network broadcaster) ───────────────────────────────
 
     /**
      * Converts model events to network messages and broadcasts them to all clients.
@@ -337,47 +367,82 @@ public class GameSession implements GameEventListener {
         }
     }
 
-    //  Disconnection
+    // ── Disconnection ─────────────────────────────────────────────────────────
 
-    public synchronized void onPlayerDisconnected(String nick) {
+    /**
+     * Called by SocketClientHandler when it detects a disconnect.
+     * @param source the handler reporting the disconnect — compared against
+     *               the CURRENT handler in clientMap to reject stale notifications
+     *               from old handlers that die after a reconnect.
+     */
+    public synchronized void onPlayerDisconnected(String nick, ClientConnection source) {
         if (terminated) return;
-        LOG.warning("'" + nick + "' disconnected.");
-        broadcast(Message.playerDisconnected(nick + " disconnected."));
-        if (!started || controller == null) { terminate("Player left before game started."); return; }
-        controller.getGame().markDisconnected(nick);
-        long active = clients.stream()
-                .filter(c -> !controller.getGame().isDisconnected(c.getNickname())).count();
-        if (active == 0) {
-            terminate("All players disconnected.");
-        } else if (active == 1) {
-            suspended = true;
-            broadcast(Message.error("Game suspended — waiting for reconnection (" +
-                    TIMEOUT_SECONDS + "s timeout)."));
-            timeoutFuture = scheduler.schedule(() -> {
-                synchronized (GameSession.this) {
-                    if (terminated || !suspended) return;
-                    clients.stream()
-                            .filter(c -> !controller.getGame().isDisconnected(c.getNickname()))
-                            .findFirst()
-                            .ifPresent(w -> {
-                                broadcast(Message.error(w.getNickname() + " wins by default."));
-                                terminate("Timeout.");
-                            });
-                }
-            }, TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+        // CRITICAL: ignore disconnect from a stale/old handler.
+        // After reconnect, clientMap holds the NEW handler. If the OLD handler
+        // dies later and calls this method, we must not mark the player disconnected.
+        ClientConnection current = clientMap.get(nick);
+        if (current != source) {
+            LOG.info("Ignoring stale disconnect from old handler of '" + nick                    + "' (handler=" + System.identityHashCode(source) + ")");
+            return;
         }
+
+        LOG.warning("DISCONNECT nick=" + nick
+                + " handler=" + System.identityHashCode(source));
+
+        if (!started || controller == null) {
+            terminate("Giocatore '" + nick + "' ha abbandonato prima dell'inizio.");
+            return;
+        }
+
+        broadcast(Message.playerDisconnected(nick));
+        controller.getGame().markDisconnected(nick);
+        // Keep nick in clientMap so reconnection is possible (hasPlayer check).
+        clients.remove(source);
+
+        long active = connectedCount();
+        if (active == 0) {
+            terminate("Tutti i giocatori si sono disconnessi.");
+            return;
+        }
+        // ≥ 2 connected: game continues uninterrupted.
+        if (active >= 2) {
+            LOG.info("'" + nick + "' disconnesso — la partita continua con "
+                    + active + " giocatori attivi.");
+            if (timeoutFuture != null) { timeoutFuture.cancel(false); timeoutFuture = null; }
+            suspended = false;
+            return;
+        }
+        // 1 player left: suspend and start reconnection timeout.
+        suspended = true;
+        String survivor = clients.stream().map(ClientConnection::getNickname)
+                .findFirst().orElse("?");
+        broadcast(Message.error("Partita sospesa — in attesa di riconnessione ("
+                + TIMEOUT_SECONDS + "s). Giocatore rimasto: " + survivor));
+        LOG.warning("Solo 1 giocatore rimasto — partita sospesa per " + TIMEOUT_SECONDS + "s.");
+        timeoutFuture = scheduler.schedule(() -> {
+            synchronized (GameSession.this) {
+                if (terminated || !suspended) return;
+                broadcast(Message.error(survivor + " vince per abbandono (timeout)."));
+                terminate("Timeout riconnessione.");
+            }
+        }, TIMEOUT_SECONDS, TimeUnit.SECONDS);
     }
 
-    //  Internal
+    // ── Internal ──────────────────────────────────────────────────────────────
 
     private void terminate(String reason) {
         terminated = true;
         scheduler.shutdownNow();
-        broadcast(Message.playerDisconnected(reason));
+        // Use error() not playerDisconnected(): reason is a server message, not a nickname.
+        broadcast(Message.error("Partita terminata: " + reason));
         clients.forEach(ClientConnection::close);
+        clients.clear();
+        clientMap.clear();
     }
 
     private void broadcast(Message msg) {
+        // clientMap always holds only current (non-stale) handlers.
         clients.forEach(c -> c.send(msg));
     }
 }

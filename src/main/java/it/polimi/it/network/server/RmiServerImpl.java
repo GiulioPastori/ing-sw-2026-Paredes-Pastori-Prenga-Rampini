@@ -40,7 +40,7 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
         LOG.info("RMI registry avviato sulla porta " + rmiPort);
     }
 
-    // RmiServer
+    // ── RmiServer ─────────────────────────────────────────────────────────────
 
     @Override
     public void register(String nickname, RmiClient client, int numPlayers, String totemColour)
@@ -101,7 +101,7 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
         }
     }
 
-    //  Helper
+    // ── Helper ────────────────────────────────────────────────────────────────
 
     private String extractPlayerName(Message msg) {
         return switch (msg.getType()) {
@@ -114,13 +114,14 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Avvolge un callback RMI come {@link ClientConnection}.
  *
  * <p><b>Send asincrono</b>: i messaggi in uscita vengono accodati in una
  * {@link BlockingQueue} e spediti da un thread daemon separato. In questo modo
- * {@link GameSession#} non viene mai bloccato da timeout RMI o
+ * {@link GameSession#broadcast} non viene mai bloccato da timeout RMI o
  * eccezioni di rete, e le eccezioni durante l'invio non interrompono il flusso
  * di gioco del server.
  */
@@ -185,7 +186,7 @@ class RmiClientHandler implements ClientConnection {
 
     private void reportDisconnect() {
         if (disconnectReported.compareAndSet(false, true) && session != null) {
-            session.onPlayerDisconnected(nickname);
+            session.onPlayerDisconnected(nickname, this);
         }
     }
 

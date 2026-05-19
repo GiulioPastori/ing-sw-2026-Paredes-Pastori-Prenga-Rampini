@@ -39,8 +39,10 @@ public class ClientController {
     private final GameView    view;
     private final String      myNickname;
 
-    private List<PlayerSnapshot> currentTurnOrder = new ArrayList<>();
-    private int                  totemPlacedCount  = 0;
+    private List<PlayerSnapshot>        currentTurnOrder      = new ArrayList<>();
+    private final java.util.Set<String> alreadyPlaced         = new java.util.HashSet<>();
+    private final java.util.Set<String> disconnectedNicknames = new java.util.HashSet<>();
+    private volatile BoardSnapshot      lastBoard             = null;
 
     private final CountDownLatch  gameLatch     = new CountDownLatch(1);
     private final ExecutorService inputExecutor = Executors.newSingleThreadExecutor();
@@ -60,7 +62,7 @@ public class ClientController {
         this.myNickname = myNickname;
     }
 
-    // Lifecycle
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     /** Chiamato quando la connessione cade. */
     public void onDisconnect() {
@@ -80,7 +82,7 @@ public class ClientController {
         }
     }
 
-    //  Dispatch
+    // ── Dispatch ──────────────────────────────────────────────────────────────
 
     public void onMessage(Message msg) {
         try {
@@ -94,8 +96,8 @@ public class ClientController {
     private void dispatch(Message msg) {
         switch (msg.getType()) {
             case Message.LOBBY_UPDATE -> {
-                List<String> players = msg.strList("connectedPlayers");
-                int needed = msg.num("expectedPlayers");
+                var players = msg.strList("connectedPlayers");
+                var needed  = msg.num("expectedPlayers");
                 System.out.println("Lobby: " + players.size() + "/" + needed + " — " + players);
                 view.showLobbyUpdate(players, needed);
             }
@@ -149,48 +151,67 @@ public class ClientController {
                 if (gameEndedReceived) gameLatch.countDown();
             }
             case Message.PLAYER_DISCONNECTED -> {
-                view.showInvalidAction("DISCONNECT", msg.str("nickname"));
-                gameLatch.countDown();
+                String who = msg.str("nickname");
+                if (who.equals(myNickname)) {
+                    view.showInvalidAction("DISCONNECT", "Sei stato disconnesso dal server.");
+                    gameLatch.countDown();
+                } else {
+                    disconnectedNicknames.add(who);
+                    view.showPlayerDisconnected(who);
+                    // Re-prompt placement in case it was this player's turn.
+                    if (lastBoard != null) promptNextTotemPlacement(lastBoard);
+                }
+            }
+            case Message.PLAYER_RECONNECTED -> {
+                String who = msg.str("nickname");
+                disconnectedNicknames.remove(who);
+                if (who.equals(myNickname)) {
+                    view.showInvalidAction("RECONNECT", "Sei tornato in gioco!");
+                } else {
+                    view.showPlayerReconnected(who);
+                }
             }
             default -> LOG.warning("Tipo messaggio sconosciuto: " + msg.getType());
         }
     } // fine dispatch()
 
-    //  Handler: piazzamento totem
+    // ── Handler: piazzamento totem ────────────────────────────────────────────
 
     private void handleRoundStarted(Message msg) {
-        totemPlacedCount = 0;
+        alreadyPlaced.clear();
         currentTurnOrder = msg.playerList("turnOrder");
         BoardSnapshot board = msg.boardObj("board");
+        lastBoard = board;
         view.showRoundStarted(msg.num("round"), currentTurnOrder, board);
-
-        if (!currentTurnOrder.isEmpty()
-                && currentTurnOrder.get(0).name().equals(myNickname)) {
-            final PlayerSnapshot me = currentTurnOrder.get(0);
-            inputExecutor.submit(() -> {
-                char chosen = view.requestOfferTileChoice(me, board);
-                proxy.send(Message.placeTotem(myNickname, chosen));
-            });
-        }
+        promptNextTotemPlacement(board);
     }
 
     private void handleTotemPlaced(Message msg) {
-        BoardSnapshot board = msg.boardObj("board");
-        view.showTotemPlaced(msg.playerObj("player"), msg.ch("tileLetter"), board);
-        totemPlacedCount++;
+        PlayerSnapshot placed = msg.playerObj("player");
+        BoardSnapshot  board  = msg.boardObj("board");
+        lastBoard = board;
+        view.showTotemPlaced(placed, msg.ch("tileLetter"), board);
+        alreadyPlaced.add(placed.name());
+        promptNextTotemPlacement(board);
+    }
 
-        if (totemPlacedCount < currentTurnOrder.size()) {
-            PlayerSnapshot next = currentTurnOrder.get(totemPlacedCount);
-            if (next.name().equals(myNickname)) {
+    private void promptNextTotemPlacement(BoardSnapshot board) {
+        for (PlayerSnapshot p : currentTurnOrder) {
+            if (alreadyPlaced.contains(p.name())) continue;
+            if (disconnectedNicknames.contains(p.name())) continue;
+            if (p.name().equals(myNickname)) {
+                final PlayerSnapshot me = p;
+                final BoardSnapshot  b  = board;
                 inputExecutor.submit(() -> {
-                    char chosen = view.requestOfferTileChoice(next, board);
+                    char chosen = view.requestOfferTileChoice(me, b);
                     proxy.send(Message.placeTotem(myNickname, chosen));
                 });
             }
+            return;
         }
     }
 
-    // Handler: scelta carte
+    // ── Handler: scelta carte ─────────────────────────────────────────────────
 
     private void handleCardSlotReady(Message msg) {
         PlayerSnapshot     player        = msg.playerObj("player");
@@ -229,7 +250,7 @@ public class ClientController {
         });
     }
 
-    //  Handler: post-round (Torre di Guardia)
+    // ── Handler: post-round (Torre di Guardia) ────────────────────────────────
 
     private void handlePostRoundStarted(Message msg) {
         List<PlayerSnapshot> watchtower = msg.playerList("watchtowerPlayers");
