@@ -51,6 +51,9 @@ public class GameSession implements GameEventListener {
     private static final Logger LOG             = Logger.getLogger(GameSession.class.getName());
     private static final long   TIMEOUT_SECONDS = 120;
 
+    /** Identificatore univoco di questa sessione (8 hex chars del UUID). */
+    private final String sessionId = java.util.UUID.randomUUID().toString().substring(0, 8);
+
     private final int                           expectedPlayers;
     private final List<ClientConnection>        clients   = new CopyOnWriteArrayList<>();
     private final Map<String, ClientConnection> clientMap = new ConcurrentHashMap<>();
@@ -131,6 +134,11 @@ public class GameSession implements GameEventListener {
     public synchronized boolean isSuspended()  { return suspended; }
     public int getExpectedPlayers()            { return expectedPlayers; }
     public synchronized boolean hasPlayer(String nick) { return clientMap.containsKey(nick); }
+    public String               getSessionId()               { return sessionId; }
+    public synchronized int     getCurrentPlayers()          { return clients.size(); }
+    public synchronized java.util.List<String> getConnectedNicknames() {
+        return clients.stream().map(ClientConnection::getNickname).toList();
+    }
 
     /**
      * Number of players currently connected (not marked disconnected in the model).

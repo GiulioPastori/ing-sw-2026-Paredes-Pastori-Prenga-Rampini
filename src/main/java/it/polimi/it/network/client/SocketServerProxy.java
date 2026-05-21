@@ -50,13 +50,22 @@ public class SocketServerProxy implements ServerProxy {
 
     @Override
     public void connect(String nickname, int numPlayers, TotemColour totemColour) throws IOException {
+        connectWithSession(nickname, numPlayers, totemColour, null);
+    }
+
+    @Override
+    public void connectWithSession(String nickname, int numPlayers,
+                                   TotemColour totemColour, String sessionId) throws IOException {
         socket    = new Socket(host, port);
         reader    = new BufferedReader(
                 new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
         writer    = new PrintWriter(
                 new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true);
         connected = true;
-        writer.println(Message.join(nickname, numPlayers, totemColour.name()).encode());
+
+        // Usa joinWithSession: include sessionId nel payload se non-null
+        writer.println(Message.joinWithSession(
+                nickname, numPlayers, totemColour.name(), sessionId).encode());
 
         Thread readerThread = new Thread(this::readLoop, "client-reader");
         readerThread.setDaemon(true);
@@ -66,7 +75,27 @@ public class SocketServerProxy implements ServerProxy {
         heartbeatThread.setDaemon(true);
         heartbeatThread.start();
 
-        LOG.info("Connesso a " + host + ":" + port + " come '" + nickname + "'");
+        LOG.info("Connesso a " + host + ":" + port + " come '" + nickname + "'"
+                + (sessionId != null ? " sessione=" + sessionId : ""));
+    }
+
+    @Override
+    public Message fetchSessionList(int numPlayersFilter) throws IOException {
+        // Connessione temporanea: invia LIST_SESSIONS, legge SESSION_LIST, chiude subito.
+        try (java.net.Socket tmp = new java.net.Socket(host, port);
+             java.io.BufferedReader r = new java.io.BufferedReader(
+                     new java.io.InputStreamReader(tmp.getInputStream(), StandardCharsets.UTF_8));
+             java.io.PrintWriter w = new java.io.PrintWriter(
+                     new java.io.OutputStreamWriter(tmp.getOutputStream(), StandardCharsets.UTF_8), true)) {
+
+            w.println(Message.listSessions(numPlayersFilter).encode());
+            String line = r.readLine();
+            if (line == null) throw new IOException("Nessuna risposta dal server.");
+            Message resp = Message.decode(line);
+            if (!Message.SESSION_LIST.equals(resp.getType()))
+                throw new IOException("Risposta inattesa: " + resp.getType());
+            return resp;
+        }
     }
 
     @Override

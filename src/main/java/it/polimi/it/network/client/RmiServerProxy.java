@@ -54,20 +54,40 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
 
     @Override
     public void connect(String nickname, int numPlayers, TotemColour totemColour) throws IOException {
+        connectWithSession(nickname, numPlayers, totemColour, null);
+    }
+
+    @Override
+    public void connectWithSession(String nickname, int numPlayers,
+                                   TotemColour totemColour, String sessionId) throws IOException {
         try {
             this.myNickname = nickname;
             Registry registry = LocateRegistry.getRegistry(host, rmiPort);
             serverStub = (RmiServer) registry.lookup(RmiServerImpl.REGISTRY_NAME);
-            serverStub.register(nickname, this, numPlayers, totemColour.name());
+            serverStub.registerWithSession(nickname, this, numPlayers,
+                    totemColour.name(), sessionId);
             connected = true;
 
             Thread t = new Thread(this::heartbeatLoop, "rmi-heartbeat");
             t.setDaemon(true);
             t.start();
 
-            LOG.info("Connesso via RMI a " + host + ":" + rmiPort + " come '" + nickname + "'");
+            LOG.info("Connesso via RMI a " + host + ":" + rmiPort + " come '" + nickname + "'"
+                    + (sessionId != null ? " sessione=" + sessionId : ""));
         } catch (Exception e) {
             throw new IOException("Connessione RMI fallita: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public Message fetchSessionList(int numPlayersFilter) throws IOException {
+        try {
+            Registry registry = LocateRegistry.getRegistry(host, rmiPort);
+            RmiServer stub = (RmiServer) registry.lookup(RmiServerImpl.REGISTRY_NAME);
+            String json = stub.listSessions(numPlayersFilter);
+            return Message.decode(json);
+        } catch (Exception e) {
+            throw new IOException("Impossibile recuperare sessioni RMI: " + e.getMessage(), e);
         }
     }
 

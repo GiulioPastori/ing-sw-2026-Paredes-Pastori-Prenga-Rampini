@@ -60,6 +60,12 @@ public class Message {
     public static final String PING = "PING";
     public static final String PONG = "PONG";
 
+    // Partite multiple — discovery sessioni
+    /** Client → Server: richiede la lista delle sessioni aperte. */
+    public static final String LIST_SESSIONS = "LIST_SESSIONS";
+    /** Server → Client: risposta con la lista delle sessioni aperte. */
+    public static final String SESSION_LIST  = "SESSION_LIST";
+
     // ── Fields ────────────────────────────────────────────────────────────────
     private final String     type;
     private final JSONObject data;
@@ -551,4 +557,80 @@ public class Message {
         int deckSize = o.optInt("tribeDeckSize", 0);
         return new BoardSnapshot(tiles, tot, deckSize);
     }
+
+    // ── Partite multiple: discovery sessioni ──────────────────────────────────
+
+    /**
+     * Descrizione leggera di una sessione aperta, inclusa nella risposta SESSION_LIST.
+     */
+    public record SessionInfo(
+            String       sessionId,
+            int          expectedPlayers,
+            int          currentPlayers,
+            java.util.List<String> players) {}
+
+    /**
+     * Client → Server: richiede la lista delle sessioni aperte.
+     * @param numPlayersFilter se &gt; 0 filtra per numero di giocatori; 0 = tutte
+     */
+    public static Message listSessions(int numPlayersFilter) {
+        return new Message(LIST_SESSIONS, new JSONObject()
+                .put("numPlayersFilter", numPlayersFilter));
+    }
+
+    /**
+     * Server → Client: lista delle sessioni aperte.
+     */
+    public static Message sessionList(List<SessionInfo> sessions) {
+        JSONArray arr = new JSONArray();
+        for (SessionInfo s : sessions) {
+            arr.put(new JSONObject()
+                    .put("sessionId",       s.sessionId())
+                    .put("expectedPlayers", s.expectedPlayers())
+                    .put("currentPlayers",  s.currentPlayers())
+                    .put("players",         new JSONArray(s.players())));
+        }
+        return new Message(SESSION_LIST, new JSONObject().put("sessions", arr));
+    }
+
+    /**
+     * JOIN con sessionId esplicito (per unirsi a una partita specifica).
+     * Se sessionId è null o blank si comporta come il JOIN normale.
+     */
+    public static Message joinWithSession(String nickname, int numPlayers,
+                                          String totemColour, String sessionId) {
+        JSONObject obj = new JSONObject()
+                .put("nickname",    nickname)
+                .put("numPlayers",  numPlayers)
+                .put("totemColour", totemColour);
+        if (sessionId != null && !sessionId.isBlank())
+            obj.put("sessionId", sessionId);
+        return new Message(JOIN, obj);
+    }
+
+    /**
+     * Legge la lista SessionInfo da un messaggio SESSION_LIST.
+     */
+    public List<SessionInfo> sessionInfoList() {
+        JSONArray arr = data.getJSONArray("sessions");
+        List<SessionInfo> result = new ArrayList<>();
+        for (int i = 0; i < arr.length(); i++) {
+            JSONObject o = arr.getJSONObject(i);
+            JSONArray  nickArr = o.getJSONArray("players");
+            List<String> nicks = new ArrayList<>();
+            for (int j = 0; j < nickArr.length(); j++) nicks.add(nickArr.getString(j));
+            result.add(new SessionInfo(
+                    o.getString("sessionId"),
+                    o.getInt("expectedPlayers"),
+                    o.getInt("currentPlayers"),
+                    nicks));
+        }
+        return result;
+    }
+
+    /** Legge un campo stringa opzionale; restituisce null se assente o JSON-null. */
+    public String optStr(String key) {
+        return data.isNull(key) ? null : data.optString(key, null);
+    }
+
 }

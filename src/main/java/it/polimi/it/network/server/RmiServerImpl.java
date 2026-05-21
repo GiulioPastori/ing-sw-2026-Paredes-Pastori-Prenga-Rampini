@@ -87,6 +87,68 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
     }
 
     @Override
+    public void registerWithSession(String nickname, RmiClient client,
+                                    int numPlayers, String totemColour, String sessionId)
+            throws RemoteException {
+
+        if (nickname == null || nickname.isBlank()) {
+            client.receiveMessage(Message.error("Il nickname non può essere vuoto.").encode());
+            return;
+        }
+
+        GameSession reconnectTarget = lobby.findSessionForReconnection(nickname);
+
+        if (reconnectTarget == null) {
+            if (!lobby.claimNickname(nickname)) {
+                client.receiveMessage(
+                        Message.error("Nickname '" + nickname + "' già in uso.").encode());
+                return;
+            }
+        }
+
+        it.polimi.it.enums.TotemColour tc;
+        try { tc = it.polimi.it.enums.TotemColour.valueOf(totemColour); }
+        catch (Exception e) { tc = it.polimi.it.enums.TotemColour.RED; }
+
+        RmiClientHandler handler = new RmiClientHandler(nickname, client, tc) {
+            @Override public void close() {
+                super.close();
+                handlers.remove(nickname);
+                if (getSession() != null && getSession().isTerminated())
+                    lobby.releaseNickname(nickname);
+            }
+        };
+        handlers.put(nickname, handler);
+
+        if (reconnectTarget != null) {
+            handler.setSession(reconnectTarget);
+            reconnectTarget.reconnectClient(handler);
+        } else {
+            GameSession session;
+            if (sessionId != null && !sessionId.isBlank()) {
+                session = lobby.getSessionById(sessionId);
+                if (session == null) {
+                    client.receiveMessage(Message.error(
+                            "Sessione '" + sessionId + "' non trovata o già iniziata.").encode());
+                    lobby.releaseNickname(nickname);
+                    return;
+                }
+            } else {
+                session = lobby.getOrCreateSession(numPlayers);
+            }
+            handler.setSession(session);
+            session.addClient(handler);
+        }
+
+        LOG.info("Giocatore RMI '" + nickname + "' registrato (sessionId=" + sessionId + ").");
+    }
+
+    @Override
+    public String listSessions(int numPlayersFilter) throws RemoteException {
+        return Message.sessionList(lobby.getOpenSessions(numPlayersFilter)).encode();
+    }
+
+    @Override
     public void sendMessage(String json) throws RemoteException {
         Message msg = Message.decode(json);
 

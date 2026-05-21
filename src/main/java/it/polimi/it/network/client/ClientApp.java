@@ -121,8 +121,39 @@ public class ClientApp {
         proxy.setOnDisconnect(controller::onDisconnect);
 
         int connectPort = useRmi ? rmiPort : socketPort;
+
+        // ── Partite multiple: mostra sessioni aperte e lascia scegliere ───────
+        String chosenSessionId = null;
         try {
-            proxy.connect(nickname, numPlayers, chosenColour);
+            java.util.List<it.polimi.it.network.message.Message.SessionInfo> sessions =
+                    proxy.fetchSessionList(numPlayers).sessionInfoList();
+            if (!sessions.isEmpty()) {
+                System.out.println("\nPartite aperte per " + numPlayers + " giocatori:");
+                System.out.println("  0. Crea una nuova partita");
+                for (int i = 0; i < sessions.size(); i++) {
+                    var s = sessions.get(i);
+                    System.out.printf("  %d. [%s] %d/%d — %s%n",
+                            i + 1, s.sessionId(), s.currentPlayers(), s.expectedPlayers(),
+                            String.join(", ", s.players()));
+                }
+                System.out.print("Scelta> ");
+                try {
+                    int choice = Integer.parseInt(readLine(stdin).trim());
+                    if (choice > 0 && choice <= sessions.size())
+                        chosenSessionId = sessions.get(choice - 1).sessionId();
+                } catch (NumberFormatException ignored) {}
+                System.out.println(chosenSessionId == null
+                        ? "Verrà creata una nuova partita."
+                        : "Unione alla sessione " + chosenSessionId);
+            } else {
+                System.out.println("Nessuna partita aperta — verrà creata una nuova sessione.");
+            }
+        } catch (IOException e) {
+            System.out.println("(Lista sessioni non disponibile: " + e.getMessage() + ")");
+        }
+
+        try {
+            proxy.connectWithSession(nickname, numPlayers, chosenColour, chosenSessionId);
             System.out.println("Connesso a " + host + ":" + connectPort
                     + " come '" + nickname + "'. In attesa degli altri giocatori...");
         } catch (IOException e) {

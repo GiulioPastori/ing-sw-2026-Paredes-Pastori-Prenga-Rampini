@@ -109,6 +109,17 @@ public class LobbyServer {
             if (firstLine == null) { socket.close(); return; }
 
             Message msg = Message.decode(firstLine);
+
+            // ── Partite multiple: il client può chiedere la lista prima del JOIN ──
+            if (Message.LIST_SESSIONS.equals(msg.getType())) {
+                int filter = msg.num("numPlayersFilter");
+                writer.println(Message.sessionList(getOpenSessions(filter)).encode());
+                // Legge il JOIN vero che arriva subito dopo
+                String joinLine = reader.readLine();
+                if (joinLine == null) { socket.close(); return; }
+                msg = Message.decode(joinLine);
+            }
+
             if (!Message.JOIN.equals(msg.getType())) {
                 writer.println(Message.error("First message must be JOIN.").encode());
                 socket.close();
@@ -117,6 +128,8 @@ public class LobbyServer {
 
             String nickname     = msg.str("nickname").trim();
             int    numPlayers   = msg.num("numPlayers");
+            // sessionId opzionale: se presente il client vuole unirsi a quella partita specifica
+            String sessionId    = msg.optStr("sessionId");
             String colourStr    = msg.str("totemColour");
             TotemColour totemColour;
             try { totemColour = TotemColour.valueOf(colourStr); }
@@ -143,7 +156,20 @@ public class LobbyServer {
                 return;
             }
 
-            GameSession session = getOrCreateSession(numPlayers);
+            // Risolvi la sessione target: join diretto o matchmaking
+            GameSession session;
+            if (sessionId != null && !sessionId.isBlank()) {
+                session = getSessionById(sessionId);
+                if (session == null) {
+                    writer.println(Message.error(
+                            "Sessione '" + sessionId + "' non trovata o già iniziata.").encode());
+                    releaseNickname(nickname);
+                    socket.close();
+                    return;
+                }
+            } else {
+                session = getOrCreateSession(numPlayers);
+            }
 
             SocketClientHandler handler = new SocketClientHandler(
                     socket, nickname, session, totemColour, reader, writer) {
@@ -227,4 +253,39 @@ public class LobbyServer {
         LOG.info("Created new GameSession for " + n + " players.");
         return session;
     }
+
+    // ── Partite multiple: discovery e join diretto ────────────────────────────
+
+    /**
+     * Snapshot di tutte le sessioni aperte (non ancora iniziate), con filtro opzionale.
+     *
+     * @param numPlayersFilter se &gt; 0 filtra per numero di giocatori atteso; 0 = tutte
+     */
+    public synchronized java.util.List<Message.SessionInfo> getOpenSessions(int numPlayersFilter) {
+        waitingSessions.removeIf(s -> s.isTerminated() || s.isStarted());
+        java.util.List<Message.SessionInfo> result = new java.util.ArrayList<>();
+        for (GameSession s : waitingSessions) {
+            if (numPlayersFilter > 0 && s.getExpectedPlayers() != numPlayersFilter) continue;
+            result.add(new Message.SessionInfo(
+                    s.getSessionId(),
+                    s.getExpectedPlayers(),
+                    s.getCurrentPlayers(),
+                    s.getConnectedNicknames()));
+        }
+        return result;
+    }
+
+    /**
+     * Restituisce la sessione in attesa con l'id dato, o {@code null} se non trovata
+     * (già iniziata, terminata o id sconosciuto).
+     */
+    public synchronized GameSession getSessionById(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) return null;
+        return waitingSessions.stream()
+                .filter(s -> !s.isTerminated() && !s.isStarted()
+                        && s.getSessionId().equals(sessionId))
+                .findFirst()
+                .orElse(null);
+    }
+
 }

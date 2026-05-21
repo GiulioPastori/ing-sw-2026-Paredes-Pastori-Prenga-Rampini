@@ -50,6 +50,7 @@ public class JavaFxApp extends Application {
                 getClass().getResource("/it/polimi/it/view/gui/lobby.fxml"));
         javafx.scene.layout.StackPane lobbyRoot = loader.load();
         this.lobbyController = loader.getController();
+        lobbyController.setSceneRoot(lobbyRoot);   // root is FXML root node, not @FXML field
 
         lobbyController.setOnConnectRequest(this::handleConnect);
 
@@ -99,6 +100,24 @@ public class JavaFxApp extends Application {
             return;
         }
 
+        // ── Partite multiple: recupera sessioni aperte e mostra la scelta ─────
+        String chosenSessionId = null;
+        try {
+            java.util.List<it.polimi.it.network.message.Message.SessionInfo> sessions =
+                    proxy.fetchSessionList(p.numPlayers()).sessionInfoList();
+            if (!sessions.isEmpty()) {
+                java.util.concurrent.CompletableFuture<String> future =
+                        new java.util.concurrent.CompletableFuture<>();
+                javafx.application.Platform.runLater(
+                        () -> lobbyController.showSessionList(sessions, future));
+                try {
+                    chosenSessionId = future.get(60, java.util.concurrent.TimeUnit.SECONDS);
+                } catch (Exception ignored) { /* timeout → nuova sessione */ }
+            }
+        } catch (IOException e) {
+            LOG.warning("Lista sessioni non disponibile: " + e.getMessage());
+        }
+
         // Crea la View JavaFX prima di tentare la connessione, così il
         // ClientController può chiamarne i metodi non appena arrivano i primi
         // messaggi del server.
@@ -107,8 +126,9 @@ public class JavaFxApp extends Application {
         proxy.setOnMessage(controller::onMessage);
         proxy.setOnDisconnect(controller::onDisconnect);
 
+        final String sessionIdToJoin = chosenSessionId;
         try {
-            proxy.connect(p.nickname(), p.numPlayers(), p.totemColour());
+            proxy.connectWithSession(p.nickname(), p.numPlayers(), p.totemColour(), sessionIdToJoin);
         } catch (IOException e) {
             try { proxy.disconnect(); } catch (Exception ignored) { /* best effort */ }
             reportLobbyError("Connessione fallita a " + p.host() + ":" + connectPort

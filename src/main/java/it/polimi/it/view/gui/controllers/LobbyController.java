@@ -29,7 +29,6 @@ import java.util.function.Consumer;
  */
 public class LobbyController {
 
-    @FXML private javafx.scene.layout.StackPane root;
     @FXML private javafx.scene.layout.VBox  formPane;
     @FXML private javafx.scene.layout.StackPane waitingPane;
     @FXML private Label             waitingTitle;
@@ -45,6 +44,17 @@ public class LobbyController {
     @FXML private ProgressIndicator spinner;
     @FXML private javafx.scene.layout.HBox totemPickerBox;
     @FXML private Label             statusLabel;
+
+    /**
+     * Nodo radice della scena lobby — impostato da JavaFxApp subito dopo il load FXML.
+     * Non iniettato via @FXML perché il nodo radice non ha fx:id nell'FXML.
+     */
+    private javafx.scene.layout.StackPane sceneRoot;
+
+    /** Chiamato da JavaFxApp dopo FXMLLoader.load() per fornire il nodo radice. */
+    public void setSceneRoot(javafx.scene.layout.StackPane root) {
+        this.sceneRoot = root;
+    }
 
     private Consumer<ConnectionParams> onConnectRequest;
     private TotemColour selectedColour = TotemColour.RED; // default
@@ -183,7 +193,74 @@ public class LobbyController {
         });
     }
 
-    public javafx.scene.layout.StackPane getRoot() { return root; }
+    /**
+     * Mostra un overlay con la lista delle sessioni aperte.
+     * Completata la scelta (o "nuova partita"), completa {@code future} con il sessionId
+     * oppure con {@code null} per creare una nuova partita.
+     *
+     * <p>Usa {@link #sceneRoot} impostato da {@code JavaFxApp} — mai null a questo punto.
+     */
+    public void showSessionList(
+            java.util.List<it.polimi.it.network.message.Message.SessionInfo> sessions,
+            java.util.concurrent.CompletableFuture<String> future) {
+
+        runFx(() -> {
+            if (sceneRoot == null) { future.complete(null); return; }
+
+            // Pannello centrale
+            javafx.scene.layout.VBox panel = new javafx.scene.layout.VBox(8);
+            panel.setStyle(
+                    "-fx-background-color: #2a2a2a;" +
+                            "-fx-padding: 20;" +
+                            "-fx-background-radius: 8;" +
+                            "-fx-border-radius: 8;" +
+                            "-fx-border-color: #555;" +
+                            "-fx-border-width: 1;");
+            panel.setMaxWidth(500);
+
+            javafx.scene.control.Label title =
+                    new javafx.scene.control.Label("Partite aperte — scegli o crea nuova");
+            title.setStyle("-fx-text-fill: #fff; -fx-font-size: 14px; -fx-font-weight: bold;");
+            panel.getChildren().add(title);
+
+            // Overlay semitrasparente che copre tutta la lobby
+            javafx.scene.layout.StackPane overlay = new javafx.scene.layout.StackPane(panel);
+            overlay.setStyle("-fx-background-color: rgba(0,0,0,0.65);");
+
+            // Un bottone per ogni sessione aperta
+            for (var s : sessions) {
+                String lbl = String.format("[%s]  %d/%d giocatori  —  %s",
+                        s.sessionId(), s.currentPlayers(), s.expectedPlayers(),
+                        String.join(", ", s.players()));
+                javafx.scene.control.Button btn = new javafx.scene.control.Button(lbl);
+                btn.setMaxWidth(Double.MAX_VALUE);
+                btn.setStyle("-fx-background-color: #3a5a3a; -fx-text-fill: #ddd;" +
+                        "-fx-cursor: hand; -fx-font-size: 12px;");
+                String sid = s.sessionId();
+                btn.setOnAction(e -> {
+                    sceneRoot.getChildren().remove(overlay);
+                    future.complete(sid);
+                });
+                panel.getChildren().add(btn);
+            }
+
+            // Bottone "nuova partita"
+            javafx.scene.control.Button newGame =
+                    new javafx.scene.control.Button("+ Crea nuova partita");
+            newGame.setMaxWidth(Double.MAX_VALUE);
+            newGame.setStyle("-fx-background-color: #1a3a5a; -fx-text-fill: #ddd;" +
+                    "-fx-cursor: hand; -fx-font-size: 12px;");
+            newGame.setOnAction(e -> {
+                sceneRoot.getChildren().remove(overlay);
+                future.complete(null);
+            });
+            panel.getChildren().add(newGame);
+
+            sceneRoot.getChildren().add(overlay);
+        });
+    }
+
+    public javafx.scene.layout.StackPane getRoot() { return sceneRoot; }
 
     private static void runFx(Runnable r) {
         if (Platform.isFxApplicationThread()) r.run();
