@@ -52,6 +52,8 @@ public class Game {
     private int     currentRound;
     private boolean gameOver;
     private final Set<String> disconnectedPlayers = new HashSet<>();
+    /** Giocatori riconnessi durante RESOLVING_ACTIONS/POST_ROUND: rientrano al prossimo beginRound. */
+    private final Set<String> pendingReconnect     = new HashSet<>();
     private boolean testMode = false;
     private Phase   currentPhase;
 
@@ -467,6 +469,14 @@ public class Game {
         currentPhase = Phase.PLACING_TOTEMS;
         LOG.info("[beginRound] inizio round " + currentRound);
 
+        // Rientra i giocatori che si erano riconnessi durante il round precedente
+        // (erano rimasti in pendingReconnect per non disturbare la fase in corso).
+        if (!pendingReconnect.isEmpty()) {
+            LOG.info("[beginRound] rientro giocatori in attesa: " + pendingReconnect);
+            disconnectedPlayers.removeAll(pendingReconnect);
+            pendingReconnect.clear();
+        }
+
         List<PlayerSnapshot> order = getPlacementOrder().stream()
                 .map(PlayerSnapshot::of).toList();
 
@@ -585,7 +595,18 @@ public class Game {
     }
 
     public void markReconnected(String nickname) {
-        disconnectedPlayers.remove(nickname);
+        // Se la reconnessione avviene durante RESOLVING_ACTIONS o POST_ROUND,
+        // il giocatore non può partecipare al round corrente (il suo totem è già
+        // stato auto-saltato o non è mai stato piazzato).
+        // Lo teniamo in disconnectedPlayers fino a beginRound(), che lo rimuoverà
+        // all'inizio del round successivo quando tutti possono piazzare.
+        if (currentPhase == Phase.RESOLVING_ACTIONS || currentPhase == Phase.POST_ROUND) {
+            // Segna come "in attesa di rientrare": si comporta come disconnesso
+            // per il round corrente ma il GameSession sa già che è riconnesso.
+            pendingReconnect.add(nickname);
+        } else {
+            disconnectedPlayers.remove(nickname);
+        }
     }
 
     public boolean isDisconnected(String nickname) {
