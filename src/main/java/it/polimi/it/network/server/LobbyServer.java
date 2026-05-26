@@ -156,19 +156,29 @@ public class LobbyServer {
                 return;
             }
 
-            // Risolvi la sessione target: join diretto o matchmaking
-            GameSession session;
-            if (sessionId != null && !sessionId.isBlank()) {
-                session = getSessionById(sessionId);
-                if (session == null) {
+            // Risolvi la sessione target: join diretto, nuova forzata o matchmaking
+            final GameSession session;
+            if (NEW_SESSION.equals(sessionId)) {
+                // L'utente ha scelto esplicitamente "Crea nuova partita"
+                session = getOrCreateSession(numPlayers, true);
+                LOG.info("Player '" + nickname + "' ha scelto di creare una nuova sessione.");
+            } else if (sessionId != null && !sessionId.isBlank()) {
+                GameSession found = getSessionById(sessionId);
+                if (found == null) {
+                    // Race condition: la sessione è diventata piena o è iniziata
+                    // mentre il client stava scegliendo — fallback a nuova sessione.
+                    LOG.warning("Sessione '" + sessionId
+                            + "' non disponibile — fallback a nuova sessione per "
+                            + numPlayers + " giocatori.");
                     writer.println(Message.error(
-                            "Sessione '" + sessionId + "' non trovata o già iniziata.").encode());
-                    releaseNickname(nickname);
-                    socket.close();
-                    return;
+                            "La sessione scelta non è più disponibile. "
+                                    + "Sei stato assegnato a una nuova sessione.").encode());
+                    session = getOrCreateSession(numPlayers, true);
+                } else {
+                    session = found;
                 }
             } else {
-                session = getOrCreateSession(numPlayers);
+                session = getOrCreateSession(numPlayers, false);
             }
 
             SocketClientHandler handler = new SocketClientHandler(
@@ -230,19 +240,29 @@ public class LobbyServer {
     }
 
     /**
+     * Sentinel sessionId che il client invia quando l'utente sceglie
+     * esplicitamente "Crea nuova partita" nella lista sessioni.
+     * Diverso da null (= matchmaking automatico) e da un ID reale.
+     */
+    public static final String NEW_SESSION = "NEW";
+
+    /**
      * Returns an existing waiting session or creates a new one.
      *
-     * <p>Terminated and started sessions are pruned from {@code waitingSessions}
-     * to keep the list bounded.
+     * @param requestedPlayers numero di giocatori desiderato
+     * @param forceNew         se true crea sempre una nuova sessione,
+     *                         ignorando quelle già aperte (l'utente ha scelto
+     *                         "Crea nuova partita" nella lista)
      */
-    public synchronized GameSession getOrCreateSession(int requestedPlayers) {
-        // FIX #3: also remove started sessions from the waiting list
+    public synchronized GameSession getOrCreateSession(int requestedPlayers, boolean forceNew) {
         activeSessions.removeIf(GameSession::isTerminated);
         waitingSessions.removeIf(s -> s.isTerminated() || s.isStarted());
 
-        for (GameSession s : waitingSessions) {
-            if (s.hasRoom() && s.getExpectedPlayers() == requestedPlayers) {
-                return s;
+        if (!forceNew) {
+            for (GameSession s : waitingSessions) {
+                if (s.hasRoom() && s.getExpectedPlayers() == requestedPlayers) {
+                    return s;
+                }
             }
         }
 
@@ -250,8 +270,13 @@ public class LobbyServer {
         GameSession session = new GameSession(n, leaderboardRepository);
         waitingSessions.add(session);
         activeSessions.add(session);
-        LOG.info("Created new GameSession for " + n + " players.");
+        LOG.info("Created new GameSession for " + n + " players (forceNew=" + forceNew + ").");
         return session;
+    }
+
+    /** Backward-compatible overload: matchmaking automatico (forceNew=false). */
+    public synchronized GameSession getOrCreateSession(int requestedPlayers) {
+        return getOrCreateSession(requestedPlayers, false);
     }
 
     // ── Partite multiple: discovery e join diretto ────────────────────────────

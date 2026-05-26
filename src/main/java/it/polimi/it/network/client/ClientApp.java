@@ -141,8 +141,12 @@ public class ClientApp {
                     int choice = Integer.parseInt(readLine(stdin).trim());
                     if (choice > 0 && choice <= sessions.size())
                         chosenSessionId = sessions.get(choice - 1).sessionId();
-                } catch (NumberFormatException ignored) {}
-                System.out.println(chosenSessionId == null
+                    else
+                        chosenSessionId = it.polimi.it.network.server.LobbyServer.NEW_SESSION;
+                } catch (NumberFormatException ignored) {
+                    chosenSessionId = it.polimi.it.network.server.LobbyServer.NEW_SESSION;
+                }
+                System.out.println(it.polimi.it.network.server.LobbyServer.NEW_SESSION.equals(chosenSessionId)
                         ? "Verrà creata una nuova partita."
                         : "Unione alla sessione " + chosenSessionId);
             } else {

@@ -125,16 +125,20 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
             reconnectTarget.reconnectClient(handler);
         } else {
             GameSession session;
-            if (sessionId != null && !sessionId.isBlank()) {
+            if (LobbyServer.NEW_SESSION.equals(sessionId)) {
+                // Utente ha scelto "Crea nuova partita"
+                session = lobby.getOrCreateSession(numPlayers, true);
+            } else if (sessionId != null && !sessionId.isBlank()) {
                 session = lobby.getSessionById(sessionId);
                 if (session == null) {
+                    // Race condition: fallback a nuova sessione
+                    session = lobby.getOrCreateSession(numPlayers, true);
                     client.receiveMessage(Message.error(
-                            "Sessione '" + sessionId + "' non trovata o già iniziata.").encode());
-                    lobby.releaseNickname(nickname);
-                    return;
+                            "La sessione scelta non è più disponibile. "
+                                    + "Sei stato assegnato a una nuova sessione.").encode());
                 }
             } else {
-                session = lobby.getOrCreateSession(numPlayers);
+                session = lobby.getOrCreateSession(numPlayers, false);
             }
             handler.setSession(session);
             session.addClient(handler);

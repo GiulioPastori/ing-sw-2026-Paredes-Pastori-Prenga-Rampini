@@ -252,7 +252,9 @@ public class LobbyController {
                     "-fx-cursor: hand; -fx-font-size: 12px;");
             newGame.setOnAction(e -> {
                 sceneRoot.getChildren().remove(overlay);
-                future.complete(null);
+                // Usa il sentinel NEW invece di null: così il server crea
+                // sempre una sessione nuova invece di riusare quella esistente.
+                future.complete(it.polimi.it.network.server.LobbyServer.NEW_SESSION);
             });
             panel.getChildren().add(newGame);
 
