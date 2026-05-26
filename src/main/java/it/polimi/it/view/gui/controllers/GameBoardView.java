@@ -85,7 +85,8 @@ public class GameBoardView {
 
     /** Insertion-ordered map by player name so the order is stable across redraws. */
     private final Map<String, PlayerSnapshot> players = new LinkedHashMap<>();
-    private BoardSnapshot lastBoard;
+    private BoardSnapshot        lastBoard;
+    private Era                  currentEra = Era.ERA_I;
     private String        activePlayer;
     private String        myNickname;
     private boolean       lastIsTopRow = true;
@@ -255,6 +256,7 @@ public class GameBoardView {
     }
 
     public void onEraChanged(Era era) {
+        this.currentEra = era;
         runFx(() -> {
             eraLabel.setText("Era " + era);
             log("★ Inizia l'" + era + " ★");
@@ -415,7 +417,7 @@ public class GameBoardView {
         }
 
         // Deck — pile of card backs with remaining count badge.
-        deckBox.getChildren().add(CardCellFactory.buildDeck(lastBoard.tribeDeckSize()));
+        deckBox.getChildren().add(CardCellFactory.buildDeck(lastBoard.tribeDeckSize(), currentEra));
     }
 
     /**

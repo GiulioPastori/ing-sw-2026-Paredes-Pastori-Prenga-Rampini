@@ -10,16 +10,23 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.VBox?>
 
 <!-- Root: StackPane so the event overlay can sit above everything -->
 <?import javafx.scene.control.ProgressIndicator?>
-<?import javafx.scene.image.ImageView?>
-<?import javafx.scene.image.Image?>
 <StackPane xmlns="http://javafx.com/javafx"
            xmlns:fx="http://javafx.com/fxml"
            fx:controller="it.polimi.it.view.gui.controllers.GameBoardView"
-           prefWidth="1280" prefHeight="800">
+           prefWidth="1280" prefHeight="800"
+           style="-fx-background-color: #0a0805;">
+
+    <!-- Background image -->
+    <ImageView preserveRatio="false" fitWidth="1280" fitHeight="800"
+               opacity="1.0" mouseTransparent="true" smooth="false">
+        <image><Image url="@/it/polimi/it/view/gui/mesos_sfondo.png"/></image>
+    </ImageView>
 
     <BorderPane fx:id="root" styleClass="game-root">
 
@@ -109,3 +116,4 @@
     </StackPane>
 
 </StackPane>
+

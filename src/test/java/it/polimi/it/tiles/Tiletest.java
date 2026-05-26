@@ -225,19 +225,42 @@ class TurnOrderTileTest {
     }
 
     @Test
-    @DisplayName("first player placed gets +3 food")
-    void firstPlaceGetsThreeFood() {
+    @DisplayName("first player placed (2P) gets +1 food")
+    void firstPlaceGetsOneFood() {
+        // 2-player layout: pos1=+1, pos2=last(-1food/-2VP)
         TurnOrderTile tile = new TurnOrderTile(2);
+        tile.placeTotem(alice);
+        assertEquals(1, alice.getFood());
+        assertEquals(1, alice.getTurnOrder());
+    }
+
+    @Test
+    @DisplayName("first player placed (5P) gets +3 food")
+    void firstPlaceGetsThreeFoodFiveP() {
+        // 5-player layout: pos1=+3, pos2=+1, rest=0, last=(-1food/-2VP)
+        TurnOrderTile tile = new TurnOrderTile(5);
         tile.placeTotem(alice);
         assertEquals(3, alice.getFood());
         assertEquals(1, alice.getTurnOrder());
     }
 
     @Test
-    @DisplayName("second player in a 3-player game gets +1 food")
-    void secondPlaceGetsOneFood() {
+    @DisplayName("second player in a 3-player game gets 0 food")
+    void secondPlaceGetsZeroFoodThreeP() {
+        // 3-player layout: pos1=+2, pos2=0, pos3=last(-1food/-2VP)
         TurnOrderTile tile = new TurnOrderTile(3);
-        tile.placeTotem(alice); // first:  +3
+        tile.placeTotem(alice); // first:  +2
+        tile.placeTotem(bob);   // second: 0
+        assertEquals(0, bob.getFood());
+        assertEquals(2, bob.getTurnOrder());
+    }
+
+    @Test
+    @DisplayName("second player in a 4-player game gets +1 food")
+    void secondPlaceGetsOneFoodFourP() {
+        // 4-player layout: pos1=+2, pos2=+1, pos3=0, pos4=last(-1food/-2VP)
+        TurnOrderTile tile = new TurnOrderTile(4);
+        tile.placeTotem(alice); // first:  +2
         tile.placeTotem(bob);   // second: +1
         assertEquals(1, bob.getFood());
         assertEquals(2, bob.getTurnOrder());
@@ -248,8 +271,8 @@ class TurnOrderTileTest {
     void lastPlacePaysOneFood() {
         TurnOrderTile tile = new TurnOrderTile(3);
         charlie.addFood(5);
-        tile.placeTotem(alice);   // first:  +3
-        tile.placeTotem(bob);     // second: +1
+        tile.placeTotem(alice);   // first:  +2
+        tile.placeTotem(bob);     // second:  0
         tile.placeTotem(charlie); // last:   -1 food → 5-1=4
         assertEquals(4, charlie.getFood());
     }
@@ -258,8 +281,8 @@ class TurnOrderTileTest {
     @DisplayName("last player loses 2 PP if no food")
     void lastPlaceLosesTwoPPWhenNoFood() {
         TurnOrderTile tile = new TurnOrderTile(3);
-        tile.placeTotem(alice);   // first
-        tile.placeTotem(bob);     // second
+        tile.placeTotem(alice);   // first:  +2
+        tile.placeTotem(bob);     // second:  0
         tile.placeTotem(charlie); // last, charlie has 0 food → -2 PP
         assertEquals(-2, charlie.getPrestigePoints());
     }

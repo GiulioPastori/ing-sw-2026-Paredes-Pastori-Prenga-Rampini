@@ -1,6 +1,7 @@
 package it.polimi.it.view.gui.widgets;
 
 import it.polimi.it.enums.CharacterType;
+import it.polimi.it.enums.Era;
 import it.polimi.it.enums.TotemColour;
 import it.polimi.it.observer.CardSnapshot;
 import it.polimi.it.observer.OfferTileSnapshot;
@@ -47,8 +48,8 @@ import java.util.function.Consumer;
  */
 public final class CardCellFactory {
 
-    private static final double CARD_W = 90;
-    private static final double CARD_H = 120;
+    private static final double CARD_W = 110;
+    private static final double CARD_H = 148;
     private static final double TILE_W = 80;
     private static final double TILE_H = 110;
     private static final double TRIBE_CARD_W = 50;
@@ -488,12 +489,17 @@ public final class CardCellFactory {
      * showing the number of remaining cards. Uses {@code card_back.png} via
      * the cache; falls back to a styled rectangle if missing.
      */
+    /** Overload without era — uses generic card back. */
     public static StackPane buildDeck(int remaining) {
+        return buildDeck(remaining, null);
+    }
+
+    public static StackPane buildDeck(int remaining, Era era) {
         StackPane deck = new StackPane();
         deck.getStyleClass().add("deck");
         deck.setPrefSize(CARD_W, CARD_H);
 
-        Image back = CardImageCache.cardBack();
+        Image back = (era != null) ? CardImageCache.cardBackForEra(era) : CardImageCache.cardBack();
         if (back != null) {
             // Two stacked images for a "pile" effect; the offset is purely visual
             ImageView shadow = new ImageView(back);
