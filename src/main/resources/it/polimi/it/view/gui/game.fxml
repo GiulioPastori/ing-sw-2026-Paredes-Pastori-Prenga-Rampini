@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.TextArea?>
@@ -43,39 +44,61 @@
             </HBox>
         </top>
 
-        <!-- CENTER -->
+        <!-- CENTER: board a tutta larghezza, log toggle -->
         <center>
-            <SplitPane orientation="HORIZONTAL" dividerPositions="0.78">
-                <VBox spacing="14" styleClass="board-pane">
-                    <padding><Insets top="14" right="14" bottom="14" left="14"/></padding>
+            <StackPane>
+                <VBox spacing="8" styleClass="board-pane" alignment="CENTER">
+                    <padding><Insets top="10" right="16" bottom="10" left="16"/></padding>
+
                     <Label text="Riga superiore" styleClass="row-title"/>
-                    <ScrollPane fitToHeight="true" hbarPolicy="AS_NEEDED" vbarPolicy="NEVER" styleClass="row-scroll">
-                        <HBox fx:id="topRowBox" spacing="10" alignment="CENTER_LEFT" styleClass="card-row"/>
+                    <ScrollPane hbarPolicy="AS_NEEDED" vbarPolicy="NEVER"
+                                fitToHeight="true" fitToWidth="true"
+                                styleClass="row-scroll" prefHeight="170" minHeight="170">
+                        <HBox fx:id="topRowBox" spacing="8" alignment="CENTER" styleClass="card-row"/>
                     </ScrollPane>
+
                     <Label text="Tessere offerta" styleClass="row-title"/>
-                    <ScrollPane fitToHeight="true" hbarPolicy="AS_NEEDED" vbarPolicy="NEVER" styleClass="row-scroll">
-                        <HBox spacing="14" alignment="CENTER_LEFT" styleClass="offer-track-container">
-                            <HBox fx:id="turnOrderBox"  spacing="6"  alignment="CENTER"       styleClass="turn-order-box"/>
-                            <HBox fx:id="offerTrackBox" spacing="10" alignment="CENTER_LEFT"  styleClass="tile-row" HBox.hgrow="ALWAYS"/>
+                    <ScrollPane hbarPolicy="AS_NEEDED" vbarPolicy="NEVER"
+                                fitToHeight="true" fitToWidth="true"
+                                styleClass="row-scroll" prefHeight="155" minHeight="155">
+                        <HBox spacing="10" alignment="CENTER" styleClass="offer-track-container">
+                            <HBox fx:id="turnOrderBox"  spacing="6" alignment="CENTER"       styleClass="turn-order-box"/>
+                            <HBox fx:id="offerTrackBox" spacing="10" alignment="CENTER"      styleClass="tile-row"/>
                             <HBox fx:id="deckBox"       spacing="6"  alignment="CENTER_RIGHT" styleClass="deck-box"/>
                         </HBox>
                     </ScrollPane>
+
                     <Label text="Riga inferiore" styleClass="row-title"/>
-                    <ScrollPane fitToHeight="true" hbarPolicy="AS_NEEDED" vbarPolicy="NEVER" styleClass="row-scroll">
-                        <HBox fx:id="bottomRowBox" spacing="10" alignment="CENTER_LEFT" styleClass="card-row"/>
+                    <ScrollPane hbarPolicy="AS_NEEDED" vbarPolicy="NEVER"
+                                fitToHeight="true" fitToWidth="true"
+                                styleClass="row-scroll" prefHeight="170" minHeight="170">
+                        <HBox fx:id="bottomRowBox" spacing="8" alignment="CENTER" styleClass="card-row"/>
                     </ScrollPane>
+
                     <HBox fx:id="actionBar" spacing="10" alignment="CENTER_RIGHT" styleClass="action-bar">
                         <Button fx:id="passButton"    text="Passa"   onAction="#onPass"    visible="false" managed="false"/>
                         <Button fx:id="declineButton" text="Rifiuta" onAction="#onDecline" visible="false" managed="false"/>
                     </HBox>
                 </VBox>
-                <VBox spacing="6" styleClass="log-pane">
-                    <padding><Insets top="14" right="14" bottom="14" left="14"/></padding>
+
+                <!-- LOG pannello toggle — inizialmente nascosto -->
+                <VBox fx:id="logPanel" spacing="6" styleClass="log-pane"
+                      prefWidth="300" maxWidth="300"
+                      visible="false" managed="false"
+                      StackPane.alignment="TOP_RIGHT">
+                    <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
                     <Label text="Eventi della partita" styleClass="log-title"/>
                     <TextArea fx:id="logArea" editable="false" wrapText="true"
                               VBox.vgrow="ALWAYS" styleClass="log-area"/>
                 </VBox>
-            </SplitPane>
+
+                <!-- Bottone 📋 sempre visibile in alto a destra -->
+                <Button fx:id="logToggleBtn" text="📋" onAction="#onToggleLog"
+                        styleClass="log-toggle-btn"
+                        StackPane.alignment="TOP_RIGHT">
+                    <StackPane.margin><Insets top="6" right="6"/></StackPane.margin>
+                </Button>
+            </StackPane>
         </center>
 
         <!-- BOTTOM -->
@@ -94,6 +117,15 @@
                visible="false" mouseTransparent="true">
         <VBox fx:id="eventOverlayBox" alignment="CENTER" spacing="16" styleClass="event-overlay-box">
             <Label fx:id="eventOverlayTitle" styleClass="event-overlay-title" text=""/>
+            <!-- FIX 5: carte evento in grande, affiancate se sono 2 -->
+            <HBox fx:id="eventCardBox" alignment="CENTER" spacing="20" visible="false" managed="false">
+                <ImageView fx:id="eventCardImageView" styleClass="event-card-image"
+                           fitWidth="180" fitHeight="252" preserveRatio="true" smooth="true"
+                           visible="false" managed="false"/>
+                <ImageView fx:id="eventCardImageView2" styleClass="event-card-image"
+                           fitWidth="180" fitHeight="252" preserveRatio="true" smooth="true"
+                           visible="false" managed="false"/>
+            </HBox>
             <Label fx:id="eventOverlayName"  styleClass="event-overlay-name"  text=""/>
         </VBox>
     </StackPane>
@@ -116,4 +148,3 @@
     </StackPane>
 
 </StackPane>
-

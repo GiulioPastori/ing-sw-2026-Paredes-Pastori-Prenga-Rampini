@@ -127,6 +127,22 @@ public class JavaFxView implements GameView {
                 Scene scene = new Scene(boardRoot, 1280, 800);
                 scene.getStylesheets().add(
                         getClass().getResource("/it/polimi/it/view/gui/styles.css").toExternalForm());
+
+                // FIX 6: sfondo mesos_sfondo.png a tutto schermo
+                try {
+                    var bgStream = getClass().getResourceAsStream(
+                            "/it/polimi/it/view/gui/mesos_sfondo.png");
+                    if (bgStream != null) {
+                        javafx.scene.image.Image bgImg = new javafx.scene.image.Image(bgStream);
+                        javafx.scene.image.ImageView bgView = new javafx.scene.image.ImageView(bgImg);
+                        bgView.setPreserveRatio(false);
+                        bgView.fitWidthProperty().bind(scene.widthProperty());
+                        bgView.fitHeightProperty().bind(scene.heightProperty());
+                        // Inserisci come primo figlio dello StackPane (sotto tutto il resto)
+                        boardRoot.getChildren().add(0, bgView);
+                    }
+                } catch (Exception ignored) {}
+
                 primaryStage.setScene(scene);
                 primaryStage.setTitle("MESOS — " + myNickname);
                 primaryStage.show();

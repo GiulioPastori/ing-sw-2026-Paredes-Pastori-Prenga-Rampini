@@ -56,16 +56,31 @@
 .lobby-status.error  { -fx-text-fill: #d76060; }
 .lobby-status.ok     { -fx-text-fill: #64c864; }
 
-/* TextField / Spinner */
+/* FIX 4: TextField / Spinner uniformi agli altri blocchi */
 .lobby-root .text-field,
 .lobby-root .spinner .text-field {
-    -fx-background-color: rgba(246, 70, 6, 0.49);
+    -fx-background-color: rgba(110, 45, 8, 0.69);
     -fx-text-fill: #dcc396;
     -fx-prompt-text-fill: rgba(180, 140, 80, 0.6);
-    -fx-border-color: #b48c50;
+    -fx-border-color: rgba(188, 72, 30, 0.73);
     -fx-border-radius: 4;
     -fx-background-radius: 4;
     -fx-padding: 6 8 6 8;
+}
+
+/* FIX 4: pulsanti incremento/decremento spinner stile coerente */
+.lobby-root .spinner .increment-arrow-button,
+.lobby-root .spinner .decrement-arrow-button {
+    -fx-background-color: rgba(188, 72, 30, 0.73);
+    -fx-background-radius: 0 4 4 0;
+}
+.lobby-root .spinner .increment-arrow-button:hover,
+.lobby-root .spinner .decrement-arrow-button:hover {
+    -fx-background-color: #c87850;
+}
+.lobby-root .spinner .increment-arrow,
+.lobby-root .spinner .decrement-arrow {
+    -fx-background-color: #dcc396;
 }
 
 .lobby-root .radio-button {
@@ -76,6 +91,7 @@
  * GAME BOARD
  * ────────────────────────────────────────────────────────────────────────── */
 
+/* FIX 6: sfondo a tutto schermo */
 .game-root {
     -fx-background-color: transparent;
 }
@@ -137,27 +153,30 @@
 
 .row-scroll > .viewport { -fx-background-color: transparent; }
 
-/* ── CARD ROW: transparent so background shows through ── */
+/* FIX 1+2: rimuovi bordi marroni da card-row e tile-row */
 .card-row, .tile-row {
     -fx-background-color: transparent;
-    -fx-background-radius: 6;
-    -fx-padding: 10;
-    -fx-min-height: 130;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 6;
+    -fx-min-height: 148;
+    -fx-pref-height: 160;
 }
 
-.tile-row { -fx-min-height: 90; }
+.tile-row { -fx-min-height: 135; -fx-pref-height: 150; }
 
-/* Carte */
+/* FIX 1+2: Carte senza bordo */
 .card-cell {
-    -fx-background-color: #4b376b;
+    -fx-background-color: transparent;
     -fx-background-radius: 6;
-    -fx-border-color: #b48c50;
-    -fx-border-radius: 6;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
     -fx-min-width: 110;
     -fx-min-height: 148;
     -fx-pref-width: 110;
     -fx-pref-height: 148;
-    -fx-padding: 4;
+    -fx-padding: 0;
     -fx-cursor: hand;
 }
 
@@ -175,15 +194,15 @@
     -fx-scale-x: 1.06;
     -fx-scale-y: 1.06;
 }
-.card-cell.event       { -fx-background-color: #6b362f; }
+.card-cell.event       { -fx-background-color: transparent; }
 
-/* Caratteri */
-.card-cell.character.HUNTER   { -fx-background-color: #822d2d; }
-.card-cell.character.GATHERER { -fx-background-color: #2d5f2d; }
-.card-cell.character.SHAMAN   { -fx-background-color: #4b2d73; }
-.card-cell.character.BUILDER  { -fx-background-color: #5f4b23; }
-.card-cell.character.INVENTOR { -fx-background-color: #234b73; }
-.card-cell.character.ARTIST   { -fx-background-color: #733755; }
+/* Caratteri — sfondo rimosso, solo glow colorato per riconoscimento */
+.card-cell.character.HUNTER   { -fx-background-color: transparent; }
+.card-cell.character.GATHERER { -fx-background-color: transparent; }
+.card-cell.character.SHAMAN   { -fx-background-color: transparent; }
+.card-cell.character.BUILDER  { -fx-background-color: transparent; }
+.card-cell.character.INVENTOR { -fx-background-color: transparent; }
+.card-cell.character.ARTIST   { -fx-background-color: transparent; }
 
 .card-label {
     -fx-text-fill: white;
@@ -195,12 +214,12 @@
     -fx-background-radius: 4;
 }
 
-/* Tile (offer track) */
+/* FIX 1: Tile (offer track) senza bordo */
 .tile-cell {
-    -fx-background-color: #5a3c23;
+    -fx-background-color: transparent;
     -fx-background-radius: 6;
-    -fx-border-color: #b48c50;
-    -fx-border-radius: 6;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
     -fx-min-width: 80;
     -fx-min-height: 70;
     -fx-pref-width: 80;
@@ -210,8 +229,8 @@
 
 .tile-cell.selectable:hover { -fx-effect: dropshadow(gaussian, #dcb43c, 12, 0, 0, 0); }
 .tile-cell.disabled         { -fx-opacity: 0.55; -fx-cursor: default; }
-.tile-cell.food-only        { -fx-background-color: #2d5f2d; }
-.tile-cell.placed           { -fx-opacity: 0.7; -fx-border-color: #dcb43c; }
+.tile-cell.food-only        { -fx-background-color: transparent; }
+.tile-cell.placed           { -fx-opacity: 0.7; }
 
 .tile-letter {
     -fx-text-fill: white;
@@ -256,29 +275,46 @@
 .player-food { -fx-text-fill: #64c864; -fx-font-size: 12px; }
 .player-pp   { -fx-text-fill: #dcb43c; -fx-font-size: 12px; }
 
-/* Log */
+/* Bottone toggle log */
+.log-toggle-btn {
+    -fx-background-color: rgba(10, 3, 1, 0.82);
+    -fx-text-fill: #ff8855;
+    -fx-font-size: 18px;
+    -fx-padding: 4 8 4 8;
+    -fx-background-radius: 6;
+    -fx-border-color: #c84020;
+    -fx-border-radius: 6;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.7), 6, 0, 0, 2);
+}
+.log-toggle-btn:hover { -fx-background-color: rgba(30, 10, 5, 0.95); }
+
+/* FIX 3: Log semi-trasparente sovrapposto */
 .log-pane {
-    -fx-background-color: #1a0f08;
+    -fx-background-color: rgba(10, 3, 1, 0.82);
+    -fx-border-color: #c84020;
+    -fx-border-width: 0 0 0 1;
 }
 
 .log-title {
-    -fx-text-fill: #b48c50;
+    -fx-text-fill: #e05030;
     -fx-font-weight: bold;
     -fx-font-size: 11px;
     -fx-text-transform: uppercase;
 }
 
 .log-area {
-    -fx-control-inner-background: #110803;
-    -fx-text-fill: #dcc396;
+    -fx-control-inner-background: rgba(10, 3, 1, 0.92);
+    -fx-text-fill: #ff8855;
     -fx-font-family: "Menlo", "Consolas", monospace;
     -fx-font-size: 11px;
-    -fx-border-color: #b48c50;
+    -fx-border-color: #c84020;
     -fx-border-radius: 4;
     -fx-background-radius: 4;
 }
 
-.log-area .content { -fx-background-color: #110803; }
+.log-area .content { -fx-background-color: rgba(10, 3, 1, 0.92); }
+.log-area .text    { -fx-fill: #ff8855; }
 
 /* Action bar */
 .action-bar {
@@ -445,23 +481,41 @@
 .gameover-button { -fx-background-color: #c87850; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand; }
 .gameover-button:hover { -fx-background-color: #d88860; }
 
-/* ── Event Overlay ────────────────────────────────────────────────────────── */
-.event-overlay { -fx-background-color: rgba(0,0,0,0.72); }
+/* ── FIX 5: Event Overlay con carta grande ────────────────────────────────── */
+.event-overlay { -fx-background-color: rgba(0,0,0,0.78); }
 .event-overlay-box {
-    -fx-padding: 40 60 40 60;
-    -fx-background-color: rgba(20,10,4,0.88);
+    -fx-padding: 30 50 30 50;
+    -fx-background-color: rgba(12,5,2,0.92);
     -fx-background-radius: 18;
     -fx-border-color: #dcb43c;
     -fx-border-width: 2;
     -fx-border-radius: 18;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.9), 40, 0.4, 0, 0);
-    -fx-max-width: 700;
+    -fx-max-width: 780;
 }
-.event-overlay-title { -fx-text-fill: #a08040; -fx-font-size: 16px; -fx-font-style: italic; -fx-font-family: "Georgia"; }
-.event-overlay-name { -fx-text-fill: #f0e0a0; -fx-font-size: 48px; -fx-font-family: "Georgia"; -fx-wrap-text: true; -fx-text-alignment: center; }
-.event-overlay-name.event-sustenance { -fx-text-fill: #88cc66; -fx-font-family: "Palatino Linotype"; -fx-font-size: 52px; -fx-font-style: italic; -fx-effect: dropshadow(gaussian, #224400, 18, 0.6, 0, 0); }
-.event-overlay-name.event-shamanic   { -fx-text-fill: #cc88ff; -fx-font-family: "Papyrus"; -fx-font-size: 50px; -fx-effect: dropshadow(gaussian, #330066, 22, 0.7, 0, 0); }
-.event-overlay-name.event-default    { -fx-text-fill: #dcb43c; -fx-font-family: "Georgia"; -fx-font-size: 48px; -fx-effect: dropshadow(gaussian, #5a3a00, 16, 0.5, 0, 0); }
+.event-overlay-title  { -fx-text-fill: #a08040; -fx-font-size: 14px; -fx-font-style: italic; -fx-font-family: "Georgia"; }
+.event-overlay-name   { -fx-text-fill: #f0e0a0; -fx-font-size: 40px; -fx-font-family: "Georgia"; -fx-wrap-text: true; -fx-text-alignment: center; }
+.event-overlay-name.event-sustenance { -fx-text-fill: #88cc66; -fx-font-family: "Palatino Linotype"; -fx-font-size: 44px; -fx-font-style: italic; -fx-effect: dropshadow(gaussian, #224400, 18, 0.6, 0, 0); }
+.event-overlay-name.event-shamanic   { -fx-text-fill: #cc88ff; -fx-font-family: "Papyrus"; -fx-font-size: 42px; -fx-effect: dropshadow(gaussian, #330066, 22, 0.7, 0, 0); }
+.event-overlay-name.event-default    { -fx-text-fill: #dcb43c; -fx-font-family: "Georgia"; -fx-font-size: 40px; -fx-effect: dropshadow(gaussian, #5a3a00, 16, 0.5, 0, 0); }
+/* carta evento */
+.event-card-image {
+    -fx-effect: dropshadow(gaussian, rgba(220,180,60,0.7), 24, 0.5, 0, 0);
+}
+.event-card-description {
+    -fx-text-fill: #dcc396;
+    -fx-font-size: 13px;
+    -fx-font-family: "Georgia";
+    -fx-wrap-text: true;
+    -fx-text-alignment: center;
+    -fx-max-width: 400;
+}
+.event-card-stats {
+    -fx-text-fill: #dcb43c;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Georgia";
+}
 
 /* Totem picker */
 .totem-picker-btn { -fx-padding: 10 16 10 16; -fx-background-radius: 10; -fx-cursor: hand; }
@@ -474,7 +528,7 @@
 
 /* Player panel */
 .player-panel.mine { -fx-border-color: #dcb43c; -fx-border-width: 2; -fx-border-radius: 6; -fx-background-color: rgba(220,180,60,0.06); -fx-background-radius: 6; }
-.tribe-scroll { -fx-background-color: transparent; -fx-background: transparent; -fx-padding: 0; -fx-max-height: 82px; }
+.tribe-scroll { -fx-background-color: transparent; -fx-background: transparent; -fx-padding: 0; -fx-max-height: 122px; }
 .tribe-scroll .viewport { -fx-background-color: transparent; }
 .tribe-eye-btn { -fx-background-color: transparent; -fx-text-fill: #a08040; -fx-font-size: 14px; -fx-cursor: hand; -fx-padding: 0 2 0 2; }
 .tribe-eye-btn:hover { -fx-text-fill: #dcb43c; -fx-scale-x: 1.2; -fx-scale-y: 1.2; }
@@ -493,6 +547,5 @@
 .waiting-players { -fx-text-fill: #dcb43c; -fx-font-size: 14px; -fx-font-family: "Georgia"; -fx-effect: dropshadow(gaussian, black, 6, 0.8, 0, 0); }
 .waiting-spinner { -fx-progress-color: #dcb43c; }
 
-/* Lobby totem picker (in-board waiting) */
 .totem-picker-lobby-btn { -fx-cursor: hand; -fx-background-color: transparent; -fx-padding: 4; -fx-background-radius: 50%; }
 .totem-picker-selected { -fx-background-color: rgba(220,180,60,0.35); -fx-border-color: #dcb43c; -fx-border-width: 2.5; -fx-border-radius: 50%; -fx-background-radius: 50%; }

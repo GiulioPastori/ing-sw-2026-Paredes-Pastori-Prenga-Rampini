@@ -50,14 +50,14 @@ public final class CardCellFactory {
 
     private static final double CARD_W = 110;
     private static final double CARD_H = 148;
-    private static final double TILE_W = 80;
-    private static final double TILE_H = 110;
-    private static final double TRIBE_CARD_W = 50;
-    private static final double TRIBE_CARD_H = 70;
+    private static final double TILE_W = 100;
+    private static final double TILE_H = 135;
+    private static final double TRIBE_CARD_W = 80;   // era 50 — più grandi e nitide
+    private static final double TRIBE_CARD_H = 112;  // era 70
 
     /** Dimensioni del nodo Turn Order Tile (ratio ~0.65 dell'immagine). */
-    private static final double TURN_TILE_W = 90;
-    private static final double TURN_TILE_H = 140;
+    private static final double TURN_TILE_W = 110;
+    private static final double TURN_TILE_H = 165;
 
     /**
      * Y-fractions of the boxes inside each player-count tile image.
@@ -153,7 +153,22 @@ public final class CardCellFactory {
             cell.getStyleClass().add("selectable");
             final int id = card.id();
             cell.setOnMouseClicked(e -> onClick.accept(id));
-        } else {
+        }
+        // Non aggiungere "disabled" se onClick == null: potrebbe essere
+        // una carta mostrata in sola visualizzazione (popup tribù, evento).
+        // "disabled" viene aggiunto esplicitamente solo dove serve (board rows).
+        return cell;
+    }
+
+    /**
+     * Builds a card cell at default size, explicitly marking it as disabled
+     * (greyed out) when it cannot be selected. Used for board display where
+     * non-selectable cards should appear dimmed.
+     */
+    public static StackPane buildCard(CardSnapshot card, Consumer<Integer> onClick,
+                                      boolean markDisabledIfNoClick) {
+        StackPane cell = buildCard(card, onClick, CARD_W, CARD_H);
+        if (markDisabledIfNoClick && onClick == null && !card.isEvent()) {
             cell.getStyleClass().add("disabled");
         }
         return cell;
@@ -589,7 +604,7 @@ public final class CardCellFactory {
 
         // ── Tribe cards (my panel) or compact summary (others) ───────────────
         if (isMe) {
-            // Show actual card images for own tribe
+            // Show actual card images for own tribe (characters + buildings)
             List<CardSnapshot> allCards = new ArrayList<>(p.tribeCharacters());
             allCards.addAll(p.tribeBuildings());
             if (!allCards.isEmpty()) {
@@ -597,10 +612,11 @@ public final class CardCellFactory {
                 scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
                 scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
                 scroll.setFitToHeight(true);
-                scroll.setMaxHeight(TRIBE_CARD_H + 6);
+                scroll.setMaxHeight(TRIBE_CARD_H + 10);
                 scroll.getStyleClass().add("tribe-scroll");
-                HBox cards = new HBox(4);
+                HBox cards = new HBox(6);
                 cards.setAlignment(Pos.CENTER_LEFT);
+                cards.setPadding(new javafx.geometry.Insets(2, 4, 2, 4));
                 for (CardSnapshot card : allCards) {
                     cards.getChildren().add(buildCard(card, null, TRIBE_CARD_W, TRIBE_CARD_H));
                 }

@@ -8,6 +8,7 @@ import it.polimi.it.observer.CardSnapshot;
 import it.polimi.it.observer.OfferTileSnapshot;
 import it.polimi.it.observer.PlayerSnapshot;
 import it.polimi.it.view.gui.widgets.CardCellFactory;
+import it.polimi.it.view.gui.widgets.CardImageCache;
 import javafx.animation.FadeTransition;
 import javafx.animation.PauseTransition;
 import javafx.animation.SequentialTransition;
@@ -82,6 +83,10 @@ public class GameBoardView {
     @FXML private VBox       eventOverlayBox;
     @FXML private Label      eventOverlayTitle;
     @FXML private Label      eventOverlayName;
+    // FIX 5: carte evento in grande (fino a 2 affiancate)
+    @FXML private HBox       eventCardBox;
+    @FXML private javafx.scene.image.ImageView eventCardImageView;
+    @FXML private javafx.scene.image.ImageView eventCardImageView2;
 
     /** Insertion-ordered map by player name so the order is stable across redraws. */
     private final Map<String, PlayerSnapshot> players = new LinkedHashMap<>();
@@ -213,6 +218,11 @@ public class GameBoardView {
         });
     }
 
+    // Coda eventi: se arrivano 2 EventResolved in rapida successione li mostriamo insieme
+    private final java.util.concurrent.BlockingQueue<int[]> pendingEvents
+            = new java.util.concurrent.LinkedBlockingQueue<>();
+    private boolean eventOverlayRunning = false;
+
     public void onEventResolved(int eventId, Era era, EventType type) {
         runFx(() -> {
             String label = switch (type) {
@@ -221,12 +231,30 @@ public class GameBoardView {
                 default              -> type.name();
             };
             log("▶ EVENTO: " + label + " (" + era + ")");
-            showEventOverlay(era, type, label);
+            pendingEvents.offer(new int[]{eventId});
+            if (!eventOverlayRunning) {
+                // Aspetta 150ms per raccogliere eventuali secondi eventi pubblicati
+                // nello stesso round (bottom row con 2 event card)
+                PauseTransition collect = new PauseTransition(Duration.millis(150));
+                collect.setOnFinished(e -> drainAndShowEvents(era, type, label));
+                collect.play();
+            }
         });
     }
 
-    private void showEventOverlay(Era era, EventType type, String label) {
-        // Clear previous style classes and set the per-event one
+    private void drainAndShowEvents(Era era, EventType type, String label) {
+        java.util.List<Integer> ids = new java.util.ArrayList<>();
+        int[] id;
+        while ((id = pendingEvents.poll()) != null) ids.add(id[0]);
+        if (ids.isEmpty()) { eventOverlayRunning = false; return; }
+        eventOverlayRunning = true;
+        showEventOverlay(era, type, label,
+                ids.get(0),
+                ids.size() > 1 ? ids.get(1) : -1);
+    }
+
+    private void showEventOverlay(Era era, EventType type, String label, int eventId, int eventId2) {
+        // Stile testo per tipo
         eventOverlayName.getStyleClass().removeIf(s -> s.startsWith("event-"));
         String eventClass = switch (type) {
             case SUSTENANCE      -> "event-sustenance";
@@ -234,9 +262,19 @@ public class GameBoardView {
             default              -> "event-default";
         };
         eventOverlayName.getStyleClass().add(eventClass);
-
         eventOverlayTitle.setText("Evento — " + era);
         eventOverlayName.setText(label);
+
+        // Carta 1
+        boolean hasImg1 = loadEventCard(eventCardImageView, eventId);
+        // Carta 2 (opzionale)
+        boolean hasImg2 = eventId2 >= 0 && loadEventCard(eventCardImageView2, eventId2);
+
+        if (eventCardBox != null) {
+            boolean show = hasImg1 || hasImg2;
+            eventCardBox.setVisible(show);
+            eventCardBox.setManaged(show);
+        }
 
         eventOverlay.setOpacity(0);
         eventOverlay.setVisible(true);
@@ -244,15 +282,31 @@ public class GameBoardView {
         FadeTransition fadeIn = new FadeTransition(Duration.millis(400), eventOverlay);
         fadeIn.setFromValue(0);
         fadeIn.setToValue(1);
-
-        PauseTransition hold = new PauseTransition(Duration.millis(2800));
-
+        PauseTransition hold = new PauseTransition(Duration.millis(3500));
         FadeTransition fadeOut = new FadeTransition(Duration.millis(600), eventOverlay);
         fadeOut.setFromValue(1);
         fadeOut.setToValue(0);
-        fadeOut.setOnFinished(e -> eventOverlay.setVisible(false));
-
+        fadeOut.setOnFinished(e -> {
+            eventOverlay.setVisible(false);
+            eventOverlayRunning = false;
+        });
         new SequentialTransition(fadeIn, hold, fadeOut).play();
+    }
+
+    private boolean loadEventCard(javafx.scene.image.ImageView iv, int cardId) {
+        if (iv == null) return false;
+        javafx.scene.image.Image img = CardImageCache.imageFor(cardId);
+        if (img != null) {
+            iv.setImage(img);
+            iv.setSmooth(true);
+            iv.setPreserveRatio(true);
+            iv.setVisible(true);
+            iv.setManaged(true);
+            return true;
+        }
+        iv.setVisible(false);
+        iv.setManaged(false);
+        return false;
     }
 
     public void onEraChanged(Era era) {
@@ -346,8 +400,19 @@ public class GameBoardView {
 
     // ── Action buttons ────────────────────────────────────────────────────────
 
+    @FXML private javafx.scene.layout.VBox logPanel;
+    @FXML private javafx.scene.control.Button logToggleBtn;
+
     @FXML private void onPass()    { pushCardChoice(-1); }
     @FXML private void onDecline() { pushCardChoice(-1); }
+
+    @FXML
+    private void onToggleLog() {
+        boolean nowVisible = !logPanel.isVisible();
+        logPanel.setVisible(nowVisible);
+        logPanel.setManaged(nowVisible);
+        logToggleBtn.setText(nowVisible ? "✖" : "📋");
+    }
 
     private void setActionButton(Button btn, boolean visible, Runnable action) {
         btn.setVisible(visible);
@@ -438,9 +503,11 @@ public class GameBoardView {
     private void renderCards(HBox target, List<CardSnapshot> cards, Consumer<Integer> onClick) {
         target.getChildren().clear();
         for (CardSnapshot c : cards) {
-            // Events stay non-clickable even if a handler is provided.
             Consumer<Integer> handler = (c.isEvent() ? null : onClick);
-            target.getChildren().add(CardCellFactory.buildCard(c, handler));
+            // Sul board: carte non selezionabili appaiono scurite (disabled)
+            // Nel popup: le carte sono sempre a piena luminosità (buildCard normale)
+            target.getChildren().add(
+                    CardCellFactory.buildCard(c, handler, true));
         }
     }
 
@@ -467,75 +534,80 @@ public class GameBoardView {
     }
 
     private void showTribeOverlay(PlayerSnapshot p) {
-        // Build a popup stage with the player's full tribe
         javafx.stage.Stage popup = new javafx.stage.Stage();
         popup.initModality(javafx.stage.Modality.APPLICATION_MODAL);
         popup.setTitle("Tribù di " + p.name());
 
-        VBox root = new VBox(12);
+        VBox root = new VBox(14);
         root.getStyleClass().add("tribe-popup-root");
-        root.setPadding(new javafx.geometry.Insets(16));
+        root.setPadding(new javafx.geometry.Insets(20));
 
         // Header
-        HBox header = new HBox(10);
+        HBox header = new HBox(12);
         header.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         header.getChildren().add(
-                it.polimi.it.view.gui.widgets.CardCellFactory.buildTotemBadge(p.totemColour(), 28));
+                it.polimi.it.view.gui.widgets.CardCellFactory.buildTotemBadge(p.totemColour(), 32));
         Label title = new Label(p.name());
         title.getStyleClass().add("tribe-popup-title");
-        header.getChildren().add(title);
+        Label stats = new Label("  \uD83C\uDF3F " + p.food() + "  \u2605 " + p.prestigePoints() + " PP");
+        stats.getStyleClass().addAll("tribe-popup-section", "emoji-text");
+        header.getChildren().addAll(title, stats);
         root.getChildren().add(header);
 
-        // Characters
+        boolean empty = true;
+
+        // Personaggi — tutte le carte in un WrapPane, niente scroll
         if (!p.tribeCharacters().isEmpty()) {
+            empty = false;
             Label lbl = new Label("Personaggi");
             lbl.getStyleClass().add("tribe-popup-section");
             root.getChildren().add(lbl);
-            HBox chars = new HBox(8);
-            chars.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-            for (it.polimi.it.observer.CardSnapshot card : p.tribeCharacters()) {
-                chars.getChildren().add(
-                        it.polimi.it.view.gui.widgets.CardCellFactory
-                                .buildCard(card, null, 90, 126));
-            }
-            javafx.scene.control.ScrollPane sp = new javafx.scene.control.ScrollPane(chars);
-            sp.setHbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.AS_NEEDED);
-            sp.setVbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.NEVER);
-            sp.setFitToHeight(true);
-            root.getChildren().add(sp);
+            root.getChildren().add(buildCardRow(p.tribeCharacters()));
         }
 
-        // Buildings
+        // Edifici
         if (!p.tribeBuildings().isEmpty()) {
+            empty = false;
             Label lbl = new Label("Edifici");
             lbl.getStyleClass().add("tribe-popup-section");
             root.getChildren().add(lbl);
-            HBox blds = new HBox(8);
-            blds.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-            for (it.polimi.it.observer.CardSnapshot card : p.tribeBuildings()) {
-                blds.getChildren().add(
-                        it.polimi.it.view.gui.widgets.CardCellFactory
-                                .buildCard(card, null, 90, 126));
-            }
-            javafx.scene.control.ScrollPane sp = new javafx.scene.control.ScrollPane(blds);
-            sp.setHbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.AS_NEEDED);
-            sp.setVbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.NEVER);
-            sp.setFitToHeight(true);
-            root.getChildren().add(sp);
+            root.getChildren().add(buildCardRow(p.tribeBuildings()));
         }
 
-        if (p.tribeCharacters().isEmpty() && p.tribeBuildings().isEmpty()) {
-            Label empty = new Label("Tribù vuota");
-            empty.getStyleClass().add("tribe-popup-empty");
-            root.getChildren().add(empty);
+        if (empty) {
+            Label e = new Label("Tribù vuota");
+            e.getStyleClass().add("tribe-popup-empty");
+            root.getChildren().add(e);
         }
+
+        javafx.scene.control.Button closeBtn = new javafx.scene.control.Button("Chiudi");
+        closeBtn.getStyleClass().add("gameover-button");
+        closeBtn.setOnAction(e -> popup.close());
+        VBox.setMargin(closeBtn, new javafx.geometry.Insets(6, 0, 0, 0));
+        root.getChildren().add(closeBtn);
 
         javafx.scene.Scene scene = new javafx.scene.Scene(root);
         scene.getStylesheets().add(
                 getClass().getResource("/it/polimi/it/view/gui/styles.css").toExternalForm());
         popup.setScene(scene);
-        popup.setResizable(false);
+        popup.sizeToScene();
+        popup.setResizable(true);
         popup.show();
+    }
+
+    /** Builds a horizontal row of cards with no scroll — all always visible. */
+    private static HBox buildCardRow(java.util.List<it.polimi.it.observer.CardSnapshot> cards) {
+        HBox row = new HBox(8);
+        row.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        for (var card : cards) {
+            javafx.scene.layout.StackPane cell =
+                    it.polimi.it.view.gui.widgets.CardCellFactory.buildCard(card, null, 110, 154);
+            // Rimuovi qualsiasi effetto che oscura la carta
+            cell.setEffect(null);
+            cell.setOpacity(1.0);
+            row.getChildren().add(cell);
+        }
+        return row;
     }
 
     // ── Utils ─────────────────────────────────────────────────────────────────
