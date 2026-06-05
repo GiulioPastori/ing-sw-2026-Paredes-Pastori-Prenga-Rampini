@@ -5,11 +5,8 @@ import it.polimi.it.enums.Era;
 import it.polimi.it.player.Player;
 
 /**
- * Character card: Inventor.
- *
- * Each inventor shows exactly one invention icon (10 different icons exist).
- * End of game: (inventor count) × (distinct invention icon count)
- */
+ * Each inventor shows exactly one invention icon
+ * End of game: (inventor count) × (distinct invention icon count)*/
 public class Inventor extends Character {
 
     private final String inventionIcon;

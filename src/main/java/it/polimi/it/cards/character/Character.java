@@ -5,19 +5,17 @@ import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
 import it.polimi.it.player.Player;
 
-/**
- * Character card: the basic unit a player adds to their tribe.
- *
+/** Character card: the basic unit a player adds to their tribe.
+
  * Each character has a unique ID, a type, an era, and a number of
  * specialised icons whose meaning depends on the concrete type:
  * - Hunter:  1 if it has the trigger icon, 0 otherwise
- * - Shaman:  number of star icons (1–3)
+ * - Shaman:  number of star icons
  * - Inventor: exactly 1 invention icon
- * - Builder/Gatherer/Artist: unused (0)
- *
+ * - Builder/Gatherer/Artist: no icon
+
  * Acquiring a character has no food cost, but during the Sustenance event
- * each character in the tribe must be fed.
- */
+ * each character in the tribe must be fed.*/
 public abstract class Character extends Card {
 
     private final CharacterType type;
@@ -35,10 +33,8 @@ public abstract class Character extends Card {
     /** Returns the number of specialised icons printed on this card. */
     public int           getIconCount() { return iconCount; }
 
-    /**
-     * Applies the character's immediate effect to the player who just acquired it.
-     * Most characters have no immediate effect (empty implementation).
-     * The exception is the Hunter with the trigger icon (rulebook p.5).
-     */
+    /** Applies the character's immediate effect to the player who just acquired it.
+     * Most characters have no immediate effect
+     * The exception is the Hunter with the trigger icon.*/
     public abstract void applyImmediateEffect(Player player);
 }

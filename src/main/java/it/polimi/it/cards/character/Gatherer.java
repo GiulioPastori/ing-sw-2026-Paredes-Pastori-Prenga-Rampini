@@ -5,12 +5,9 @@ import it.polimi.it.enums.Era;
 import it.polimi.it.player.Player;
 
 /**
- * Character card: Gatherer.
- *
  * Sustenance event: each gatherer provides a discount of
  * {@value #FOOD_DISCOUNT_PER_GATHERER} food on the total amount to pay.
- * No immediate effect; no direct contribution to the final score.
- */
+ * No immediate effect; no direct contribution to the final score.*/
 public class Gatherer extends Character {
 
     public static final int FOOD_DISCOUNT_PER_GATHERER = 3;

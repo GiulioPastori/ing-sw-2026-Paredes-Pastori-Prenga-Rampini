@@ -4,10 +4,8 @@ import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
 import it.polimi.it.player.Player;
 
-/**
- * During the game: reduces the food cost of every building acquired.
- * End of game: contributes fixed prestige points.
- */
+/** During the game: reduces the food cost of every building acquired.
+ * End of game: contributes fixed prestige points.*/
 public class Builder extends Character {
 
     private final int buildingDiscount;

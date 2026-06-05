@@ -4,13 +4,9 @@ import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
 import it.polimi.it.player.Player;
 
-/**
- * Character card: Hunter.
- *
- * Immediate effect: if this hunter carries the trigger icon,
+/** Immediate effect: if this hunter carries the trigger icon,
  * the player immediately takes 1 food for every hunter currently in their tribe
- * (including this one, which has already been added).
- *
+
  * Hunt event: for each hunter in the tribe the player takes
  * 1 food and gains the prestige points shown on the event card.
  */

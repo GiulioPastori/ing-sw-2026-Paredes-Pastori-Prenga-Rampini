@@ -4,12 +4,8 @@ import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
 import it.polimi.it.player.Player;
 
-/**
-
- * Shamans show 1–3 star icons. The total across the tribe determines the
- * outcome of the Shamanic Ritual event
- * No immediate effect; no direct contribution to the final score.
- */
+/** Shamans show 1–3 stars icons.
+  No immediate effect; no direct contribution to the final score.*/
 public class Shaman extends Character {
 
     public Shaman(int id, Era era, int starIcons) {

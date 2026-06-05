@@ -1,14 +1,9 @@
 package it.polimi.it.actions;
 
 /**
- * An action a player can perform during their turn (Command pattern).
- *
- * Sealed interface: the only permitted types are declared with "permits".
- * Each action is an immutable record carrying all the data needed to
- * validate and execute it in Game.
- *
- * The controller constructs an action from user input; Game validates
- * and applies it. Input never enters the model directly.
+ * An action that a player can perform during their turn (Command pattern).
+ * The controller builds an action from what the user does; Game then
+ * checks it and applies it. User input never reaches the model on its own.
  */
 public sealed interface PlayerAction
         permits PlaceTotemAction, TakeCardAction, PassAction, PostRoundAction {
