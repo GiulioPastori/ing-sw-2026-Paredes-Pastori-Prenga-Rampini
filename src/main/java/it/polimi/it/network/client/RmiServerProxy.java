@@ -122,7 +122,7 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
      * Sends a HEARTBEAT every {@value #HEARTBEAT_INTERVAL_MS} ms via RMI.
      * The RMI server uses {@code RmiClientHandler.send()} to detect disconnections;
      * the failure of the call itself is enough to trigger
-     * {@link it.polimi.it.network.server.GameSession#onPlayerDisconnected(String)}.
+
      */
     private void heartbeatLoop() {
         while (connected) {

@@ -6,10 +6,6 @@ import it.polimi.it.enums.EventType;
 
 /**
  * Describes the effects of a building card.
- *
- * Built via the inner Builder to avoid long sequences of null arguments.
- * Every field defaults to null (or false), meaning no effect of that type.
- *
  * A building may have at most one hook per category:
  * - eventTrigger + eventHook: fires during a specific EventType
  * - turnHook: fires when the player repositions their totem

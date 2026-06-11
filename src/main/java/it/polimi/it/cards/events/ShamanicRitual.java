@@ -5,20 +5,13 @@ import it.polimi.it.player.Player;
 
 import java.util.List;
 
-/**
- * Strategy for the Shamanic Ritual event.
- *
- * The player with the most star icons gains rewardForMost PP;
- * the player with the fewest loses penaltyForFewest PP. Ties are included in both cases.
- *
- * Buildings modify the behaviour via ShamanicModifier:
- * - extraStarIcons(): virtual star icon bonus before the comparison
- * - isImmuneToMinPenalty(): immunity to the minimum penalty
- * - doublesMaxReward(): doubles the majority reward
- *
- * ShamanicRitual does not know building IDs: it queries the capability
- * declared by the interface. Adding a new building with a shamanic effect
- * shamanic effect does not require modifying this class.
+/** Strategy for the Shamanic Ritual event.
+ The player with the most star icons gains rewardForMost PP;
+ the player with the fewest loses penaltyForFewest PP. Ties are included in both cases.
+ Buildings modify the behaviour via ShamanicModifier:
+ - extraStarIcons(): virtual star icon bonus before the comparison
+ - isImmuneToMinPenalty(): immunity to the minimum penalty
+ - doublesMaxReward(): doubles the majority reward
  */
 public class ShamanicRitual implements EventStrategy {
 
