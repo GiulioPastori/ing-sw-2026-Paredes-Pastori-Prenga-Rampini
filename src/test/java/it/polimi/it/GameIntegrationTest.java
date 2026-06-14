@@ -24,17 +24,19 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Integration tests for Game.
  *
- * Offer Track — 2-player layout:
- *   B: 1 bottom-row slot  (top=0, bot=1)
- *   C: 1 top-row slot     (top=1, bot=0)
- *   E: 1 top + 1 bottom   (top=1, bot=1)
- *   F: 2 top-row slots    (top=2, bot=0)
+ * Offer Track — 2-player layout (tiles with minPlayers <= 2, ordered by letter):
+ *   B: 1 bottom-row slot (top=0, bottom=1)
+ *   C: 1 top-row slot    (top=1, bottom=0)
+ *   E: 1 top + 1 bottom slot
+ *   F: 2 top-row slots
+ * (Tile A is food-only and exists only in 5-player games — it is NOT present here.)
  *
- * The action phase starts when placed == players.size() (2).
+ * The action phase starts when placed == players.size() (2). Tiles are then
+ * resolved left to right by letter, so the player on B acts before the player on C.
  *
  * Turn Order Tile bonuses with 2 players:
- *   position 1 → +1 food
- *   position 2 → last: −1 food or −2 VP
+ *   position 1 → +1 food bonus
+ *   position 2 → no bonus, then last space pays 1 food (or −2 PP if no food)
  */
 @DisplayName("Game Integration")
 class GameIntegrationTest {
@@ -114,9 +116,9 @@ class GameIntegrationTest {
 
     /**
      * Drives one complete round without taking any cards.
-     * First player  → tile B (bottom-row slot, resolves first).
-     * Second player → tile C (top-row slot,    resolves second).
-     * Tiles are resolved in their declaration order: B before C.
+     * First player → tile B (1 top slot, pass).
+     * Second player → tile C (1 bottom slot, pass).
+     * Tile A (food-only) is left free every round.
      */
     static void passRound(Game game) {
         List<String> o = order(game);
@@ -287,80 +289,68 @@ class GameIntegrationTest {
     class CardActions {
 
         private Game   game;
-        private String onB;  // first to resolve: tile B has bottom-row slot
-        private String onC;  // second to resolve: tile C has top-row slot
+        private String onB;
+        private String onC;
 
         @BeforeEach
         void placeTotems() {
             game = newGame();
             List<String> o = order(game);
-            onB = o.get(0);  // first player → tile B (bot=1, resolves first)
-            onC = o.get(1);  // second player → tile C (top=1, resolves second)
+            onB = o.get(0);
+            onC = o.get(1);
             game.execute(new PlaceTotemAction(onB, 'B'));
             game.execute(new PlaceTotemAction(onC, 'C'));
         }
 
         @Test
-        @DisplayName("taking a top-row card removes it from the board")
+        @DisplayName("taking a bottom-row card removes it from the board")
         void takingCardRemovesFromRow() {
-            game.execute(new PassAction(onB)); // tile B resolves first
-            // onC is now active on tile C (top=1)
-            Card card = game.getBoard().getTopRow().stream()
-                    .filter(c -> c instanceof Character)
-                    .findFirst().orElseThrow(() -> new AssertionError("No Character in top row"));
-            // Verify the card is on the board before taking it
-            assertTrue(game.getBoard().getTopRow().contains(card));
-            game.execute(new TakeCardAction(onC, card.getId(), true));
-            // After taking, the specific card must no longer be in the top row
-            assertFalse(game.getBoard().getTopRow().contains(card),
-                    "Taken card must be removed from the top row");
+            // The player on tile B has a single BOTTOM-row slot (top=0, bottom=1).
+            int before = game.getBoard().getBottomRow().size();
+            Card card = bottomRowCard(game);
+            assertTrue(game.execute(
+                    new TakeCardAction(onB, card.getId(), false)).isOk());
+            assertEquals(before - 1, game.getBoard().getBottomRow().size());
         }
 
         @Test
         @DisplayName("taken card appears in the player's tribe")
         void takenCardInTribe() {
-            game.execute(new PassAction(onB));
-            Card card = game.getBoard().getTopRow().stream()
-                    .filter(c -> c instanceof Character)
-                    .findFirst().orElseThrow(() -> new AssertionError("No Character in top row"));
-            game.execute(new TakeCardAction(onC, card.getId(), true));
-            assertEquals(1, player(game, onC).getTribe().getCharacterCount());
+            Card card = bottomRowCard(game);
+            game.execute(new TakeCardAction(onB, card.getId(), false));
+            assertEquals(1, player(game, onB).getTribe().getCharacterCount());
         }
 
         @Test
         @DisplayName("CardAcquired event published on successful take")
         void cardAcquiredEvent() {
-            game.execute(new PassAction(onB));
-            Card card = game.getBoard().getTopRow().stream()
-                    .filter(c -> c instanceof Character)
-                    .findFirst().orElseThrow(() -> new AssertionError("No Character in top row"));
+            Card card = bottomRowCard(game);
             List<GameEvent> events = capture(game,
-                    () -> game.execute(new TakeCardAction(onC, card.getId(), true)));
+                    () -> game.execute(new TakeCardAction(onB, card.getId(), false)));
             assertTrue(events.stream()
                     .anyMatch(e -> e instanceof GameEvent.CardAcquired));
         }
 
         @Test
-        @DisplayName("pass action is accepted on tile B (bottom slot)")
+        @DisplayName("pass action is accepted")
         void passAccepted() {
             assertTrue(game.execute(new PassAction(onB)).isOk());
         }
 
         @Test
-        @DisplayName("tile B (onB) has no top-row slot — taking from top rejected")
+        @DisplayName("tile B has no top-row slot — taking from top rejected")
         void tileB_noTopSlot() {
-            // onB is on tile B: top=0, bot=1 → top slot not available
+            // Tile B is a bottom-slot tile (top=0): taking from the top must fail.
             Card card = topRowCard(game);
             assertFalse(game.execute(
                     new TakeCardAction(onB, card.getId(), true)).isOk());
         }
 
         @Test
-        @DisplayName("tile C (onC) has no bottom-row slot — taking from bottom rejected")
+        @DisplayName("tile C has no bottom-row slot — taking from bottom rejected")
         void tileC_noBottomSlot() {
-            // onC is on tile C: top=1, bot=0 → bottom slot not available
-            // onB must act first
-            game.execute(new PassAction(onB));
+            // Tile C is a top-slot tile (bottom=0): taking from the bottom must fail.
+            game.execute(new PassAction(onB)); // finish tile B so C becomes active
             Card card = bottomRowCard(game);
             assertFalse(game.execute(
                     new TakeCardAction(onC, card.getId(), false)).isOk());
@@ -369,7 +359,7 @@ class GameIntegrationTest {
         @Test
         @DisplayName("wrong player trying to act is rejected")
         void wrongPlayerRejected() {
-            // onC is not the active player while tile B (onB's tile) is resolving
+            // onC is not the active player while tile B is resolving
             Card card = topRowCard(game);
             assertFalse(game.execute(
                     new TakeCardAction(onC, card.getId(), true)).isOk());
@@ -378,9 +368,8 @@ class GameIntegrationTest {
         @Test
         @DisplayName("non-existent card ID is rejected")
         void nonExistentCardIdRejected() {
-            // onB is active first; tile B has bottom slot — use fromTop=false
             assertFalse(game.execute(
-                    new TakeCardAction(onB, 99999, false)).isOk());
+                    new TakeCardAction(onB, 99999, true)).isOk());
         }
 
         @Test
@@ -397,14 +386,16 @@ class GameIntegrationTest {
             g.setTestMode(true);
             g.start();
             List<String> o = order(g);
-            // tile C has top-row slot, resolves second
             g.execute(new PlaceTotemAction(o.get(0), 'B'));
             g.execute(new PlaceTotemAction(o.get(1), 'C'));
-            g.execute(new PassAction(o.get(0))); // pass tile B first
 
+            // Buildings are dealt to the TOP row, so only the player on tile C
+            // (the top-slot tile) can attempt to take one. Tile B resolves first,
+            // so the player on B must finish before C becomes active.
             Optional<Card> expensive = g.getBoard().getTopRow().stream()
                     .filter(c -> c.getId() == 3999).findFirst();
             if (expensive.isPresent()) {
+                g.execute(new PassAction(o.get(0))); // finish tile B
                 List<GameEvent> events = capture(g,
                         () -> g.execute(new TakeCardAction(o.get(1), 3999, true)));
                 assertTrue(events.stream()
@@ -420,23 +411,24 @@ class GameIntegrationTest {
     class TurnOrderTileTests {
 
         @Test
-        @DisplayName("player returning to position 1 gains +1 food (2P)")
-        void position1GainsFood() {
-            // In 2P the TurnOrderTile gives +1 food to position 1.
-            // Place first player on tile F (2 top slots, no bottom) so they
-            // resolve first and land on TurnOrderTile position 1.
+        @DisplayName("player returning to position 1 gains +1 food (2-player)")
+        void position1GainsOneFood() {
+            // No food-only tile exists in a 2-player game. The +1 food bonus
+            // comes from the Turn Order Tile: the first player to finish their
+            // offer tile returns to position 1, which grants +1 food (2-player).
             Game game = newGame();
             List<String> o = order(game);
             int foodBefore = player(game, o.get(0)).getFood();
 
-            game.execute(new PlaceTotemAction(o.get(0), 'F')); // 2 top slots
-            game.execute(new PlaceTotemAction(o.get(1), 'C')); // 1 top slot
-            game.execute(new PassAction(o.get(0)));            // pass tile F
-            game.execute(new PassAction(o.get(1)));            // pass tile C
+            game.execute(new PlaceTotemAction(o.get(0), 'B'));
+            game.execute(new PlaceTotemAction(o.get(1), 'C'));
+            // Tiles resolve left to right: B finishes first, so o.get(0) returns
+            // to Turn Order position 1 (+1 food). Capture food right after, before
+            // the second player finishes and end-of-round events run.
+            game.execute(new PassAction(o.get(0)));
 
-            // position 1 → +1 food from TurnOrderTile
-            assertTrue(player(game, o.get(0)).getFood() >= foodBefore,
-                    "Player at position 1 should not lose food");
+            assertEquals(foodBefore + 1, player(game, o.get(0)).getFood(),
+                    "Player returning to position 1 should gain exactly +1 food");
         }
 
         @Test
@@ -453,6 +445,7 @@ class GameIntegrationTest {
             long count = events.stream()
                     .filter(e -> e instanceof GameEvent.TotemReturnedToTurnOrder)
                     .count();
+            // Tiles B and C each give one return event = 2
             assertEquals(2, count);
         }
     }
@@ -523,8 +516,8 @@ class GameIntegrationTest {
         }
 
         @Test
-        @DisplayName("ShamanicRitual tie: all gain the reward, none penalised")
-        void shamanicTieAllGain() {
+        @DisplayName("ShamanicRitual full tie: all gain reward then lose penalty")
+        void shamanicTieAllGainAndLose() {
             Game game = newGame();
             Player alice = game.getPlayers().get(0);
             Player bob   = game.getPlayers().get(1);
@@ -532,15 +525,13 @@ class GameIntegrationTest {
             bob.takeCharacterCard(new Shaman(9012,   Era.ERA_I, 2));
             int aPP = alice.getPrestigePoints(), bPP = bob.getPrestigePoints();
 
-            // Apply the fixed ShamanicRitual directly
-            // (this test verifies the CORRECT behaviour; if ShamanicRitual.java
-            // in the project still has the bug, this test will fail intentionally
-            // to signal that ShamanicRitual.java also needs to be updated)
+            // Rulebook: in a full tie every player is both max and min, so they
+            // first gain the reward (+10) and then lose the penalty (-5) = net +5.
             new ShamanicRitual(10, 5).apply(game.getPlayers());
-            assertEquals(aPP + 10, alice.getPrestigePoints(),
-                    "Tied player should gain reward (not lose penalty)");
-            assertEquals(bPP + 10, bob.getPrestigePoints(),
-                    "Tied player should gain reward (not lose penalty)");
+            assertEquals(aPP + 10 - 5, alice.getPrestigePoints(),
+                    "Tied player gains reward then loses penalty");
+            assertEquals(bPP + 10 - 5, bob.getPrestigePoints(),
+                    "Tied player gains reward then loses penalty");
         }
 
         @Test
@@ -724,6 +715,7 @@ class GameIntegrationTest {
             if (game.getCurrentPhase() == Game.Phase.RESOLVING_ACTIONS) {
                 game.execute(new PassAction(alice));
             }
+            // Bob's auto-placed tile resolves automatically (food tile or pass handled)
 
             // Reconnect Bob and start round 3
             game.markReconnected("Bob");
@@ -889,11 +881,10 @@ class GameIntegrationTest {
         void nonExistentCardRejected() {
             Game game = newGame();
             List<String> o = order(game);
-            game.execute(new PlaceTotemAction(o.get(0), 'B')); // bot slot
-            game.execute(new PlaceTotemAction(o.get(1), 'C')); // top slot
-            game.execute(new PassAction(o.get(0)));             // pass B first
+            game.execute(new PlaceTotemAction(o.get(0), 'B'));
+            game.execute(new PlaceTotemAction(o.get(1), 'C'));
             assertFalse(game.execute(
-                    new TakeCardAction(o.get(1), 99999, true)).isOk());
+                    new TakeCardAction(o.get(0), 99999, true)).isOk());
         }
     }
 }

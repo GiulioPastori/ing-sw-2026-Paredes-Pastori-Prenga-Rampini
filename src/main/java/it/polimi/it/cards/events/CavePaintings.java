@@ -44,7 +44,4 @@ public class CavePaintings implements EventStrategy {
         }
     }
 
-    public int getMinArtistsForBonus() { return minArtistsForBonus; }
-    public int getPenaltyPoints()      { return penaltyPoints; }
-    public int getPrestigePerArtist()  { return prestigePerArtist; }
 }

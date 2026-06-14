@@ -5,8 +5,7 @@ import it.polimi.it.player.Player;
 import java.util.List;
 
 /** Strategy pattern
- * Each event type implements this interface with its own calculation logic over all players.
- * Events are resolved at the end of a round on the bottom row  */
+ * Each event type implements this interface with its own calculation logic over all players.*/
 
 public interface EventStrategy {
 

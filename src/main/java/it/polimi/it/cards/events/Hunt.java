@@ -35,6 +35,5 @@ public class Hunt implements EventStrategy {
         }
     }
 
-    public int getPrestigePerHunter() { return prestigePerHunter; }
 }
 

@@ -6,12 +6,8 @@ import it.polimi.it.enums.Era;
 import it.polimi.it.player.Player;
 
 /** Each character has a unique ID, a type, an era, and a number of
- * specialised icons whose meaning depends on the concrete type:
- * - Hunter:  1 if it has the trigger icon, 0 otherwise
- * - Shaman:  number of star icons
- * - Inventor: exactly 1 invention icon
+ * specialised icons whose meaning depends on the concrete type.
  * - Builder/Gatherer/Artist: no icon
-
  * Acquiring a character has NO FOOD COST but during the Sustenance event
  * each character in the tribe must be fed.*/
 public abstract class Character extends Card {

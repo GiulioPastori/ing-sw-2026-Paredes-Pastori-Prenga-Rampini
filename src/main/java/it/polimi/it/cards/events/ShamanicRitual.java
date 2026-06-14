@@ -5,13 +5,11 @@ import it.polimi.it.player.Player;
 
 import java.util.List;
 
-/** Strategy for the Shamanic Ritual event.
- The player with the most star icons gains rewardForMost PP;
- the player with the fewest loses penaltyForFewest PP. Ties are included in both cases.
- Buildings modify the behaviour via ShamanicModifier:
- - extraStarIcons(): virtual star icon bonus before the comparison
- - isImmuneToMinPenalty(): immunity to the minimum penalty
- - doublesMaxReward(): doubles the majority reward
+/**
+ * Strategy for the Shamanic Ritual event.
+ * The player(s) with the most star icons gain rewardForMost PP.
+ * The player(s) with the fewest lose penaltyForFewest PP. IMPORTANT if ALL players have the same number of icons,
+ * each player is both max and min, so they first gain the reward and then lose the penalty.
  */
 public class ShamanicRitual implements EventStrategy {
 
@@ -42,6 +40,7 @@ public class ShamanicRitual implements EventStrategy {
             Player player = players.get(i);
             int icons     = effective[i];
 
+
             if (icons == max) {
                 boolean doubles = player.getTribe().getBuildings().stream()
                         .anyMatch(b -> b.getEffect().hasShamanicModifier()
@@ -50,9 +49,8 @@ public class ShamanicRitual implements EventStrategy {
                 player.addPrestigePoints(reward);
             }
 
-            // Penalty applies only when max != min; if all players are tied
-            // they all gain the reward above — no one loses (rulebook p.6).
-            if (max != min && icons == min) {
+
+            if (icons == min) {
                 boolean immune = player.getTribe().getBuildings().stream()
                         .anyMatch(b -> b.getEffect().hasShamanicModifier()
                                 && b.getEffect().getShamanicModifier().isImmuneToMinPenalty(player));
@@ -72,6 +70,4 @@ public class ShamanicRitual implements EventStrategy {
         return base + bonus;
     }
 
-    public int getRewardForMost()    { return rewardForMost; }
-    public int getPenaltyForFewest() { return penaltyForFewest; }
 }

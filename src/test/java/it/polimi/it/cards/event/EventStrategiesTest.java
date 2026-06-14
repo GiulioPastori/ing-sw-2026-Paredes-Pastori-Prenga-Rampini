@@ -134,13 +134,11 @@ class ShamanicRitualTest {
     }
 
     @Test
-    @DisplayName("T5: single player is both max and min (tie) — gains reward, no penalty")
-    void singlePlayerOnlyGetsReward() {
-        // With a single player max == min, so the "tie" rule applies:
-        // penalty block (max != min) is false → only the reward fires.
+    @DisplayName("T5: single player receives both reward and penalty")
+    void singlePlayerReceivesBothEffects() {
         Player p = playerWithIcons(2, TotemColour.RED);
-        ritual.apply(List.of(p));
-        assertEquals(REWARD, p.getPrestigePoints());
+        ritual.apply(List.of(p)); // only player = max and min
+        assertEquals(REWARD - PENALTY, p.getPrestigePoints());
     }
 }
 
