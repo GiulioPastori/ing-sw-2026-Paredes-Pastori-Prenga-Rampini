@@ -7,15 +7,9 @@ import it.polimi.it.cards.events.EventStrategy;
 
 import java.util.List;
 
-/**
- * Strategy for the Hunt event.
- *
- * Base rule: for each hunter in the tribe the player takes 1 food
- * and gains the PP shown on the event card.
- *
- * Building effects that modify this event:
- * - Building 202/306: for each hunter, +1 food and +1 PP additional
- */
+/** Strategy for the Hunt event.
+ Base rule: for each hunter in the tribe the player takes 1 food and gains the PP shown on the event card.
+ Building 202/306: for each hunter, +1 food and +1 PP additional */
 public class Hunt implements EventStrategy {
 
     private final int prestigePerHunter;
@@ -41,6 +35,5 @@ public class Hunt implements EventStrategy {
         }
     }
 
-    public int getPrestigePerHunter() { return prestigePerHunter; }
 }
 

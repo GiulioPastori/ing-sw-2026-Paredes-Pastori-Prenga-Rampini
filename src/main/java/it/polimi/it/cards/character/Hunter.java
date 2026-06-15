@@ -6,9 +6,6 @@ import it.polimi.it.player.Player;
 
 /** Immediate effect: if this hunter carries the trigger icon,
  * the player immediately takes 1 food for every hunter currently in their tribe
-
- * Hunt event: for each hunter in the tribe the player takes
- * 1 food and gains the prestige points shown on the event card.
  */
 public class Hunter extends Character {
 

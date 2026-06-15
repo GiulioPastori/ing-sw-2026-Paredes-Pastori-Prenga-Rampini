@@ -6,17 +6,14 @@ import it.polimi.it.player.Player;
 
 import java.util.List;
 
-/**
- * Strategy for the Sustenance event.
- *
- * Each player pays 1 food for each character in their tribe.
- * Discounts applied in order:
- * 1. Gatherers: -3 food each
- * 2. Buildings with SustenanceModifier: additional discount declared by the building
- *
- * If characters remain unfed, the player loses PP for each one.
- * Sustenance is always resolved last among events in the same round.
- */
+/**  Strategy for the Sustenance event.
+  Each player pays 1 food for each character in their tribe.
+  Discounts applied in order:
+  1. Gatherers: -3 food each
+  2. Buildings with SustenanceModifier: additional discount declared by the building
+
+ If characters remain unfed, the player loses PP for each one.
+ Sustenance is ALWAYS resolved last among events in the same round. */
 public class Sustenance implements EventStrategy {
 
     private final int penaltyPerUnfedCharacter;

@@ -7,15 +7,11 @@ import it.polimi.it.player.Player;
 
 import java.util.List;
 
-/**
- * Strategy for the Cave Paintings event.
- *
- * Base rule: if the player has fewer than minArtistsForBonus artists,
- * they lose penaltyPoints PP. Otherwise they gain prestigePerArtist PP for
- * each artist in their tribe.
- *
- * Building effects that modify this event:
- * - Building 204: takes 1 food for each artist in the tribe
+/** Strategy for the Cave Paintings event.
+ Base rule: if the player has fewer than minArtistsForBonus artists,
+ they lose penaltyPoints PP. Otherwise they gain prestigePerArtist PP for
+ each artist in their tribe.
+ - Building 204: takes 1 food for each artist in the tribe
  */
 public class CavePaintings implements EventStrategy {
 
@@ -48,7 +44,4 @@ public class CavePaintings implements EventStrategy {
         }
     }
 
-    public int getMinArtistsForBonus() { return minArtistsForBonus; }
-    public int getPenaltyPoints()      { return penaltyPoints; }
-    public int getPrestigePerArtist()  { return prestigePerArtist; }
 }

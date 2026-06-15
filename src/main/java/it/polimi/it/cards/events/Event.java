@@ -7,14 +7,10 @@ import it.polimi.it.player.Player;
 
 import java.util.List;
 
-/**
- * Event card.
- *
+/** Event card
  * There are 4 event types (Sustenance, Hunt, Shamanic Ritual, Cave Paintings),
- * one per type per era (12 event cards total in the tribe deck).
  * Event cards can never be taken by players
- * Resolution logic is delegated to an EventStrategy.
- */
+ * Resolution logic is delegated to an EventStrategy. */
 public class Event extends Card {
 
     private final EventType     type;

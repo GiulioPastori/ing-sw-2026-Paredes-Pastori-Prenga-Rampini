@@ -8,16 +8,7 @@ import it.polimi.it.enums.EventType;
 import it.polimi.it.player.Player;
 import it.polimi.it.tiles.TurnPosition;
 
-/**
- * Building card.
- *
- * The building ID serves two purposes:
- * 1. Network key (carried in TakeCardAction / PostRoundAction).
- * 2. Index into BuildingEffectRegistry to retrieve the card's special effect.
- *
- * The effective food cost is the base cost minus the total builder discount
- * accumulated in the player's tribe.
- */
+/** Food cost= base cost - total builder discount accumulated in the player's tribe */
 public class Building extends Card {
 
     private final int           foodCost;
