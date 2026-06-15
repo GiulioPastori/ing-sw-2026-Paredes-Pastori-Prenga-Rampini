@@ -1,6 +1,5 @@
 package it.polimi.it.cards.events;
 
-import it.polimi.it.cards.building.modifier.ShamanicModifier;
 import it.polimi.it.player.Player;
 
 import java.util.List;
@@ -8,17 +7,18 @@ import java.util.List;
 /**
  * Strategy for the Shamanic Ritual event.
  *
- * The player with the most star icons gains rewardForMost PP;
- * the player with the fewest loses penaltyForFewest PP. Ties are included in both cases.
+ * The player(s) with the most star icons gain the prestige points
+ * indicated on the event card.
  *
- * Buildings modify the behaviour via ShamanicModifier:
- * - extraStarIcons(): virtual star icon bonus before the comparison
- * - isImmuneToMinPenalty(): immunity to the minimum penalty
- * - doublesMaxReward(): doubles the majority reward
+ * The player(s) with the fewest star icons lose the prestige points
+ * indicated on the event card.
  *
- * ShamanicRitual does not know building IDs: it queries the capability
- * declared by the interface. Adding a new building with a shamanic effect
- * shamanic effect does not require modifying this class.
+ * In case of a tie, all tied players gain or lose the indicated points.
+ *
+ * Building effects:
+ * - 103: immunity to the minimum penalty.
+ * - 201: doubles the reward gained from the ritual.
+ * - 207: grants 3 virtual star icons.
  */
 public class ShamanicRitual implements EventStrategy {
 
@@ -26,43 +26,65 @@ public class ShamanicRitual implements EventStrategy {
     private final int penaltyForFewest;
 
     public ShamanicRitual(int rewardForMost, int penaltyForFewest) {
-        this.rewardForMost    = rewardForMost;
+        this.rewardForMost = rewardForMost;
         this.penaltyForFewest = penaltyForFewest;
     }
 
     @Override
     public void apply(List<Player> players) {
-        if (players.isEmpty()) return;
 
-        int[] effective = new int[players.size()];
-        for (int i = 0; i < players.size(); i++) {
-            effective[i] = computeEffectiveIcons(players.get(i));
+        if (players.isEmpty()) {
+            return;
         }
 
-        int max = 0, min = Integer.MAX_VALUE;
-        for (int icons : effective) {
-            if (icons > max) max = icons;
-            if (icons < min) min = icons;
+        int[] effectiveIcons = new int[players.size()];
+
+        for (int i = 0; i < players.size(); i++) {
+            effectiveIcons[i] = computeEffectiveIcons(players.get(i));
+        }
+
+        int max = Integer.MIN_VALUE;
+        int min = Integer.MAX_VALUE;
+
+        for (int icons : effectiveIcons) {
+            max = Math.max(max, icons);
+            min = Math.min(min, icons);
         }
 
         for (int i = 0; i < players.size(); i++) {
+
             Player player = players.get(i);
-            int icons     = effective[i];
+            int icons = effectiveIcons[i];
 
+            // Players with the most icons gain prestige points
             if (icons == max) {
-                boolean doubles = player.getTribe().getBuildings().stream()
-                        .anyMatch(b -> b.getEffect().hasShamanicModifier()
-                                && b.getEffect().getShamanicModifier().doublesMaxReward(player));
-                int reward = doubles ? rewardForMost * 2 : rewardForMost;
+
+                boolean doubleReward =
+                        player.getTribe().getBuildings().stream()
+                                .filter(b -> b.getEffect().hasShamanicModifier())
+                                .anyMatch(b ->
+                                        b.getEffect()
+                                                .getShamanicModifier()
+                                                .doublesMaxReward(player));
+
+                int reward = doubleReward
+                        ? rewardForMost * 2
+                        : rewardForMost;
+
                 player.addPrestigePoints(reward);
             }
 
-            // Penalty applies only when max != min; if all players are tied
-            // they all gain the reward above — no one loses (rulebook p.6).
+            // Players with the fewest icons lose prestige points
             if (max != min && icons == min) {
-                boolean immune = player.getTribe().getBuildings().stream()
-                        .anyMatch(b -> b.getEffect().hasShamanicModifier()
-                                && b.getEffect().getShamanicModifier().isImmuneToMinPenalty(player));
+
+                boolean immune =
+                        player.getTribe().getBuildings().stream()
+                                .filter(b -> b.getEffect().hasShamanicModifier())
+                                .anyMatch(b ->
+                                        b.getEffect()
+                                                .getShamanicModifier()
+                                                .isImmuneToMinPenalty(player));
+
                 if (!immune) {
                     player.addPrestigePoints(-penaltyForFewest);
                 }
@@ -70,15 +92,23 @@ public class ShamanicRitual implements EventStrategy {
         }
     }
 
+    /**
+     * Computes the effective number of star icons for the ritual,
+     * including building modifiers.
+     */
     private int computeEffectiveIcons(Player player) {
-        int base  = player.getTribe().totalShamanIcons();
-        int bonus = player.getTribe().getBuildings().stream()
-                .filter(b -> b.getEffect().hasShamanicModifier())
-                .mapToInt(b -> b.getEffect().getShamanicModifier().extraStarIcons(player))
-                .sum();
-        return base + bonus;
-    }
 
-    public int getRewardForMost()    { return rewardForMost; }
-    public int getPenaltyForFewest() { return penaltyForFewest; }
+        int baseIcons = player.getTribe().totalShamanIcons();
+
+        int bonusIcons =
+                player.getTribe().getBuildings().stream()
+                        .filter(b -> b.getEffect().hasShamanicModifier())
+                        .mapToInt(b ->
+                                b.getEffect()
+                                        .getShamanicModifier()
+                                        .extraStarIcons(player))
+                        .sum();
+
+        return baseIcons + bonusIcons;
+    }
 }
