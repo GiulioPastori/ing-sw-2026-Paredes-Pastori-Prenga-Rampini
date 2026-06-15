@@ -3,7 +3,22 @@ package it.polimi.it.cards.events;
 import it.polimi.it.player.Player;
 
 import java.util.List;
-
+/**
+ * Strategy for the Shamanic Ritual event.
+ *
+ * The player(s) with the most star icons gain the prestige points
+ * indicated on the event card.
+ *
+ * The player(s) with the fewest star icons lose the prestige points
+ * indicated on the event card.
+ *
+ * In case of a tie, all tied players gain or lose the indicated points.
+ *
+ * Building effects:
+ * - 103: immunity to the minimum penalty.
+ * - 201: doubles the reward gained from the ritual.
+ * - 207: grants 3 virtual star icons.
+ */
 public class ShamanicRitual implements EventStrategy {
 
     private final int rewardForMost;
