@@ -121,7 +121,8 @@ public class ClientController {
                     view.showEventResolved(
                             msg.num("eventId"),
                             Era.valueOf(msg.str("era")),
-                            EventType.valueOf(msg.str("eventType")));
+                            EventType.valueOf(msg.str("eventType")),
+                            msg.playerResourceDeltaList("deltas"));
             case Message.ERA_CHANGED ->
                     view.showEraChanged(Era.valueOf(msg.str("newEra")));
             case Message.ROUND_ENDED ->
@@ -129,7 +130,8 @@ public class ClientController {
             case Message.GAME_ENDED -> {
                 view.showGameEnded(
                         msg.playerList("winners"),
-                        msg.playerList("finalScores"));
+                        msg.playerList("finalScores"),
+                        msg.finalScoreBreakdownList("scoreBreakdowns"));
                 gameEndedReceived = true;
                 // Wait up to 5 s for the optional LEADERBOARD message that the
                 // server sends right after GAME_ENDED when the leaderboard DB

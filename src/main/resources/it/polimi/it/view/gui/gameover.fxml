@@ -5,6 +5,7 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextArea?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
@@ -16,9 +17,9 @@
       fx:controller="it.polimi.it.view.gui.controllers.GameOverController"
       styleClass="gameover-root"
       alignment="CENTER" spacing="14"
-      prefWidth="640" prefHeight="640">
+      prefWidth="760" prefHeight="760">
 
-    <padding><Insets top="40" right="48" bottom="40" left="48"/></padding>
+    <padding><Insets top="32" right="48" bottom="32" left="48"/></padding>
 
     <Label text="🏆" styleClass="gameover-trophy">
         <font><Font size="80"/></font>
@@ -30,11 +31,21 @@
 
     <Label fx:id="winnersLabel" text="" styleClass="gameover-winners" wrapText="true"/>
 
-    <Region prefHeight="20"/>
+    <Region prefHeight="8"/>
+
+    <Label text="Resoconto calcolo punti" styleClass="gameover-section-title"/>
+
+    <TextArea fx:id="finalBreakdownArea"
+              editable="false"
+              wrapText="true"
+              prefHeight="120"
+              styleClass="gameover-breakdown"/>
+
+    <Region prefHeight="4"/>
 
     <Label text="Classifica finale" styleClass="gameover-section-title"/>
 
-    <TableView fx:id="scoreTable" prefHeight="280" styleClass="gameover-table">
+    <TableView fx:id="scoreTable" prefHeight="240" styleClass="gameover-table">
         <columns>
             <TableColumn fx:id="rankCol"  text="#"          prefWidth="50"  />
             <TableColumn fx:id="nameCol"  text="Giocatore"  prefWidth="220" />

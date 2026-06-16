@@ -1,6 +1,7 @@
 package it.polimi.it.view.gui.controllers;
 
 import it.polimi.it.network.server.persistence.LeaderboardEntry;
+import it.polimi.it.observer.FinalScoreBreakdown;
 import it.polimi.it.observer.PlayerSnapshot;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -11,6 +12,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -19,7 +21,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Controller della schermata di fine partita.
@@ -37,6 +42,7 @@ public class GameOverController {
 
     @FXML private VBox  root;
     @FXML private Label winnersLabel;
+    @FXML private TextArea finalBreakdownArea;
 
     @FXML private TableView<Row>           scoreTable;
     @FXML private TableColumn<Row, Number> rankCol;
@@ -150,6 +156,15 @@ public class GameOverController {
      * Popola la schermata con vincitori e classifica della partita.
      */
     public void setResults(List<PlayerSnapshot> winners, List<PlayerSnapshot> finalScores) {
+        setResults(winners, finalScores, List.of());
+    }
+
+    /**
+     * Popola la schermata con vincitori, resoconto del calcolo punti e
+     * classifica della partita.
+     */
+    public void setResults(List<PlayerSnapshot> winners, List<PlayerSnapshot> finalScores,
+                           List<FinalScoreBreakdown> scoreBreakdowns) {
         runFx(() -> {
             String winnerNames = winners.stream()
                     .map(PlayerSnapshot::name)
@@ -173,7 +188,36 @@ public class GameOverController {
                 rows.add(new Row(rank++, p, winSet.contains(p.name())));
             }
             scoreTable.setItems(rows);
+            fillFinalBreakdown(sorted, scoreBreakdowns);
         });
+    }
+
+    private void fillFinalBreakdown(List<PlayerSnapshot> sortedScores,
+                                    List<FinalScoreBreakdown> scoreBreakdowns) {
+        if (finalBreakdownArea == null) return;
+        if (scoreBreakdowns == null || scoreBreakdowns.isEmpty()) {
+            finalBreakdownArea.setText("Resoconto non disponibile.");
+            return;
+        }
+
+        Map<String, FinalScoreBreakdown> byPlayer = scoreBreakdowns.stream()
+                .collect(Collectors.toMap(FinalScoreBreakdown::playerName,
+                        Function.identity(), (a, b) -> a));
+        StringBuilder sb = new StringBuilder();
+        for (PlayerSnapshot p : sortedScores) {
+            FinalScoreBreakdown b = byPlayer.get(p.name());
+            if (b == null) continue;
+            sb.append(b.playerName()).append(": ")
+                    .append(b.inGamePrestige()).append(" PP in partita")
+                    .append(" + ").append(b.builderPoints()).append(" costruttori")
+                    .append(" + ").append(b.inventorPoints()).append(" inventori")
+                    .append(" + ").append(b.artistPoints()).append(" artisti")
+                    .append(" + ").append(b.buildingPoints()).append(" edifici")
+                    .append(" = ").append(b.totalPrestige()).append(" PP")
+                    .append(" | cibo ").append(b.food())
+                    .append('\n');
+        }
+        finalBreakdownArea.setText(sb.toString());
     }
 
     /**

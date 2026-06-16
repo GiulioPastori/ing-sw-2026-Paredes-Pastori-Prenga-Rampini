@@ -8,9 +8,7 @@ import it.polimi.it.network.server.persistence.LeaderboardRepository;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.sql.SQLException;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -25,8 +23,9 @@ import java.util.logging.Logger;
  *
  * <p>The leaderboard storage is created — empty — on the first server launch
  * (database name embeds the group identifier, e.g. {@code GC45_Mesos_DB},
- * to avoid collisions on a shared DBMS). If the DBMS is unreachable the
- * server still starts, but the leaderboard feature is disabled for that run.
+ * to avoid collisions on a shared DBMS). The server fails fast if MySQL is
+ * unreachable or if a different DBMS is detected, because the leaderboard
+ * feature is part of the declared deliverable.
  *
  * <p>Usage:
  * <pre>
@@ -66,9 +65,8 @@ public class GameServer {
 
         // 2. Bootstrap the leaderboard database (additional functionality).
         //    Done before opening the network so that any misconfiguration is
-        //    surfaced early. A DB failure does NOT prevent the server from
-        //    running: the leaderboard repository simply stays null and
-        //    GameSession will skip the related operations.
+        //    surfaced early. A DB failure prevents startup because the
+        //    leaderboard feature requires a compliant MySQL database.
         leaderboardRepository = bootstrapLeaderboard();
 
         // 3. Create lobby server (manages sessions for both Socket and RMI)
@@ -96,21 +94,22 @@ public class GameServer {
      * not, as required by the spec) and returns a repository that the game
      * sessions can use to persist results and serve rankings.
      *
-     * @return the configured repository, or {@code null} if the DBMS could
-     *         not be reached
+     * @return the configured repository
+     * @throws IOException if MySQL cannot be reached or the schema cannot be
+     *                     created
      */
-    private LeaderboardRepository bootstrapLeaderboard() {
+    private LeaderboardRepository bootstrapLeaderboard() throws IOException {
         DatabaseConfig config = DatabaseConfig.load();
         DatabaseInitializer init = new DatabaseInitializer(config);
         try {
             init.initialise();
             LOG.info("Leaderboard database ready (" + config.databaseName() + ").");
             return new LeaderboardRepository(config);
-        } catch (SQLException e) {
-            LOG.log(Level.WARNING,
-                    "Leaderboard DB unavailable — the server will run without it. "
-                            + "Cause: " + e.getMessage(), e);
-            return null;
+        } catch (Exception e) {
+            throw new IOException("Leaderboard DB startup failed. MySQL is required and "
+                    + "the database '" + config.databaseName()
+                    + "' must be creatable by the configured user. Cause: "
+                    + e.getMessage(), e);
         }
     }
 

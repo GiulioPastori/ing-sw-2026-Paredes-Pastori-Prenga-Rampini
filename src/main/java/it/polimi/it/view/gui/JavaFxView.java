@@ -6,8 +6,10 @@ import it.polimi.it.enums.EventType;
 import it.polimi.it.network.server.persistence.LeaderboardEntry;
 import it.polimi.it.observer.CardSnapshot;
 import it.polimi.it.observer.BoardSnapshot;
+import it.polimi.it.observer.FinalScoreBreakdown;
 import it.polimi.it.observer.OfferTileSnapshot;
 import it.polimi.it.observer.PlayerSnapshot;
+import it.polimi.it.observer.PlayerResourceDelta;
 import it.polimi.it.view.GameView;
 import it.polimi.it.view.gui.controllers.GameBoardView;
 import it.polimi.it.view.gui.controllers.LobbyController;
@@ -247,6 +249,12 @@ public class JavaFxView implements GameView {
     }
 
     @Override
+    public void showEventResolved(int eventId, Era era, EventType type,
+                                  List<PlayerResourceDelta> deltas) {
+        whenReady(bc -> bc.onEventResolved(eventId, era, type, deltas));
+    }
+
+    @Override
     public void showEraChanged(Era newEra) {
         whenReady(bc -> bc.onEraChanged(newEra));
     }
@@ -276,18 +284,25 @@ public class JavaFxView implements GameView {
     @Override
     public void showGameEnded(List<PlayerSnapshot> winners,
                               List<PlayerSnapshot> finalScores) {
+        showGameEnded(winners, finalScores, List.of());
+    }
+
+    @Override
+    public void showGameEnded(List<PlayerSnapshot> winners,
+                              List<PlayerSnapshot> finalScores,
+                              List<FinalScoreBreakdown> scoreBreakdowns) {
         whenReady(bc -> Platform.runLater(() -> {
             try {
                 FXMLLoader loader = new FXMLLoader(
                         getClass().getResource("/it/polimi/it/view/gui/gameover.fxml"));
                 VBox root = loader.load();
                 GameOverController c = loader.getController();
-                c.setResults(winners, finalScores);
+                c.setResults(winners, finalScores, scoreBreakdowns);
                 // Keep a reference so a later LEADERBOARD message can populate
                 // the bottom panel of this same scene.
                 gameOverController = c;
 
-                Scene scene = new Scene(root, 640, 720);
+                Scene scene = new Scene(root, 760, 820);
                 scene.getStylesheets().add(
                         getClass().getResource("/it/polimi/it/view/gui/styles.css").toExternalForm());
                 primaryStage.setScene(scene);

@@ -82,12 +82,13 @@ class LeaderboardRepositoryTest {
     @DisplayName("saveGameResults: persists every entry of a single game")
     void savesAllRows() throws SQLException {
         LocalDateTime now = LocalDateTime.now();
-        repo.saveGameResults(List.of(
+        LocalDateTime storedAt = repo.saveGameResults(List.of(
                 LeaderboardEntry.of("Alice", 42, 3, now),
                 LeaderboardEntry.of("Bob",   30, 3, now),
                 LeaderboardEntry.of("Carol", 51, 3, now)
         ), 3);
 
+        assertNotNull(storedAt, "Saving a non-empty game should return the stored timestamp");
         assertEquals(3, repo.countEntries(3),
                 "All three rows of the game should be in the table");
     }
@@ -98,10 +99,8 @@ class LeaderboardRepositoryTest {
         LocalDateTime t1 = LocalDateTime.of(2026, 1, 1, 12, 0);
         LocalDateTime t2 = LocalDateTime.of(2026, 1, 2, 12, 0);
 
-        repo.saveGameResults(List.of(
-                LeaderboardEntry.of("Alice", 42, 2, t1),
-                LeaderboardEntry.of("Bob",   42, 2, t2)
-        ), 2);
+        repo.saveGameResults(List.of(LeaderboardEntry.of("Alice", 42, 2, t1)), 2);
+        repo.saveGameResults(List.of(LeaderboardEntry.of("Bob",   42, 2, t2)), 2);
         repo.saveGameResults(List.of(
                 LeaderboardEntry.of("Eve",   99, 2, t2),
                 LeaderboardEntry.of("Mallory", 1, 2, t2)
@@ -133,14 +132,14 @@ class LeaderboardRepositoryTest {
     @Test
     @DisplayName("getPlayerRank: matches the index reported by getLeaderboard")
     void rankConsistentWithLeaderboard() throws SQLException {
-        LocalDateTime t = LocalDateTime.now().withNano(0);
-        repo.saveGameResults(List.of(
+        LocalDateTime t = LocalDateTime.now();
+        LocalDateTime storedAt = repo.saveGameResults(List.of(
                 LeaderboardEntry.of("Alice", 30, 2, t),
                 LeaderboardEntry.of("Bob",   50, 2, t)
         ), 2);
 
-        int aliceRank = repo.getPlayerRank("Alice", 30, 2, t);
-        int bobRank   = repo.getPlayerRank("Bob",   50, 2, t);
+        int aliceRank = repo.getPlayerRank("Alice", 30, 2, storedAt);
+        int bobRank   = repo.getPlayerRank("Bob",   50, 2, storedAt);
         assertEquals(1, bobRank);
         assertEquals(2, aliceRank);
     }

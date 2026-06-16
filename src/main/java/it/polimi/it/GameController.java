@@ -104,11 +104,11 @@ public class GameController implements GameEventListener {
             case GameEvent.PostRoundStarted         e ->
                     view.showPostRoundStarted(e.watchtowerPlayers(), e.availableCards());
             case GameEvent.EventResolved            e ->
-                    view.showEventResolved(e.eventId(), e.era(), e.type());
+                    view.showEventResolved(e.eventId(), e.era(), e.type(), e.deltas());
             case GameEvent.EraChanged               e -> view.showEraChanged(e.newEra());
             case GameEvent.RoundEnded               e -> view.showRoundEnded(e.round());
             case GameEvent.GameEnded                e ->
-                    view.showGameEnded(e.winners(), e.finalScores());
+                    view.showGameEnded(e.winners(), e.finalScores(), e.scoreBreakdowns());
         }
     }
 

@@ -145,11 +145,13 @@ public sealed interface GameEvent permits
      * @param eventId ID of the event card
      * @param era     era of the event
      * @param type    type of the event (for display)
+     * @param deltas  per-player resource changes caused by this event
      */
     record EventResolved(
             int                          eventId,
             Era                          era,
-            it.polimi.it.enums.EventType type
+            it.polimi.it.enums.EventType type,
+            List<PlayerResourceDelta>    deltas
     ) implements GameEvent {}
 
     /** A new era has begun. */
@@ -163,9 +165,11 @@ public sealed interface GameEvent permits
      *
      * @param winners     snapshots of the winning player(s); each carries the final tribe
      * @param finalScores snapshots of all players with their final scores and tribes
+     * @param scoreBreakdowns detailed final score calculation for every player
      */
     record GameEnded(
             List<PlayerSnapshot> winners,
-            List<PlayerSnapshot> finalScores
+            List<PlayerSnapshot> finalScores,
+            List<FinalScoreBreakdown> scoreBreakdowns
     ) implements GameEvent {}
 }

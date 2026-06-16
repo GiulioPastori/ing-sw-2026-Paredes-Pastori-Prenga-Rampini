@@ -4,7 +4,9 @@ import it.polimi.it.enums.Era;
 import it.polimi.it.network.server.persistence.LeaderboardEntry;
 import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;
+import it.polimi.it.observer.FinalScoreBreakdown;
 import it.polimi.it.observer.PlayerSnapshot;
+import it.polimi.it.observer.PlayerResourceDelta;
 
 import java.util.List;
 
@@ -58,6 +60,12 @@ public interface GameView {
 
     void showEventResolved(int eventId, Era era, it.polimi.it.enums.EventType type);
 
+    default void showEventResolved(int eventId, Era era,
+                                   it.polimi.it.enums.EventType type,
+                                   List<PlayerResourceDelta> deltas) {
+        showEventResolved(eventId, era, type);
+    }
+
     void showEraChanged(Era newEra);
 
     void showRoundEnded(int round);
@@ -78,6 +86,12 @@ public interface GameView {
     default void showLobbyUpdate(java.util.List<String> players, int needed) {}
 
     void showGameEnded(List<PlayerSnapshot> winners, List<PlayerSnapshot> finalScores);
+
+    default void showGameEnded(List<PlayerSnapshot> winners,
+                               List<PlayerSnapshot> finalScores,
+                               List<FinalScoreBreakdown> scoreBreakdowns) {
+        showGameEnded(winners, finalScores);
+    }
 
     /**
      * Displays the persistent leaderboard delivered by the server after a

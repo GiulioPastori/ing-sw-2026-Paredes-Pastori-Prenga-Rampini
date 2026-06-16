@@ -5,8 +5,10 @@ import it.polimi.it.enums.EventType;
 import it.polimi.it.network.server.persistence.LeaderboardEntry;
 import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;
+import it.polimi.it.observer.FinalScoreBreakdown;
 import it.polimi.it.observer.OfferTileSnapshot;
 import it.polimi.it.observer.PlayerSnapshot;
+import it.polimi.it.observer.PlayerResourceDelta;
 import it.polimi.it.observer.TurnOrderTileSnapshot;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -216,11 +218,13 @@ public class Message {
                 .put("availableCards",    cardListToJson(cards)));
     }
 
-    public static Message eventResolved(int eventId, Era era, EventType type) {
+    public static Message eventResolved(int eventId, Era era, EventType type,
+                                        List<PlayerResourceDelta> deltas) {
         return new Message(EVENT_RESOLVED, new JSONObject()
                 .put("eventId",   eventId)
                 .put("era",       era.name())
-                .put("eventType", type.name()));
+                .put("eventType", type.name())
+                .put("deltas",    playerResourceDeltasToJson(deltas)));
     }
     public static Message eraChanged(Era newEra) {
         return new Message(ERA_CHANGED, new JSONObject()
@@ -232,10 +236,12 @@ public class Message {
     }
 
     public static Message gameEnded(List<PlayerSnapshot> winners,
-                                    List<PlayerSnapshot> finalScores) {
+                                    List<PlayerSnapshot> finalScores,
+                                    List<FinalScoreBreakdown> breakdowns) {
         return new Message(GAME_ENDED, new JSONObject()
                 .put("winners",     playerListToJson(winners))
-                .put("finalScores", playerListToJson(finalScores)));
+                .put("finalScores", playerListToJson(finalScores))
+                .put("scoreBreakdowns", finalScoreBreakdownsToJson(breakdowns)));
     }
 
     /**
@@ -356,6 +362,39 @@ public class Message {
     private static JSONArray cardListToJson(List<CardSnapshot> list) {
         JSONArray arr = new JSONArray();
         list.forEach(c -> arr.put(cardToJson(c)));
+        return arr;
+    }
+
+    private static JSONObject playerResourceDeltaToJson(PlayerResourceDelta d) {
+        return new JSONObject()
+                .put("playerName",      d.playerName())
+                .put("foodBefore",      d.foodBefore())
+                .put("foodAfter",       d.foodAfter())
+                .put("prestigeBefore",  d.prestigeBefore())
+                .put("prestigeAfter",   d.prestigeAfter());
+    }
+
+    private static JSONArray playerResourceDeltasToJson(List<PlayerResourceDelta> list) {
+        JSONArray arr = new JSONArray();
+        if (list != null) list.forEach(d -> arr.put(playerResourceDeltaToJson(d)));
+        return arr;
+    }
+
+    private static JSONObject finalScoreBreakdownToJson(FinalScoreBreakdown b) {
+        return new JSONObject()
+                .put("playerName",      b.playerName())
+                .put("inGamePrestige",  b.inGamePrestige())
+                .put("builderPoints",   b.builderPoints())
+                .put("inventorPoints",  b.inventorPoints())
+                .put("artistPoints",    b.artistPoints())
+                .put("buildingPoints",  b.buildingPoints())
+                .put("totalPrestige",   b.totalPrestige())
+                .put("food",            b.food());
+    }
+
+    private static JSONArray finalScoreBreakdownsToJson(List<FinalScoreBreakdown> list) {
+        JSONArray arr = new JSONArray();
+        if (list != null) list.forEach(b -> arr.put(finalScoreBreakdownToJson(b)));
         return arr;
     }
 
@@ -493,6 +532,41 @@ public class Message {
                     o.getInt("finalScore"),
                     o.getInt("numPlayers"),
                     playedAt));
+        }
+        return list;
+    }
+
+    public List<PlayerResourceDelta> playerResourceDeltaList(String key) {
+        if (!data.has(key)) return List.of();
+        JSONArray arr = data.getJSONArray(key);
+        List<PlayerResourceDelta> list = new ArrayList<>();
+        for (int i = 0; i < arr.length(); i++) {
+            JSONObject o = arr.getJSONObject(i);
+            list.add(new PlayerResourceDelta(
+                    o.getString("playerName"),
+                    o.getInt("foodBefore"),
+                    o.getInt("foodAfter"),
+                    o.getInt("prestigeBefore"),
+                    o.getInt("prestigeAfter")));
+        }
+        return list;
+    }
+
+    public List<FinalScoreBreakdown> finalScoreBreakdownList(String key) {
+        if (!data.has(key)) return List.of();
+        JSONArray arr = data.getJSONArray(key);
+        List<FinalScoreBreakdown> list = new ArrayList<>();
+        for (int i = 0; i < arr.length(); i++) {
+            JSONObject o = arr.getJSONObject(i);
+            list.add(new FinalScoreBreakdown(
+                    o.getString("playerName"),
+                    o.getInt("inGamePrestige"),
+                    o.getInt("builderPoints"),
+                    o.getInt("inventorPoints"),
+                    o.getInt("artistPoints"),
+                    o.getInt("buildingPoints"),
+                    o.getInt("totalPrestige"),
+                    o.getInt("food")));
         }
         return list;
     }

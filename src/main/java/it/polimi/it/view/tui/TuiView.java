@@ -6,8 +6,10 @@ import it.polimi.it.enums.EventType;
 import it.polimi.it.network.server.persistence.LeaderboardEntry;
 import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;
+import it.polimi.it.observer.FinalScoreBreakdown;
 import it.polimi.it.observer.OfferTileSnapshot;
 import it.polimi.it.observer.PlayerSnapshot;
+import it.polimi.it.observer.PlayerResourceDelta;
 import it.polimi.it.observer.TurnOrderTileSnapshot;
 import it.polimi.it.view.CardLocalization;
 import it.polimi.it.view.GameView;
@@ -138,6 +140,12 @@ public class TuiView implements GameView {
 
     @Override
     public void showEventResolved(int eventId, Era era, EventType type) {
+        showEventResolved(eventId, era, type, List.of());
+    }
+
+    @Override
+    public void showEventResolved(int eventId, Era era, EventType type,
+                                  List<PlayerResourceDelta> deltas) {
         String desc = switch (type) {
             case SUSTENANCE      -> "Ogni giocatore paga 1 cibo per personaggio.";
             case HUNT            -> "Ogni giocatore guadagna cibo in base ai Cacciatori.";
@@ -150,6 +158,13 @@ public class TuiView implements GameView {
                         + eventNameIt(type)) + "  " + eraBadge(era)
                 + paint(DIM, "  (id:" + eventId + ")"));
         println(paint(FG_GRAY, "  " + desc));
+        for (PlayerResourceDelta d : deltas) {
+            println("  " + d.playerName()
+                    + " | cibo " + signed(d.foodDelta())
+                    + " (" + d.foodBefore() + " -> " + d.foodAfter() + ")"
+                    + " | PP " + signed(d.prestigeDelta())
+                    + " (" + d.prestigeBefore() + " -> " + d.prestigeAfter() + ")");
+        }
     }
 
     @Override
@@ -175,6 +190,12 @@ public class TuiView implements GameView {
 
     @Override
     public void showGameEnded(List<PlayerSnapshot> winners, List<PlayerSnapshot> finalScores) {
+        showGameEnded(winners, finalScores, List.of());
+    }
+
+    @Override
+    public void showGameEnded(List<PlayerSnapshot> winners, List<PlayerSnapshot> finalScores,
+                              List<FinalScoreBreakdown> scoreBreakdowns) {
         println("");
         printBoxTop("PARTITA FINITA");
         String winnerNames = winners.stream()
@@ -182,11 +203,27 @@ public class TuiView implements GameView {
                 .reduce((a, b) -> a + ", " + b).orElse("nessuno");
         printBoxBody(paint(FG_B_YELLOW, true, "🏆 VINCITORE/I: " + winnerNames));
         printBoxBody("");
+        if (!scoreBreakdowns.isEmpty()) {
+            printBoxBody("Resoconto calcolo punti:");
+            scoreBreakdowns.forEach(b -> printBoxBody("  " + b.playerName()
+                    + ": " + b.inGamePrestige() + " in partita"
+                    + " + " + b.builderPoints() + " costruttori"
+                    + " + " + b.inventorPoints() + " inventori"
+                    + " + " + b.artistPoints() + " artisti"
+                    + " + " + b.buildingPoints() + " edifici"
+                    + " = " + b.totalPrestige()
+                    + " | cibo " + b.food()));
+            printBoxBody("");
+        }
         printBoxBody("Punteggi finali:");
         finalScores.stream()
                 .sorted((a, b) -> b.prestigePoints() - a.prestigePoints())
                 .forEach(p -> printBoxBody("  " + formatPlayer(p)));
         printBoxBottom();
+    }
+
+    private static String signed(int value) {
+        return value > 0 ? "+" + value : String.valueOf(value);
     }
 
     /** Date formatter for leaderboard entries (date only, locale-neutral). */
