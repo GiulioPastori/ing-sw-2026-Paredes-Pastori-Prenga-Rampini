@@ -1,9 +1,11 @@
 package it.polimi.it.network.server.persistence;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -15,6 +17,8 @@ import java.util.logging.Logger;
  * <ol>
  *   <li>Connects to the MySQL DBMS using the credentials from
  *       {@link DatabaseConfig};</li>
+ *   <li>Verifies that the server is MySQL. MariaDB is rejected because the
+ *       assignment explicitly disallows alternative DBMS products;</li>
  *   <li>Checks whether the application database (e.g. {@code GC45_Mesos_DB})
  *       exists, creating it empty otherwise;</li>
  *   <li>Ensures the {@code game_results} table is present, creating it on
@@ -100,11 +104,36 @@ public final class DatabaseInitializer {
                 config.baseUrl(), config.user(), config.password());
              Statement stmt = conn.createStatement()) {
 
+            verifyMySqlDbms(conn);
             String sql = "CREATE DATABASE IF NOT EXISTS `" + config.databaseName()
                     + "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci";
             stmt.executeUpdate(sql);
             LOG.info("Verified database '" + config.databaseName() + "' (created if missing).");
         }
+    }
+
+    /**
+     * Ensures that the connected DBMS is MySQL, not MariaDB or another product.
+     */
+    private void verifyMySqlDbms(Connection conn) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        String productName = safe(meta.getDatabaseProductName());
+        String productVersion = safe(meta.getDatabaseProductVersion());
+        String fullDescription = (productName + " " + productVersion).toLowerCase(Locale.ROOT);
+
+        if (fullDescription.contains("mariadb")) {
+            throw new SQLException("Unsupported DBMS detected: " + productName + " "
+                    + productVersion + ". The assignment requires MySQL; MariaDB is not accepted.");
+        }
+        if (!productName.toLowerCase(Locale.ROOT).contains("mysql")) {
+            throw new SQLException("Unsupported DBMS detected: " + productName + " "
+                    + productVersion + ". The assignment requires MySQL.");
+        }
+        LOG.info("Verified MySQL DBMS: " + productName + " " + productVersion);
+    }
+
+    private static String safe(String value) {
+        return value == null ? "" : value;
     }
 
     /**
@@ -132,6 +161,7 @@ public final class DatabaseInitializer {
     public boolean ping() {
         try (Connection conn = DriverManager.getConnection(
                 config.baseUrl(), config.user(), config.password())) {
+            verifyMySqlDbms(conn);
             return conn.isValid(2);
         } catch (SQLException e) {
             LOG.log(Level.WARNING, "Database ping failed: " + e.getMessage(), e);

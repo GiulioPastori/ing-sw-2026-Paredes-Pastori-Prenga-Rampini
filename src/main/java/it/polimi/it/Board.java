@@ -6,6 +6,7 @@ import it.polimi.it.cards.Card;
 import it.polimi.it.cards.events.Event;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.EventType;
+import it.polimi.it.observer.PlayerResourceDelta;
 import it.polimi.it.player.Player;
 import it.polimi.it.tiles.*;
 
@@ -68,6 +69,9 @@ public class Board {
 
     /** Current era (changes when the first card of a new era is drawn). */
     private Era currentEra;
+
+    /** Result of resolving one event, including per-player resource changes. */
+    public record ResolvedEvent(Event event, List<PlayerResourceDelta> deltas) {}
 
     public Board(Deque<Card> tribeDeck,
                  Map<Era, Deque<Building>> buildingDecks,
@@ -220,10 +224,9 @@ public class Board {
      * @param players list of all players
      * @return list of resolved events
      */
-    public List<Event> resolveBottomRowEvents(List<Player> players) {
+    public List<ResolvedEvent> resolveBottomRowEvents(List<Player> players) {
         List<Event> events = collectEvents(bottomRow);
-        resolveEventsSorted(events, players);
-        return events;
+        return resolveEventsSorted(events, players);
     }
 
     /**
@@ -234,12 +237,11 @@ public class Board {
      * @param players list of all players
      * @return list of resolved events
      */
-    public List<Event> resolveAllVisibleEvents(List<Player> players) {
+    public List<ResolvedEvent> resolveAllVisibleEvents(List<Player> players) {
         List<Event> events = new ArrayList<>();
         events.addAll(collectEvents(bottomRow));
         events.addAll(collectEvents(topRow));
-        resolveEventsSorted(events, players);
-        return events;
+        return resolveEventsSorted(events, players);
     }
 
     private List<Event> collectEvents(List<Card> row) {
@@ -255,13 +257,33 @@ public class Board {
      * 1. Ascending era order (I before II before III)
      * 2. Sustenance always last
      */
-    private void resolveEventsSorted(List<Event> events, List<Player> players) {
+    private List<ResolvedEvent> resolveEventsSorted(List<Event> events, List<Player> players) {
         events.sort(Comparator
                 .comparingInt((Event e) -> e.getEra().ordinal())
                 .thenComparingInt(e -> e.getType() == EventType.SUSTENANCE ? 1 : 0));
+        List<ResolvedEvent> resolved = new ArrayList<>();
         for (Event event : events) {
+            Map<String, int[]> before = new java.util.LinkedHashMap<>();
+            for (Player player : players) {
+                before.put(player.getName(), new int[] {
+                        player.getFood(),
+                        player.getPrestigePoints()
+                });
+            }
             event.resolve(players);
+            List<PlayerResourceDelta> deltas = new ArrayList<>();
+            for (Player player : players) {
+                int[] previous = before.get(player.getName());
+                deltas.add(new PlayerResourceDelta(
+                        player.getName(),
+                        previous[0],
+                        player.getFood(),
+                        previous[1],
+                        player.getPrestigePoints()));
+            }
+            resolved.add(new ResolvedEvent(event, deltas));
         }
+        return resolved;
     }
 
     // Card removal

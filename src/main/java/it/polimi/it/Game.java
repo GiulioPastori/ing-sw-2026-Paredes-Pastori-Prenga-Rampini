@@ -9,6 +9,7 @@ import it.polimi.it.enums.Era;
 import it.polimi.it.enums.TotemColour;
 import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;
+import it.polimi.it.observer.FinalScoreBreakdown;
 import it.polimi.it.observer.GameEvent;
 import it.polimi.it.observer.GameEventListener;
 import it.polimi.it.observer.PlayerSnapshot;
@@ -389,13 +390,13 @@ public class Game {
         if (isLastRound) {
             LOG.info("[endRound] Ultimo round - risolvo tutti gli eventi visibili");
             board.resolveAllVisibleEvents(players)
-                    .forEach(e -> publish(new GameEvent.EventResolved(
-                            e.getId(), e.getEra(), e.getType())));
+                    .forEach(r -> publish(new GameEvent.EventResolved(
+                            r.event().getId(), r.event().getEra(), r.event().getType(), r.deltas())));
         } else {
             LOG.info("[endRound] Risolvo eventi riga inferiore");
             board.resolveBottomRowEvents(players)
-                    .forEach(e -> publish(new GameEvent.EventResolved(
-                            e.getId(), e.getEra(), e.getType())));
+                    .forEach(r -> publish(new GameEvent.EventResolved(
+                            r.event().getId(), r.event().getEra(), r.event().getType(), r.deltas())));
             LOG.info("[endRound] clearBottomRow");
             board.clearBottomRowExceptBuildings();
             LOG.info("[endRound] moveTopToBottom");
@@ -430,20 +431,34 @@ public class Game {
         currentPhase = Phase.ENDED;
         gameOver     = true;
 
-        // Bug fix 3: apply end-of-game bonuses BEFORE taking snapshots and
-        // determining the winner, so the final scoreboard is correct (rulebook p.7).
+        // Apply end-of-game bonuses before taking snapshots and determining
+        // the winner; keep a breakdown so the view can explain the total.
+        List<FinalScoreBreakdown> breakdowns = new ArrayList<>();
         for (Player p : players) {
-            int endBonus = p.getTribe().computeBuilderPoints()
-                    + p.getTribe().computeInventorPoints()
-                    + p.getTribe().computeArtistPoints()
-                    + p.getTribe().computeBuildingPoints(p);
-            p.addPrestigePoints(endBonus);
+            int inGamePrestige = p.getPrestigePoints();
+            int builderPoints  = p.getTribe().computeBuilderPoints();
+            int inventorPoints = p.getTribe().computeInventorPoints();
+            int artistPoints   = p.getTribe().computeArtistPoints();
+            int buildingPoints = p.getTribe().computeBuildingPoints(p);
+            int totalPrestige  = inGamePrestige + builderPoints + inventorPoints
+                    + artistPoints + buildingPoints;
+            breakdowns.add(new FinalScoreBreakdown(
+                    p.getName(),
+                    inGamePrestige,
+                    builderPoints,
+                    inventorPoints,
+                    artistPoints,
+                    buildingPoints,
+                    totalPrestige,
+                    p.getFood()));
+            p.addPrestigePoints(totalPrestige - inGamePrestige);
         }
 
         List<Player> winners = getWinners();
         publish(new GameEvent.GameEnded(
                 winners.stream().map(PlayerSnapshot::of).toList(),
-                players.stream().map(PlayerSnapshot::of).toList()));
+                players.stream().map(PlayerSnapshot::of).toList(),
+                breakdowns));
     }
 
     // ── Card acquisition ──────────────────────────────────────────────────────

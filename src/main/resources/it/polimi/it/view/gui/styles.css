@@ -464,6 +464,18 @@
 .gameover-title { -fx-text-fill: #dcb43c; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.7), 6, 0, 0, 2); }
 .gameover-winners { -fx-text-fill: #dcc396; -fx-font-size: 18px; -fx-text-alignment: center; }
 .gameover-section-title { -fx-text-fill: #b48c50; -fx-font-weight: bold; -fx-font-size: 12px; -fx-text-transform: uppercase; }
+.gameover-breakdown {
+    -fx-background-color: transparent;
+    -fx-control-inner-background: #130b06;
+    -fx-text-fill: #dcc396;
+    -fx-border-color: #7c5630;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-font-family: "Consolas", "Monospaced";
+    -fx-font-size: 12px;
+}
+.gameover-breakdown .content { -fx-background-color: #130b06; }
+.gameover-breakdown .text    { -fx-fill: #dcc396; }
 .gameover-table {
     -fx-background-color: transparent;
     -fx-control-inner-background: #1a0f08;

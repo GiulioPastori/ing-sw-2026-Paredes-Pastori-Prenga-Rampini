@@ -7,6 +7,7 @@ import it.polimi.it.observer.BoardSnapshot;
 import it.polimi.it.observer.CardSnapshot;
 import it.polimi.it.observer.OfferTileSnapshot;
 import it.polimi.it.observer.PlayerSnapshot;
+import it.polimi.it.observer.PlayerResourceDelta;
 import it.polimi.it.view.gui.widgets.CardCellFactory;
 import it.polimi.it.view.gui.widgets.CardImageCache;
 import javafx.animation.FadeTransition;
@@ -218,42 +219,52 @@ public class GameBoardView {
         });
     }
 
-    // Coda eventi: se arrivano 2 EventResolved in rapida successione li mostriamo insieme
-    private final java.util.concurrent.BlockingQueue<int[]> pendingEvents
+    private record PendingEvent(int eventId, Era era, EventType type, String label) {}
+
+    // Coda overlay: gli eventi arrivano spesso in rapida successione, ma vanno
+    // mostrati uno alla volta per evitare banner con tipo/immagine sbagliati.
+    private final java.util.concurrent.BlockingQueue<PendingEvent> pendingEvents
             = new java.util.concurrent.LinkedBlockingQueue<>();
     private boolean eventOverlayRunning = false;
 
     public void onEventResolved(int eventId, Era era, EventType type) {
+        onEventResolved(eventId, era, type, List.of());
+    }
+
+    public void onEventResolved(int eventId, Era era, EventType type,
+                                List<PlayerResourceDelta> deltas) {
         runFx(() -> {
-            String label = switch (type) {
-                case SUSTENANCE      -> "Sostentamento";
-                case SHAMANIC_RITUAL -> "Rito Sciamanico";
-                default              -> type.name();
-            };
-            log("▶ EVENTO: " + label + " (" + era + ")");
-            pendingEvents.offer(new int[]{eventId});
-            if (!eventOverlayRunning) {
-                // Aspetta 150ms per raccogliere eventuali secondi eventi pubblicati
-                // nello stesso round (bottom row con 2 event card)
-                PauseTransition collect = new PauseTransition(Duration.millis(150));
-                collect.setOnFinished(e -> drainAndShowEvents(era, type, label));
-                collect.play();
+            String label = eventLabel(type);
+            applyResourceDeltas(deltas);
+            log("▶ EVENTO: " + label + " (" + era + ", carta #" + eventId + ")");
+            if (deltas == null || deltas.isEmpty()) {
+                log("  Nessuna variazione di cibo o punti prestigio.");
+            } else {
+                for (PlayerResourceDelta d : deltas) {
+                    log("  " + d.playerName()
+                            + " | cibo " + formatSigned(d.foodDelta())
+                            + " (" + d.foodBefore() + " → " + d.foodAfter() + ")"
+                            + " | PP " + formatSigned(d.prestigeDelta())
+                            + " (" + d.prestigeBefore() + " → " + d.prestigeAfter() + ")");
+                }
             }
+            renderPlayers();
+            pendingEvents.offer(new PendingEvent(eventId, era, type, label));
+            if (!eventOverlayRunning) showNextEventOverlay();
         });
     }
 
-    private void drainAndShowEvents(Era era, EventType type, String label) {
-        java.util.List<Integer> ids = new java.util.ArrayList<>();
-        int[] id;
-        while ((id = pendingEvents.poll()) != null) ids.add(id[0]);
-        if (ids.isEmpty()) { eventOverlayRunning = false; return; }
+    private void showNextEventOverlay() {
+        PendingEvent event = pendingEvents.poll();
+        if (event == null) {
+            eventOverlayRunning = false;
+            return;
+        }
         eventOverlayRunning = true;
-        showEventOverlay(era, type, label,
-                ids.get(0),
-                ids.size() > 1 ? ids.get(1) : -1);
+        showEventOverlay(event.era(), event.type(), event.label(), event.eventId());
     }
 
-    private void showEventOverlay(Era era, EventType type, String label, int eventId, int eventId2) {
+    private void showEventOverlay(Era era, EventType type, String label, int eventId) {
         // Stile testo per tipo
         eventOverlayName.getStyleClass().removeIf(s -> s.startsWith("event-"));
         String eventClass = switch (type) {
@@ -265,13 +276,14 @@ public class GameBoardView {
         eventOverlayTitle.setText("Evento — " + era);
         eventOverlayName.setText(label);
 
-        // Carta 1
         boolean hasImg1 = loadEventCard(eventCardImageView, eventId);
-        // Carta 2 (opzionale)
-        boolean hasImg2 = eventId2 >= 0 && loadEventCard(eventCardImageView2, eventId2);
+        if (eventCardImageView2 != null) {
+            eventCardImageView2.setVisible(false);
+            eventCardImageView2.setManaged(false);
+        }
 
         if (eventCardBox != null) {
-            boolean show = hasImg1 || hasImg2;
+            boolean show = hasImg1;
             eventCardBox.setVisible(show);
             eventCardBox.setManaged(show);
         }
@@ -288,9 +300,38 @@ public class GameBoardView {
         fadeOut.setToValue(0);
         fadeOut.setOnFinished(e -> {
             eventOverlay.setVisible(false);
-            eventOverlayRunning = false;
+            showNextEventOverlay();
         });
         new SequentialTransition(fadeIn, hold, fadeOut).play();
+    }
+
+    private void applyResourceDeltas(List<PlayerResourceDelta> deltas) {
+        if (deltas == null) return;
+        for (PlayerResourceDelta d : deltas) {
+            PlayerSnapshot old = players.get(d.playerName());
+            if (old == null) continue;
+            players.put(d.playerName(), new PlayerSnapshot(
+                    old.name(),
+                    old.totemColour(),
+                    d.foodAfter(),
+                    d.prestigeAfter(),
+                    old.turnOrder(),
+                    old.tribeCharacters(),
+                    old.tribeBuildings()));
+        }
+    }
+
+    private static String eventLabel(EventType type) {
+        return switch (type) {
+            case SUSTENANCE      -> "Sostentamento";
+            case HUNT            -> "Caccia";
+            case SHAMANIC_RITUAL -> "Rito Sciamanico";
+            case CAVE_PAINTINGS  -> "Pitture Rupestri";
+        };
+    }
+
+    private static String formatSigned(int value) {
+        return value > 0 ? "+" + value : String.valueOf(value);
     }
 
     private boolean loadEventCard(javafx.scene.image.ImageView iv, int cardId) {

@@ -278,7 +278,7 @@ public class GameSession implements GameEventListener {
             case GameEvent.PostRoundStarted e ->
                     Message.postRoundStarted(e.round(), e.watchtowerPlayers(), e.availableCards());
             case GameEvent.EventResolved e ->
-                    Message.eventResolved(e.eventId(), e.era(), e.type());
+                    Message.eventResolved(e.eventId(), e.era(), e.type(), e.deltas());
             case GameEvent.EraChanged e ->
                     Message.eraChanged(e.newEra());
             case GameEvent.RoundEnded e ->
@@ -290,7 +290,7 @@ public class GameSession implements GameEventListener {
                 // the gameEnded message: the client expects the leaderboard to
                 // arrive shortly after the gameEnded screen, in a separate
                 // message it can correlate by nickname.
-                yield Message.gameEnded(e.winners(), e.finalScores());
+                yield Message.gameEnded(e.winners(), e.finalScores(), e.scoreBreakdowns());
             }
         };
         broadcast(msg);
@@ -337,7 +337,8 @@ public class GameSession implements GameEventListener {
         }
 
         try {
-            leaderboardRepository.saveGameResults(entries, numPlayers);
+            playedAt = leaderboardRepository.saveGameResults(entries, numPlayers);
+            if (playedAt == null) return;
         } catch (SQLException e) {
             LOG.log(Level.WARNING, "Cannot persist leaderboard: " + e.getMessage(), e);
             return;
