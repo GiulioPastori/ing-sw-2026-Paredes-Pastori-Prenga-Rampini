@@ -1,0 +1,1 @@
+-Ddb.url=jdbc:mysql://127.0.0.1:3307/ -Ddb.user=root -Ddb.password=root -Ddb.name=GC45_Mesos_DB
