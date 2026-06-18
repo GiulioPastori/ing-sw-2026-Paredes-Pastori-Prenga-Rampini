@@ -16,10 +16,8 @@ import java.util.logging.Logger;
 
 /**
  * Client-side RMI Proxy.
- *
  * <p>Implements {@link ServerProxy} (transport-agnostic) and {@link RmiClient}
  * (server → client callback).
- *
  * <p>Sends a heartbeat {@link Message#HEARTBEAT} every
  * {@value #HEARTBEAT_INTERVAL_MS} ms via {@link RmiServer#sendMessage(String)}
  * so that the server can detect RMI disconnections even in the absence of actions.
@@ -29,7 +27,7 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
 
     private static final Logger LOG = Logger.getLogger(RmiServerProxy.class.getName());
 
-    /** interval heartbeat client → server (ms). */
+    /** interval heartbeat client → server */
     private static final long HEARTBEAT_INTERVAL_MS = 5_000;
 
     private final String host;
@@ -39,7 +37,8 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
     private Consumer<Message> onMessage;
     private Runnable          onDisconnect;
     private volatile boolean  connected = false;
-    /** Nickname used during reconnection — It is used to construct the heartbeat message. */
+
+    /** Nickname used during reconnection. It is used to construct the heartbeat message. */
     private String myNickname;
 
     public RmiServerProxy(String host, int rmiPort) throws RemoteException {
@@ -116,14 +115,12 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
         if (onMessage != null) onMessage.accept(Message.decode(json));
     }
 
-    //  Heartbeat periodico
+    //  Heartbeat
 
     /**
      * Sends a HEARTBEAT every {@value #HEARTBEAT_INTERVAL_MS} ms via RMI.
      * The RMI server uses {@code RmiClientHandler.send()} to detect disconnections;
-     * the failure of the call itself is enough to trigger
-
-     */
+     * the failure of the call itself is enough to trigger */
     private void heartbeatLoop() {
         while (connected) {
             try {

@@ -49,7 +49,7 @@ public class ClientApp {
             return;
         }
 
-        // ── Ramo TUI (flusso classico) ────────────────────────────────────────
+        //  Tui
         runTui(stdin, args);
     }
 
@@ -62,13 +62,13 @@ public class ClientApp {
         }
         int rmiPort = socketPort + 1;
 
-        // ── Trasporto ─────────────────────────────────────────────────────────
+        // rmi o socket
         System.out.println("Scegli connessione:  1) Socket (TCP)   2) RMI");
         System.out.print("> ");
         String netChoice = readLine(stdin).toLowerCase();
         boolean useRmi = netChoice.equals("2") || netChoice.equals("rmi");
 
-        // ── Nickname ──────────────────────────────────────────────────────────
+        // nickname
         System.out.print("Il tuo nickname: ");
         String nickname = readLine(stdin).trim();
         while (nickname.isBlank()) {
@@ -76,14 +76,14 @@ public class ClientApp {
             nickname = readLine(stdin).trim();
         }
 
-        // ── Numero giocatori ──────────────────────────────────────────────────
+        // players number
         System.out.print("Numero di giocatori (2-5): ");
         int numPlayers = 2;
         try { numPlayers = Integer.parseInt(readLine(stdin).trim()); }
         catch (NumberFormatException ignored) {}
         numPlayers = Math.max(2, Math.min(5, numPlayers));
 
-        // ── Colore totem ──────────────────────────────────────────────────────────
+        // Totem colour
         TotemColour[] allColours = TotemColour.values();
         System.out.println("Scegli il colore del tuo totem:");
         for (int i = 0; i < allColours.length; i++) {
@@ -96,10 +96,10 @@ public class ClientApp {
             if (idx >= 0 && idx < allColours.length) chosenColour = allColours[idx];
         } catch (NumberFormatException ignored) {}
 
-        // ── View ──────────────────────────────────────────────────────────────
+        //  View
         GameView view = new TuiView();
 
-        // ── Proxy ─────────────────────────────────────────────────────────────
+        // Proxy
         ServerProxy proxy;
         if (useRmi) {
             try {
@@ -115,14 +115,14 @@ public class ClientApp {
             System.out.println("Connessione Socket sulla porta " + socketPort);
         }
 
-        // ── Controller + connessione ──────────────────────────────────────────
+        // Controller + connessione
         ClientController controller = new ClientController(proxy, view, nickname);
         proxy.setOnMessage(controller::onMessage);
         proxy.setOnDisconnect(controller::onDisconnect);
 
         int connectPort = useRmi ? rmiPort : socketPort;
 
-        // ── Partite multiple: mostra sessioni aperte e lascia scegliere ───────
+        // Partite multiple: mostra sessioni aperte e lascia scegliere
         String chosenSessionId = null;
         try {
             java.util.List<it.polimi.it.network.message.Message.SessionInfo> sessions =

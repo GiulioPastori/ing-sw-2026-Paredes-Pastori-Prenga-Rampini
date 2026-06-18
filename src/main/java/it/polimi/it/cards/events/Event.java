@@ -8,9 +8,9 @@ import it.polimi.it.player.Player;
 import java.util.List;
 
 /** Event card
- * There are 4 event types (Sustenance, Hunt, Shamanic Ritual, Cave Paintings),
- * Event cards can never be taken by players
- * Resolution logic is delegated to an EventStrategy. */
+ There are 4 event types (Sustenance, Hunt, Shamanic Ritual, Cave Paintings),
+ Event cards can never be taken by players
+ Resolution logic is delegated to an EventStrategy. */
 public class Event extends Card {
 
     private final EventType     type;
