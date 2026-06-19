@@ -9,11 +9,9 @@ import java.util.List;
 
 /**
  * Validates PlayerActions before Game applies them to the model.
- *
  * Centralises all admissibility rules in one place, keeping Game.execute()
  * readable. Each method returns a ValidationResult: Ok if the action is
- * legal, Fail with a readable message otherwise.
- */
+ * legal, Fail with a readable message otherwise. */
 public final class ActionValidator {
 
     private ActionValidator() {}
