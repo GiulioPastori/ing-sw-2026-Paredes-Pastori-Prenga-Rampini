@@ -6,13 +6,6 @@ import it.polimi.it.player.Player;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Space bonuses based on the game's physical tiles:
- * 2 players: [+1] [-1/-2VP]
- * 3 players: [+2] [ 0 ] [-1/-2VP]
- * 4 players: [+2] [+1] [ 0 ] [-1/-2VP]
- * 5 players: [+3] [+1] [ 0 ] [ 0 ] [-1/-2VP]
- */
 
 public class TurnOrderTile {
 
@@ -59,7 +52,8 @@ public class TurnOrderTile {
                     }
                 }
 
-                // Notifica edifici con TurnHook (es. edificio 104)
+                // Notifica edifici con TurnHook
+
                 player.getTribe().getBuildings().stream()
                         .filter(b -> b.getEffect().hasTurnHook())
                         .forEach(b -> b.applyTurnHook(player, pos));

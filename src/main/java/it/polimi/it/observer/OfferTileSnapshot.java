@@ -8,23 +8,19 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
 
-/**
- * Snapshot immutabile di una tessera offerta.
+ /**
+ * Immutable snapshot of an offer tile.
+  * It holds the FULL lists of the cards shown in the two board rows
+ * (events included: they can be seen but not taken), so the view can show
+ * the player ALL the available cards before deciding where to place the totem.
  *
- * <p>Include le liste COMPLETE delle carte visibili nelle due righe del
- * tabellone (inclusi gli eventi, non acquisibili ma visibili), in modo che
- * la view possa mostrare al giocatore TUTTE le carte disponibili prima di
- * decidere dove piazzare il totem.
+ * The cards are shared by all tiles — they are not "assigned" to one
+ * tile. {topRowCards} and {bottomRowCards} say how many cards the
+ * player CAN TAKE from that row if they choose this tile, not how many cards
+ * are there.
  *
- * <p>Nota: le carte sono condivise tra tutte le tessere — non sono
- * "assegnate" a una tessera specifica. {@code topRowCards} e
- * {@code bottomRowCards} indicano quante carte il giocatore PUÒ PRENDERE
- * da quella riga se sceglie questa tessera, non quante carte ci sono.
- *
- * <p>{@link #placedTotem()} riporta il colore del totem attualmente sulla
- * tessera, o {@code null} se libera. La view lo usa per disegnare il totem
- * sopra la tessera (e per evidenziare le tessere dei vari giocatori in modo
- * coerente con il loro colore).
+ * { #placedTotem()} gives the colour of the totem now on the tile, or
+ * { null} if the tile is free. The view uses it to draw the totem on the tile
  */
 public record OfferTileSnapshot(
         char               letter,
@@ -38,15 +34,13 @@ public record OfferTileSnapshot(
 ) implements Serializable {
     @Serial private static final long serialVersionUID = 3L;
 
-    /**
-     * Crea uno snapshot da una tessera concreta, includendo TUTTE le carte
-     * visibili nelle due righe del tabellone (eventi inclusi) e il totem
-     * eventualmente presente.
-     *
-     * @param tile      la tessera offerta
-     * @param topRow    la riga superiore corrente del tabellone
-     * @param bottomRow la riga inferiore corrente del tabellone
-     */
+     /** Creates a snapshot from a real tile, including ALL the cards shown in the
+      * two board rows (events included) and the totem on it, if any.
+      *
+      * tile=the offer tile
+      * topRow=the current top row of the board
+      * bottomRow=the current bottom row of the board
+      */
     public static OfferTileSnapshot of(OfferTile tile,
                                        List<Card> topRow,
                                        List<Card> bottomRow) {
@@ -63,10 +57,8 @@ public record OfferTileSnapshot(
                 bottom);
     }
 
-    /**
-     * Versione senza liste di carte (usata dove non si ha accesso alle righe).
-     * Le liste saranno vuote — la view mostra solo i conteggi.
-     */
+     /** Version without card lists (used where the rows are not available).
+      * The lists will be empty — the view shows only the counts. */
     public static OfferTileSnapshot of(OfferTile tile) {
         return new OfferTileSnapshot(
                 tile.getLetter(),

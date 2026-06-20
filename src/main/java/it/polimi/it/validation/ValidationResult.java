@@ -2,14 +2,11 @@ package it.polimi.it.validation;
 
 /**
  * Result of validating a PlayerAction.
- *
  * Instead of throwing unchecked exceptions for invalid user input,
  * Game returns a ValidationResult that the controller can inspect
  * and present to the user with a readable message.
- *
- * Exceptions remain reserved for truly exceptional conditions
- * (internal bugs, corrupted state), not for invalid user input.
  */
+
 public sealed interface ValidationResult permits ValidationResult.Ok, ValidationResult.Fail {
 
     boolean isOk();

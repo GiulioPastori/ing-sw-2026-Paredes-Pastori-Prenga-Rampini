@@ -8,16 +8,7 @@ import java.util.function.Consumer;
 
 /**
  * Client-side abstraction over the server connection.
- *
  * Implemented by {@link SocketServerProxy} (TCP) and {@link RmiServerProxy} (RMI).
- *
- * <h2>Flusso partite multiple</h2>
- * <ol>
- *   <li>Chiama {@link #fetchSessionList} per sapere le sessioni aperte.</li>
- *   <li>Mostra la lista all'utente e fai scegliere.</li>
- *   <li>Chiama {@link #connectWithSession} passando il sessionId scelto
- *       (oppure {@link #connect} per l'auto-assign).</li>
- * </ol>
  */
 public interface ServerProxy {
 
@@ -25,25 +16,19 @@ public interface ServerProxy {
     void setOnDisconnect(Runnable listener);
 
     /**
-     * Recupera la lista delle sessioni aperte SENZA unirsi.
-     * Sicuro da chiamare prima di {@link #connect}.
-     *
-     * @param numPlayersFilter se &gt; 0 filtra per giocatori attesi; 0 = tutte
-     * @return messaggio SESSION_LIST decodificato
-     * @throws IOException se il server non è raggiungibile
+     * Gets the list of open sessions WITHOUT joining.
+     * Safe to call before
+     * @param numPlayersFilter
+     * @return the decoded SESSION_LIST message
+     * @throws IOException if the server cannot be reached
      */
     Message fetchSessionList(int numPlayersFilter) throws IOException;
 
-    /**
-     * Si connette e invia JOIN assegnandosi automaticamente a una sessione.
-     */
+    /** Connects and sends JOIN, getting auto-assigned to a session */
     void connect(String nickname, int numPlayers, TotemColour totemColour) throws IOException;
 
-    /**
-     * Si connette e invia JOIN verso una sessione specifica.
-     *
-     * @param sessionId id della sessione scelta; null/blank = auto-assign (come {@link #connect})
-     */
+    /** Connects and sends JOIN to a specific session.
+     * @param sessionId id of the chosen session; null/blank = auto-assign */
     void connectWithSession(String nickname, int numPlayers,
                             TotemColour totemColour, String sessionId) throws IOException;
 

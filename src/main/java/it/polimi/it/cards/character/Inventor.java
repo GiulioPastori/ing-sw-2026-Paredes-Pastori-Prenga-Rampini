@@ -4,9 +4,8 @@ import it.polimi.it.enums.CharacterType;
 import it.polimi.it.enums.Era;
 import it.polimi.it.player.Player;
 
-/**
- * Each inventor shows exactly one invention icon
- * End of game: (inventor count) × (distinct invention icon count)*/
+/** Each inventor shows exactly one invention icon
+ End of game: (inventor count) × (distinct invention icon count)*/
 public class Inventor extends Character {
 
     private final String inventionIcon;

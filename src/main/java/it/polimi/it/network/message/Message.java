@@ -21,23 +21,22 @@ import java.util.List;
 
 /**
  * Network message: a type string + a JSON payload.
- *
  * Serialised as a single JSON line:
  *   {"type":"PLACE_TOTEM","playerName":"Alice","tileLetter":"B"}
- *
  * One class replaces all record subtypes — no Jackson, no multiple files.
  * Uses org.json which is already in the project dependencies.
  */
 public class Message {
 
-    // ── Types ─────────────────────────────────────────────────────────────────
+    // Types
     // Client → Server
     public static final String JOIN        = "JOIN";
     public static final String PLACE_TOTEM = "PLACE_TOTEM";
     public static final String TAKE_CARD   = "TAKE_CARD";
     public static final String PASS        = "PASS";
     public static final String POST_ROUND  = "POST_ROUND";
-    /** Heartbeat periodico inviato dal client ogni HEARTBEAT_INTERVAL_MS millisecondi. */
+
+    /** periodic heartbeat  */
     public static final String HEARTBEAT   = "HEARTBEAT";
 
     // Server → Client
@@ -58,17 +57,17 @@ public class Message {
     public static final String PLAYER_RECONNECTED      = "PLAYER_RECONNECTED";
     public static final String LEADERBOARD             = "LEADERBOARD";
 
-    // Mantenuti per retrocompatibilità RMI (vecchi client)
+
     public static final String PING = "PING";
     public static final String PONG = "PONG";
 
-    // Partite multiple — discovery sessioni
-    /** Client → Server: richiede la lista delle sessioni aperte. */
+    // Multiple sessions — session discovery
+    /** Client → Server: asks for the list of open sessions. */
     public static final String LIST_SESSIONS = "LIST_SESSIONS";
-    /** Server → Client: risposta con la lista delle sessioni aperte. */
+    /** Server → Client: reply with the list of open sessions. */
     public static final String SESSION_LIST  = "SESSION_LIST";
 
-    // ── Fields ────────────────────────────────────────────────────────────────
+    //Fields
     private final String     type;
     private final JSONObject data;
 
@@ -80,7 +79,7 @@ public class Message {
     public String     getType() { return type; }
     public JSONObject getData() { return data; }
 
-    // ── Codec ─────────────────────────────────────────────────────────────────
+    //  Codec
 
     /** Serialises to a single JSON line (safe for BufferedWriter.newLine). */
     public String encode() {
@@ -97,14 +96,8 @@ public class Message {
         return new Message(type, obj);
     }
 
-    // ── Client → Server factories ─────────────────────────────────────────────
+    // Client → Server factories
 
-    public static Message join(String nickname, int numPlayers, String totemColour) {
-        return new Message(JOIN, new JSONObject()
-                .put("nickname", nickname)
-                .put("numPlayers", numPlayers)
-                .put("totemColour", totemColour));
-    }
 
     public static Message placeTotem(String playerName, char tileLetter) {
         return new Message(PLACE_TOTEM, new JSONObject()
@@ -130,11 +123,10 @@ public class Message {
                 .put("cardId", cardId));
     }
 
-    public static Message ping()      { return new Message(PING,      new JSONObject()); }
     public static Message pong()      { return new Message(PONG,      new JSONObject()); }
     public static Message heartbeat() { return new Message(HEARTBEAT, new JSONObject()); }
 
-    // ── Server → Client factories ─────────────────────────────────────────────
+    // Server → Client factories
 
     public static Message error(String reason) {
         return new Message(ERROR, new JSONObject().put("reason", reason));
@@ -244,9 +236,7 @@ public class Message {
                 .put("scoreBreakdowns", finalScoreBreakdownsToJson(breakdowns)));
     }
 
-    /**
-     * Builds a personalised {@code LEADERBOARD} message for one player.
-     *
+    /** Builds a personalised  message for one player
      * @param recipient     nickname of the player this message is addressed to
      * @param myScore       final score the recipient obtained in this game
      * @param myRank        1-based rank of the recipient among all games of
@@ -268,7 +258,7 @@ public class Message {
                 .put("entries",       leaderboardEntriesToJson(leaderboard)));
     }
 
-    // ── JSON helpers ──────────────────────────────────────────────────────────
+    // JSON helpers
 
     private static final DateTimeFormatter ISO_LOCAL_DT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
@@ -287,7 +277,7 @@ public class Message {
         return arr;
     }
 
-    // ── JSON helpers ──────────────────────────────────────────────────────────
+    // JSON helpers
 
     private static JSONObject playerToJson(PlayerSnapshot p) {
         return new JSONObject()
@@ -398,7 +388,7 @@ public class Message {
         return arr;
     }
 
-    // ── Data accessors (used by ClientController) ─────────────────────────────
+    // Data accessors (used by ClientController)
 
     public String  str(String key)     { return data.getString(key); }
     public int     num(String key)     { return data.getInt(key); }
@@ -440,14 +430,7 @@ public class Message {
                 blds);
     }
 
-    public List<OfferTileSnapshot> tileList(String key) {
-        JSONArray arr = data.getJSONArray(key);
-        List<OfferTileSnapshot> list = new ArrayList<>();
-        for (int i = 0; i < arr.length(); i++) {
-            list.add(parseTile(arr.getJSONObject(i)));
-        }
-        return list;
-    }
+
 
     /** Shared OfferTileSnapshot deserialiser (used by tileList and boardObj). */
     private static OfferTileSnapshot parseTile(JSONObject o) {
@@ -465,7 +448,7 @@ public class Message {
                 bottomCards);
     }
 
-    /** Deserializza un JSONArray di carte in List<CardSnapshot>. */
+    /** Deserializes a JSONArray of cards into a List<CardSnapshot>. */
     private static List<CardSnapshot> parseCardArray(JSONArray arr) {
         List<CardSnapshot> list = new ArrayList<>();
 
@@ -596,11 +579,6 @@ public class Message {
         );
     }
 
-    /** Reads a TurnOrderTileSnapshot from a nested object. */
-    public TurnOrderTileSnapshot turnOrderTileObj(String key) {
-        if (!data.has(key)) return null;
-        return parseTurnOrderTile(data.getJSONObject(key));
-    }
 
     private static TurnOrderTileSnapshot parseTurnOrderTile(JSONObject o) {
         if (o == null || !o.has("numPlayers")) return null;
@@ -631,11 +609,10 @@ public class Message {
         int deckSize = o.optInt("tribeDeckSize", 0);
         return new BoardSnapshot(tiles, tot, deckSize);
     }
-
-    // ── Partite multiple: discovery sessioni ──────────────────────────────────
+// Multiple sessions: session discovery
 
     /**
-     * Descrizione leggera di una sessione aperta, inclusa nella risposta SESSION_LIST.
+     * Lightweight description of an open session, included in the SESSION_LIST reply.
      */
     public record SessionInfo(
             String       sessionId,
@@ -644,8 +621,8 @@ public class Message {
             java.util.List<String> players) {}
 
     /**
-     * Client → Server: richiede la lista delle sessioni aperte.
-     * @param numPlayersFilter se &gt; 0 filtra per numero di giocatori; 0 = tutte
+     * Client → Server: asks for the list of open sessions.
+     * @param numPlayersFilter if &gt; 0, filter by number of players; 0 = all
      */
     public static Message listSessions(int numPlayersFilter) {
         return new Message(LIST_SESSIONS, new JSONObject()
@@ -653,7 +630,7 @@ public class Message {
     }
 
     /**
-     * Server → Client: lista delle sessioni aperte.
+     * Server → Client: list of open sessions.
      */
     public static Message sessionList(List<SessionInfo> sessions) {
         JSONArray arr = new JSONArray();
@@ -668,8 +645,8 @@ public class Message {
     }
 
     /**
-     * JOIN con sessionId esplicito (per unirsi a una partita specifica).
-     * Se sessionId è null o blank si comporta come il JOIN normale.
+     * JOIN with an explicit sessionId (to join a specific game).
+     * If sessionId is null or blank it behaves like a normal JOIN.
      */
     public static Message joinWithSession(String nickname, int numPlayers,
                                           String totemColour, String sessionId) {
@@ -683,7 +660,7 @@ public class Message {
     }
 
     /**
-     * Legge la lista SessionInfo da un messaggio SESSION_LIST.
+     * Reads the SessionInfo list from a SESSION_LIST message.
      */
     public List<SessionInfo> sessionInfoList() {
         JSONArray arr = data.getJSONArray("sessions");
@@ -702,7 +679,7 @@ public class Message {
         return result;
     }
 
-    /** Legge un campo stringa opzionale; restituisce null se assente o JSON-null. */
+    /** Reads an optional string field; returns null if missing or JSON-null. */
     public String optStr(String key) {
         return data.isNull(key) ? null : data.optString(key, null);
     }

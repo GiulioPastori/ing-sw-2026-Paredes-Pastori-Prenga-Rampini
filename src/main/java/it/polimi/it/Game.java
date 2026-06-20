@@ -24,18 +24,14 @@ import java.util.logging.Logger;
 
 /**
  * Pure game model (Model role in MVC).
- *
  * Responsibilities:
  * - Hold the complete game state
  * - Enforce the game rules
  * - Publish immutable GameEvents to registered listeners
  * - Validate and apply PlayerActions received via execute()
- *
  * Does not know the controller, the view, or the network layer.
- *
  * Internal state machine (Phase):
  * WAITING -> PLACING_TOTEMS -> RESOLVING_ACTIONS -> POST_ROUND -> (loop | ENDED)
- *
  * Offer Track note: the number of tiles is always players+1 (one tile is never
  * used each round). The action phase starts when placed totems == players.size(),
  * not when no free tiles remain.

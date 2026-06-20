@@ -3,9 +3,8 @@ package it.polimi.it.observer;
 import java.io.Serial;
 import java.io.Serializable;
 
-/**
- * Immutable resource delta for one player after a resolved event.
- */
+/* Immutable resource delta for one player after a resolved event. */
+
 public record PlayerResourceDelta(
         String playerName,
         int foodBefore,

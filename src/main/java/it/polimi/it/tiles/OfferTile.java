@@ -2,19 +2,13 @@ package it.polimi.it.tiles;
 
 import it.polimi.it.enums.TotemColour;
 
-/**
- * A single tile on the Offer Track.
- *
+/** A single tile on the Offer Track.
+
  * Each tile is identified by a letter (A–G) and specifies:
- * - how many cards the player may take from the top row
- * - how many cards the player may take from the bottom row
- * - the minimum number of players required for the tile to be active
- *
- * Exception: tile A (5-player games only) provides 3 food instead of card draws
- * ({@link #isFoodOnly()} returns true, rulebook p.4).
- *
- * Only one totem can be placed on each tile at a time.
- */
+    - how many cards the player may take from the top row
+    - how many cards the player may take from the bottom row
+    - the minimum number of players required for the tile to be active
+ * Only one totem can be placed on each tile at a time. */
 public class OfferTile {
 
     /** Identifying letter of the tile (A–G), determines position on the track. */
@@ -29,10 +23,8 @@ public class OfferTile {
     /** Number of cards the player may take from the bottom row. */
     private final int bottomRowCards;
 
-    /**
-     * If true, this tile provides 3 food instead of card draws.
-     * Only tile A in 5-player games (rulebook p.4).
-     */
+    /** If true, this tile provides 3 food instead of card draws.
+     * Only tile A in 5-player game */
     private final boolean isFoodOnly;
 
     /** Colour of the totem currently placed on this tile; null if free. */
@@ -53,23 +45,18 @@ public class OfferTile {
     /** Returns true if no totem is currently placed on this tile. */
     public boolean isFree() { return placedTotem == null; }
 
-    /**
-     * Places a totem on this tile.
-     *
-     * @param totem colour of the totem to place
-     * @throws IllegalStateException if the tile is already occupied
-     */
+    /** Places a totem on this tile.
+     * totem colour of the totem to place
+     * IllegalStateException if the tile is already occupied */
     public void placeTotem(TotemColour totem) {
         if (!isFree()) throw new IllegalStateException("Tile " + letter + " is already occupied.");
         this.placedTotem = totem;
     }
 
-    /**
-     * Removes the totem from this tile and returns it.
+    /** Removes the totem from this tile and returns it.
      * Called when the player repositions their totem on the Turn Order Tile.
-     *
-     * @return colour of the removed totem
-     * @throws IllegalStateException if the tile was already free
+     * return colour of the removed totem
+     * IllegalStateException if the tile was already free
      */
     public TotemColour removeTotem() {
         if (isFree()) throw new IllegalStateException("Tile " + letter + " is already free.");

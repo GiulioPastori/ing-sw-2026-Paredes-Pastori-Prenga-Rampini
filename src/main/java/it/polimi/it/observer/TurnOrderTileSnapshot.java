@@ -11,15 +11,13 @@ import java.util.List;
 /**
  * Immutable snapshot of the Turn Order Tile.
  *
- * <p>Carries everything the view needs to render the tile:
- * <ul>
- *   <li>{@code numPlayers} — drives the visual variant (2-, 3-, 4-, 5-player
- *       layout has different bonus spaces).</li>
- *   <li>{@code positions} — one entry per space, in placement order
- *       (first to last). Free spaces have a {@code null} totem.</li>
- * </ul>
+ * Carries everything the view needs to render the tile:
+ * { numPlayers} — drives the visual variant (2-, 3-, 4-, 5-player
+ *       layout has different bonus spaces).
+ * { positions} — one entry per space, in placement order
+ *       (first to last). Free spaces have a {null} totem.
  *
- * <p>Implements {@link Serializable} so it can be passed inside Message
+ * Implements { Serializable} so it can be passed inside Message
  * objects over RMI and via Java object serialisation over sockets.
  */
 public record TurnOrderTileSnapshot(
@@ -31,10 +29,10 @@ public record TurnOrderTileSnapshot(
     /**
      * Single position on the Turn Order Tile.
      *
-     * @param position    position number (1 = first to play next round)
-     * @param foodBonus   food granted when landing on this space (0 if none)
-     * @param isLast      true for the last space (food penalty / -2 PP)
-     * @param placedTotem totem currently on this space, or {@code null} if free
+     * position=position number (1 = first to play next round)
+     * foodBonus=food granted when landing on this space (0 if none)
+     * isLast =true for the last space (food penalty / -2 PP)
+     * placedTotem=totem currently on this space, or { null} if free
      */
     public record PositionSnap(
             int         position,

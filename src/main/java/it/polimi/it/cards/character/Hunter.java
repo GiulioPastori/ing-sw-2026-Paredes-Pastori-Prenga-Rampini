@@ -5,7 +5,7 @@ import it.polimi.it.enums.Era;
 import it.polimi.it.player.Player;
 
 /** Immediate effect: if this hunter carries the trigger icon,
- * the player immediately takes 1 food for every hunter currently in their tribe
+ the player immediately takes 1 food for every hunter currently in their tribe
  */
 public class Hunter extends Character {
 
