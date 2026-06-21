@@ -17,9 +17,9 @@
       fx:controller="it.polimi.it.view.gui.controllers.GameOverController"
       styleClass="gameover-root"
       alignment="CENTER" spacing="14"
-      prefWidth="760" prefHeight="760">
+      prefWidth="900" prefHeight="760">
 
-    <padding><Insets top="32" right="48" bottom="32" left="48"/></padding>
+    <padding><Insets top="30" right="56" bottom="30" left="56"/></padding>
 
     <Label text="🏆" styleClass="gameover-trophy">
         <font><Font size="80"/></font>
@@ -45,12 +45,13 @@
 
     <Label text="Classifica finale" styleClass="gameover-section-title"/>
 
-    <TableView fx:id="scoreTable" prefHeight="240" styleClass="gameover-table">
+    <TableView fx:id="scoreTable" prefHeight="260" styleClass="gameover-table">
         <columns>
-            <TableColumn fx:id="rankCol"  text="#"          prefWidth="50"  />
-            <TableColumn fx:id="nameCol"  text="Giocatore"  prefWidth="220" />
-            <TableColumn fx:id="ppCol"    text="Punti P."   prefWidth="110" />
-            <TableColumn fx:id="foodCol"  text="Cibo"       prefWidth="100" />
+            <TableColumn fx:id="rankCol"  text="#"           prefWidth="60"  />
+            <TableColumn fx:id="nameCol"  text="Giocatore"   prefWidth="260" />
+            <TableColumn fx:id="ppCol"    text="Punti P."    prefWidth="120" />
+            <TableColumn fx:id="foodCol"  text="Cibo"        prefWidth="100" />
+            <TableColumn fx:id="winsCol"  text="Vittorie DB" prefWidth="150" />
         </columns>
     </TableView>
 

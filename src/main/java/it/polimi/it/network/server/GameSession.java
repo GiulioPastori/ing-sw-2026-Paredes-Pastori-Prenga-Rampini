@@ -84,8 +84,8 @@ public class GameSession implements GameEventListener {
 
     // ── Connection ────────────────────────────────────────────────────────────
 
-    public synchronized void addClient(ClientConnection c) {
-        if (terminated || started) return;
+    public synchronized boolean addClient(ClientConnection c) {
+        if (terminated || started) return false;
         clients.add(c);
         clientMap.put(c.getNickname(), c);
         LOG.info("'" + c.getNickname() + "' joined (" + clients.size() + "/" + expectedPlayers + ")");
@@ -93,6 +93,7 @@ public class GameSession implements GameEventListener {
                 clients.stream().map(ClientConnection::getNickname).toList(),
                 expectedPlayers));
         if (clients.size() == expectedPlayers) startGame();
+        return true;
     }
 
     public synchronized void reconnectClient(ClientConnection c) {
@@ -355,6 +356,16 @@ public class GameSession implements GameEventListener {
             return;
         }
 
+        Map<String, Integer> playerWinCounts = new HashMap<>();
+        for (PlayerSnapshot p : finalScores) {
+            try {
+                playerWinCounts.put(p.name(), leaderboardRepository.countWinsForPlayer(p.name()));
+            } catch (SQLException e) {
+                LOG.log(Level.FINE, "Cannot read win count for " + p.name() + ": "
+                        + e.getMessage(), e);
+            }
+        }
+
         // Send one personalised message per client
         for (PlayerSnapshot p : finalScores) {
             int rank;
@@ -371,7 +382,7 @@ public class GameSession implements GameEventListener {
             if (conn != null) {
                 conn.send(Message.leaderboard(
                         p.name(), p.prestigePoints(), rank, totalEntries,
-                        numPlayers, leaderboard));
+                        numPlayers, leaderboard, playerWinCounts));
             }
         }
     }

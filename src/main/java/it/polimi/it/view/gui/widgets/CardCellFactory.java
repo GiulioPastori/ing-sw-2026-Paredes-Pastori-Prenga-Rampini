@@ -13,21 +13,22 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.Button;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.TextAlignment;
 import javafx.util.Duration;
 
-import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -43,17 +44,28 @@ import java.util.function.Consumer;
  *
  * <p>Selectability is opt-in: passing a non-null {@code onClick} consumer
  * makes the node interactive ({@code .selectable} CSS class) and wires the
- * mouse handler. Tile cells additionally apply {@code .placed} when occupied
- * and {@code .disabled} when not selectable.
+ * mouse handler. Tile cells additionally apply {@code .placed} when occupied.
  */
 public final class CardCellFactory {
 
     private static final double CARD_W = 110;
     private static final double CARD_H = 148;
-    private static final double TILE_W = 100;
-    private static final double TILE_H = 135;
-    private static final double TRIBE_CARD_W = 80;   // era 50 — più grandi e nitide
-    private static final double TRIBE_CARD_H = 112;  // era 70
+    private static final double TILE_W = 110;
+    private static final double TILE_H = 148;
+    private static final double TRIBE_THUMB_W = 34;
+    private static final double TRIBE_THUMB_H = 48;
+    private static final double TRIBE_SLOT_W = 38;
+    private static final double TRIBE_SLOT_H = 54;
+    private static final double TRIBE_ZOOM_CARD_W = 70;
+    private static final double TRIBE_ZOOM_CARD_H = 96;
+    private static final CharacterType[] TRIBE_CHARACTER_ORDER = {
+            CharacterType.HUNTER,
+            CharacterType.GATHERER,
+            CharacterType.SHAMAN,
+            CharacterType.BUILDER,
+            CharacterType.INVENTOR,
+            CharacterType.ARTIST
+    };
 
     /** Dimensioni del nodo Turn Order Tile (ratio ~0.65 dell'immagine). */
     private static final double TURN_TILE_W = 110;
@@ -326,6 +338,13 @@ public final class CardCellFactory {
             cell.getChildren().add(box);
         }
 
+        Rectangle outline = new Rectangle(TILE_W - 4, TILE_H - 4);
+        outline.setArcWidth(8);
+        outline.setArcHeight(8);
+        outline.setMouseTransparent(true);
+        outline.getStyleClass().add("tile-outline");
+        cell.getChildren().add(outline);
+
         // Letter badge in the top-left so it stays visible over the image
         Label letterBadge = new Label(String.valueOf(tile.letter()));
         letterBadge.getStyleClass().add("tile-letter-badge");
@@ -347,8 +366,6 @@ public final class CardCellFactory {
             cell.getStyleClass().add("selectable");
             final char l = tile.letter();
             cell.setOnMouseClicked(e -> onClick.accept(l));
-        } else {
-            cell.getStyleClass().add("disabled");
         }
         return cell;
     }
@@ -566,12 +583,12 @@ public final class CardCellFactory {
     public static VBox buildPlayerPanel(PlayerSnapshot p, boolean active,
                                         boolean isMe,
                                         Consumer<PlayerSnapshot> onViewTribe) {
-        VBox panel = new VBox(6);
+        VBox panel = new VBox(4);
         panel.getStyleClass().add("player-panel");
         if (active) panel.getStyleClass().add("active");
         if (isMe)   panel.getStyleClass().add("mine");
         panel.setAlignment(Pos.TOP_CENTER);
-        panel.setPadding(new Insets(8));
+        panel.setPadding(new Insets(6, 8, 6, 8));
 
         // ── Header: totem + name + (eye button for other players) ────────────
         HBox header = new HBox(8);
@@ -583,7 +600,7 @@ public final class CardCellFactory {
 
         if (onViewTribe != null) {
             Region spacer = new Region();
-            HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
+            HBox.setHgrow(spacer, Priority.ALWAYS);
             Button eyeBtn = new Button("👁");
             eyeBtn.getStyleClass().add("tribe-eye-btn");
             eyeBtn.setOnAction(e -> onViewTribe.accept(p));
@@ -602,61 +619,151 @@ public final class CardCellFactory {
         stats.getChildren().addAll(food, pp);
         panel.getChildren().add(stats);
 
-        // ── Tribe cards (my panel) or compact summary (others) ───────────────
-        if (isMe) {
-            // Show actual card images for own tribe (characters + buildings)
-            List<CardSnapshot> allCards = new ArrayList<>(p.tribeCharacters());
-            allCards.addAll(p.tribeBuildings());
-            if (!allCards.isEmpty()) {
-                ScrollPane scroll = new ScrollPane();
-                scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-                scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-                scroll.setFitToHeight(true);
-                scroll.setMaxHeight(TRIBE_CARD_H + 10);
-                scroll.getStyleClass().add("tribe-scroll");
-                HBox cards = new HBox(6);
-                cards.setAlignment(Pos.CENTER_LEFT);
-                cards.setPadding(new javafx.geometry.Insets(2, 4, 2, 4));
-                for (CardSnapshot card : allCards) {
-                    cards.getChildren().add(buildCard(card, null, TRIBE_CARD_W, TRIBE_CARD_H));
-                }
-                scroll.setContent(cards);
-                panel.getChildren().add(scroll);
-            }
-        } else {
-            // Compact: role emoji counts
-            if (!p.tribeCharacters().isEmpty()) {
-                HBox chars = new HBox(6);
-                chars.setAlignment(Pos.CENTER_LEFT);
-                Map<CharacterType, Integer> counts = new HashMap<>();
-                for (CardSnapshot cs : p.tribeCharacters()) {
-                    if (cs.characterType() == null) continue;
-                    counts.merge(cs.characterType(), 1, Integer::sum);
-                }
-                for (CharacterType ct : CharacterType.values()) {
-                    int n = counts.getOrDefault(ct, 0);
-                    if (n == 0) continue;
-                    Label l = new Label(roleEmoji(ct) + " ×" + n);
-                    l.getStyleClass().addAll("char-count", "emoji-text",
-                            "role-" + ct.name().toLowerCase());
-                    chars.getChildren().add(l);
-                }
-                panel.getChildren().add(chars);
+        HBox tribeStacks = buildTribeStackRow(p, isMe);
+        if (tribeStacks != null) {
+            panel.getChildren().add(tribeStacks);
+        }
 
-                HBox agg = buildCharacterAggregateRow(p);
-                if (agg != null) panel.getChildren().add(agg);
-            }
-            if (!p.tribeBuildings().isEmpty()) {
-                HBox blds = new HBox(4);
-                blds.setAlignment(Pos.CENTER_LEFT);
-                for (CardSnapshot b : p.tribeBuildings()) {
-                    blds.getChildren().add(buildCard(b, null, TRIBE_CARD_W, TRIBE_CARD_H));
-                }
-                panel.getChildren().add(blds);
-            }
+        if (!isMe && !p.tribeCharacters().isEmpty()) {
+            HBox agg = buildCharacterAggregateRow(p);
+            if (agg != null) panel.getChildren().add(agg);
         }
 
         return panel;
+    }
+
+    private static HBox buildTribeStackRow(PlayerSnapshot p, boolean expandable) {
+        boolean hasCards = !p.tribeCharacters().isEmpty() || !p.tribeBuildings().isEmpty();
+        if (!hasCards) return null;
+
+        Map<CharacterType, List<CardSnapshot>> byType = new EnumMap<>(CharacterType.class);
+        for (CharacterType type : TRIBE_CHARACTER_ORDER) {
+            byType.put(type, new ArrayList<>());
+        }
+        for (CardSnapshot card : p.tribeCharacters()) {
+            if (card.characterType() != null) {
+                byType.computeIfAbsent(card.characterType(), ignored -> new ArrayList<>()).add(card);
+            }
+        }
+
+        HBox row = new HBox(4);
+        row.getStyleClass().add("tribe-stack-row");
+        row.setAlignment(Pos.CENTER_LEFT);
+        for (CharacterType type : TRIBE_CHARACTER_ORDER) {
+            row.getChildren().add(buildTribeStackSlot(
+                    roleEmoji(type), roleNameIt(type), byType.getOrDefault(type, List.of()), expandable));
+        }
+        row.getChildren().add(buildTribeStackSlot("🏛", "Edifici", p.tribeBuildings(), expandable));
+        return row;
+    }
+
+    private static StackPane buildTribeStackSlot(String label, String title,
+                                                List<CardSnapshot> cards,
+                                                boolean expandable) {
+        StackPane slot = new StackPane();
+        slot.getStyleClass().add("tribe-stack-slot");
+        boolean canExpand = expandable && !cards.isEmpty();
+        slot.getStyleClass().add(canExpand ? "mine" : "readonly");
+        slot.setMinSize(TRIBE_SLOT_W, TRIBE_SLOT_H);
+        slot.setPrefSize(TRIBE_SLOT_W, TRIBE_SLOT_H);
+        slot.setMaxSize(TRIBE_SLOT_W, TRIBE_SLOT_H);
+
+        Label typeLabel = new Label(label);
+        typeLabel.getStyleClass().addAll("tribe-stack-label", "emoji-text");
+        StackPane.setAlignment(typeLabel, Pos.BOTTOM_CENTER);
+        slot.getChildren().add(typeLabel);
+
+        if (cards.isEmpty()) {
+            slot.getStyleClass().add("empty");
+            Tooltip.install(slot, new Tooltip(title + ": 0"));
+            return slot;
+        }
+
+        List<StackPane> cardNodes = new ArrayList<>();
+        for (CardSnapshot c : cards) {
+            StackPane card = buildCard(c, null, TRIBE_THUMB_W, TRIBE_THUMB_H);
+            card.getStyleClass().add("tribe-stack-card");
+            card.setMouseTransparent(true);
+            StackPane.setAlignment(card, Pos.CENTER);
+            slot.getChildren().add(card);
+            cardNodes.add(card);
+        }
+
+        Label count = null;
+        if (cards.size() > 1) {
+            count = new Label(String.valueOf(cards.size()));
+            count.getStyleClass().add("tribe-stack-count");
+            StackPane.setAlignment(count, Pos.TOP_RIGHT);
+            StackPane.setMargin(count, new Insets(0, 1, 0, 0));
+            slot.getChildren().add(count);
+        }
+        Label finalCount = count;
+        layoutCollapsedTribeStack(cardNodes, finalCount);
+        Tooltip.install(slot, canExpand
+                ? buildTribeStackTooltip(title, cards)
+                : new Tooltip(title + ": " + cards.size()));
+        if (canExpand) {
+            slot.setOnMouseEntered(e -> {
+                if (finalCount != null) finalCount.setVisible(false);
+            });
+            slot.setOnMouseExited(e -> {
+                if (finalCount != null) finalCount.setVisible(true);
+            });
+        }
+        return slot;
+    }
+
+    private static void layoutCollapsedTribeStack(List<StackPane> cards, Label count) {
+        if (cards.isEmpty()) return;
+        int firstVisible = Math.max(0, cards.size() - 4);
+        int visibleIndex = 0;
+        for (int i = 0; i < cards.size(); i++) {
+            StackPane card = cards.get(i);
+            boolean visible = i >= firstVisible;
+            card.setVisible(visible);
+            card.setScaleX(1.0);
+            card.setScaleY(1.0);
+            if (visible) {
+                card.setTranslateX(visibleIndex * 1.6);
+                card.setTranslateY(-visibleIndex * 1.6 - 2.0);
+                visibleIndex++;
+            }
+        }
+        if (count != null) {
+            count.setVisible(true);
+            count.toFront();
+        }
+    }
+
+    private static Tooltip buildTribeStackTooltip(String title, List<CardSnapshot> cards) {
+        Tooltip tip = new Tooltip(title + ": " + cards.size());
+        tip.getStyleClass().add("emoji-text");
+        tip.setShowDelay(Duration.millis(120));
+        tip.setHideDelay(Duration.millis(80));
+        tip.setGraphic(buildTribeStackPreview(cards));
+        return tip;
+    }
+
+    private static Pane buildTribeStackPreview(List<CardSnapshot> cards) {
+        int n = cards.size();
+        double spacing = n <= 1 ? 0.0 : Math.min(48.0, Math.max(18.0, 340.0 / (n - 1)));
+        double width = TRIBE_ZOOM_CARD_W + Math.max(0, n - 1) * spacing;
+
+        Pane pane = new Pane();
+        pane.getStyleClass().add("tribe-stack-preview");
+        pane.setMinSize(width, TRIBE_ZOOM_CARD_H);
+        pane.setPrefSize(width, TRIBE_ZOOM_CARD_H);
+        pane.setMaxSize(width, TRIBE_ZOOM_CARD_H);
+
+        for (int i = 0; i < cards.size(); i++) {
+            StackPane card = buildCard(cards.get(i), null, TRIBE_ZOOM_CARD_W, TRIBE_ZOOM_CARD_H);
+            card.getStyleClass().add("tribe-tooltip-card");
+            card.setMouseTransparent(true);
+            card.setLayoutX(i * spacing);
+            card.setLayoutY(0);
+            pane.getChildren().add(card);
+        }
+        return pane;
     }
 
     /** Overload for backward compat — no tribe viewer, not marked as mine. */

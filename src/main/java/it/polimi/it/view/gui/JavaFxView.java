@@ -23,6 +23,7 @@ import javafx.stage.Stage;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -79,6 +80,7 @@ public class JavaFxView implements GameView {
      * on the JavaFX thread and read from the network thread.
      */
     private volatile GameOverController gameOverController;
+    private volatile PendingLeaderboard pendingLeaderboard;
 
     /** Lock that protects the controller-pending-queue handover. */
     private final Object lock = new Object();
@@ -94,6 +96,14 @@ public class JavaFxView implements GameView {
 
     private final java.util.concurrent.CountDownLatch gameStartedLatch =
             new java.util.concurrent.CountDownLatch(1);
+
+    private record PendingLeaderboard(String recipient,
+                                      int myScore,
+                                      int myRank,
+                                      int totalEntries,
+                                      int numPlayers,
+                                      List<LeaderboardEntry> leaderboard,
+                                      Map<String, Integer> playerWinCounts) {}
 
     /**
      * @param primaryStage lo {@link Stage} principale dove montare la board.
@@ -129,21 +139,6 @@ public class JavaFxView implements GameView {
                 Scene scene = new Scene(boardRoot, 1280, 800);
                 scene.getStylesheets().add(
                         getClass().getResource("/it/polimi/it/view/gui/styles.css").toExternalForm());
-
-                // FIX 6: sfondo mesos_sfondo.png a tutto schermo
-                try {
-                    var bgStream = getClass().getResourceAsStream(
-                            "/it/polimi/it/view/gui/mesos_sfondo.png");
-                    if (bgStream != null) {
-                        javafx.scene.image.Image bgImg = new javafx.scene.image.Image(bgStream);
-                        javafx.scene.image.ImageView bgView = new javafx.scene.image.ImageView(bgImg);
-                        bgView.setPreserveRatio(false);
-                        bgView.fitWidthProperty().bind(scene.widthProperty());
-                        bgView.fitHeightProperty().bind(scene.heightProperty());
-                        // Inserisci come primo figlio dello StackPane (sotto tutto il resto)
-                        boardRoot.getChildren().add(0, bgView);
-                    }
-                } catch (Exception ignored) {}
 
                 primaryStage.setScene(scene);
                 primaryStage.setTitle("MESOS — " + myNickname);
@@ -291,26 +286,39 @@ public class JavaFxView implements GameView {
     public void showGameEnded(List<PlayerSnapshot> winners,
                               List<PlayerSnapshot> finalScores,
                               List<FinalScoreBreakdown> scoreBreakdowns) {
-        whenReady(bc -> Platform.runLater(() -> {
-            try {
-                FXMLLoader loader = new FXMLLoader(
-                        getClass().getResource("/it/polimi/it/view/gui/gameover.fxml"));
-                VBox root = loader.load();
-                GameOverController c = loader.getController();
-                c.setResults(winners, finalScores, scoreBreakdowns);
-                // Keep a reference so a later LEADERBOARD message can populate
-                // the bottom panel of this same scene.
-                gameOverController = c;
+        whenReady(bc -> bc.runAfterEventOverlays(() ->
+                showGameOverScene(winners, finalScores, scoreBreakdowns)));
+    }
 
-                Scene scene = new Scene(root, 760, 820);
-                scene.getStylesheets().add(
-                        getClass().getResource("/it/polimi/it/view/gui/styles.css").toExternalForm());
-                primaryStage.setScene(scene);
-                primaryStage.setTitle("MESOS — Game Over");
-            } catch (IOException e) {
-                LOG.log(Level.SEVERE, "Impossibile caricare gameover.fxml", e);
-            }
-        }));
+    private void showGameOverScene(List<PlayerSnapshot> winners,
+                                   List<PlayerSnapshot> finalScores,
+                                   List<FinalScoreBreakdown> scoreBreakdowns) {
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(() -> showGameOverScene(winners, finalScores, scoreBreakdowns));
+            return;
+        }
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/it/polimi/it/view/gui/gameover.fxml"));
+            VBox root = loader.load();
+            GameOverController c = loader.getController();
+            c.setResults(winners, finalScores, scoreBreakdowns);
+            // Keep a reference so a later LEADERBOARD message can populate
+            // the bottom panel of this same scene.
+            gameOverController = c;
+
+            PendingLeaderboard pending = pendingLeaderboard;
+            pendingLeaderboard = null;
+            if (pending != null) applyLeaderboard(c, pending);
+
+            Scene scene = new Scene(root, 900, 820);
+            scene.getStylesheets().add(
+                    getClass().getResource("/it/polimi/it/view/gui/styles.css").toExternalForm());
+            primaryStage.setScene(scene);
+            primaryStage.setTitle("MESOS — Game Over");
+        } catch (IOException e) {
+            LOG.log(Level.SEVERE, "Impossibile caricare gameover.fxml", e);
+        }
     }
 
     @Override
@@ -320,6 +328,21 @@ public class JavaFxView implements GameView {
                                 int totalEntries,
                                 int numPlayers,
                                 List<LeaderboardEntry> leaderboard) {
+        showLeaderboard(recipient, myScore, myRank, totalEntries, numPlayers,
+                leaderboard, Map.of());
+    }
+
+    @Override
+    public void showLeaderboard(String recipient,
+                                int myScore,
+                                int myRank,
+                                int totalEntries,
+                                int numPlayers,
+                                List<LeaderboardEntry> leaderboard,
+                                Map<String, Integer> playerWinCounts) {
+        PendingLeaderboard pending = new PendingLeaderboard(
+                recipient, myScore, myRank, totalEntries, numPlayers,
+                leaderboard, playerWinCounts);
         // Forward to the GameOverController of the current scene.
         // If GAME_ENDED has not been processed yet (race), retry on the FX
         // thread after a short delay — the GameOver scene is loaded
@@ -327,13 +350,18 @@ public class JavaFxView implements GameView {
         Platform.runLater(() -> {
             GameOverController c = gameOverController;
             if (c != null) {
-                c.setLeaderboard(recipient, myScore, myRank, totalEntries,
-                        numPlayers, leaderboard);
+                applyLeaderboard(c, pending);
             } else {
-                LOG.warning("Leaderboard arrived before GameOver scene was ready — "
-                        + "ignoring (this should not normally happen).");
+                pendingLeaderboard = pending;
+                LOG.info("Leaderboard arrived before GameOver scene was ready — queued.");
             }
         });
+    }
+
+    private void applyLeaderboard(GameOverController c, PendingLeaderboard pending) {
+        c.setLeaderboard(pending.recipient(), pending.myScore(), pending.myRank(),
+                pending.totalEntries(), pending.numPlayers(), pending.leaderboard(),
+                pending.playerWinCounts());
     }
 
     // ── request* (pull, blocking) ─────────────────────────────────────────────

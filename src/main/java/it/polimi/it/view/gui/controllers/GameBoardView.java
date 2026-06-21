@@ -14,22 +14,28 @@ import javafx.animation.FadeTransition;
 import javafx.animation.PauseTransition;
 import javafx.animation.SequentialTransition;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.NumberBinding;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.geometry.Pos;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.Consumer;
 
@@ -57,10 +63,18 @@ import java.util.function.Consumer;
  */
 public class GameBoardView {
 
+    private static final double DESIGN_WIDTH  = 1280.0;
+    private static final double DESIGN_HEIGHT = 800.0;
+
+    @FXML private StackPane  sceneRoot;
     @FXML private BorderPane root;
+    @FXML private ImageView  backgroundImageView;
     @FXML private Label      roundLabel;
     @FXML private Label      eraLabel;
     @FXML private Label      bannerLabel;
+    @FXML private Label      topRowTitle;
+    @FXML private Label      bottomRowTitle;
+    @FXML private Label      drawPromptLabel;
 
     @FXML private HBox       topRowBox;
     @FXML private HBox       bottomRowBox;
@@ -84,6 +98,7 @@ public class GameBoardView {
     @FXML private VBox       eventOverlayBox;
     @FXML private Label      eventOverlayTitle;
     @FXML private Label      eventOverlayName;
+    @FXML private Label      eventOverlayDelta;
     // FIX 5: carte evento in grande (fino a 2 affiancate)
     @FXML private HBox       eventCardBox;
     @FXML private javafx.scene.image.ImageView eventCardImageView;
@@ -96,6 +111,7 @@ public class GameBoardView {
     private String        activePlayer;
     private String        myNickname;
     private boolean       lastIsTopRow = true;
+    private List<CardSnapshot> activeChoiceRowCards = List.of();
 
     /** True while we are awaiting a tile choice (so click handlers know to push). */
     private boolean awaitingTileChoice;
@@ -103,6 +119,32 @@ public class GameBoardView {
     /** Injected by JavaFxView so the user's selection is pushed back. */
     private BlockingQueue<Integer>   cardChoiceQueue;
     private BlockingQueue<Character> tileChoiceQueue;
+
+    @FXML
+    private void initialize() {
+        if (sceneRoot == null || root == null) return;
+
+        if (backgroundImageView != null) {
+            backgroundImageView.fitWidthProperty().bind(sceneRoot.widthProperty());
+            backgroundImageView.fitHeightProperty().bind(sceneRoot.heightProperty());
+        }
+
+        NumberBinding scale = Bindings.max(0.1, Bindings.min(
+                sceneRoot.widthProperty().divide(DESIGN_WIDTH),
+                sceneRoot.heightProperty().divide(DESIGN_HEIGHT)));
+        root.setMinSize(DESIGN_WIDTH, DESIGN_HEIGHT);
+        root.prefWidthProperty().bind(sceneRoot.widthProperty().divide(scale));
+        root.prefHeightProperty().bind(sceneRoot.heightProperty().divide(scale));
+        root.maxWidthProperty().bind(root.prefWidthProperty());
+        root.maxHeightProperty().bind(root.prefHeightProperty());
+        root.scaleXProperty().bind(scale);
+        root.scaleYProperty().bind(scale);
+
+        if (actionBar != null) {
+            actionBar.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+            actionBar.setPickOnBounds(false);
+        }
+    }
 
     public void bindInputQueues(BlockingQueue<Integer> cardQueue,
                                 BlockingQueue<Character> tileQueue) {
@@ -138,6 +180,8 @@ public class GameBoardView {
             for (PlayerSnapshot p : turnOrder) players.put(p.name(), p);
             this.lastBoard = board;
             this.activePlayer = null;
+            this.activeChoiceRowCards = List.of();
+            clearDrawPrompt();
             renderAll();
             log("══ ROUND " + round + " ══");
         });
@@ -147,6 +191,8 @@ public class GameBoardView {
         runFx(() -> {
             players.put(player.name(), player);
             this.lastBoard = board;
+            this.activeChoiceRowCards = List.of();
+            clearDrawPrompt();
             renderAll();
             log(player.name() + " ha piazzato il totem sulla tessera " + tileLetter);
         });
@@ -167,8 +213,10 @@ public class GameBoardView {
             // Selectability is added later in promptCardChoice for this player.
             List<CardSnapshot> all = new ArrayList<>(available);
             all.addAll(visibleEvents);
+            activeChoiceRowCards = List.copyOf(all);
             HBox target = isTopRow ? topRowBox : bottomRowBox;
-            renderCards(target, all, null);
+            renderCards(target, all);
+            showDrawPrompt(player.name(), isTopRow, player.name().equals(myNickname));
         });
     }
 
@@ -193,6 +241,8 @@ public class GameBoardView {
         runFx(() -> {
             players.put(player.name(), player);
             this.lastBoard = board;
+            this.activeChoiceRowCards = List.of();
+            clearDrawPrompt();
             renderAll();
             log(player.name() + " → Ordine di turno #" + position);
 
@@ -213,18 +263,23 @@ public class GameBoardView {
             String names = watchtowerPlayers.stream()
                     .map(PlayerSnapshot::name)
                     .reduce((a, b) -> a + ", " + b).orElse("nessuno");
+            List<CardSnapshot> displayed = boardRowCards(true);
+            if (displayed.isEmpty()) displayed = available;
             log("[POST-ROUND] Torre di Guardia: " + names);
             renderPlayers();
-            renderCards(topRowBox, available, null);
+            activeChoiceRowCards = List.copyOf(displayed);
+            renderCards(topRowBox, displayed);
         });
     }
 
-    private record PendingEvent(int eventId, Era era, EventType type, String label) {}
+    private record PendingEvent(int eventId, Era era, EventType type,
+                                String label, String localDeltaText) {}
 
     // Coda overlay: gli eventi arrivano spesso in rapida successione, ma vanno
     // mostrati uno alla volta per evitare banner con tipo/immagine sbagliati.
     private final java.util.concurrent.BlockingQueue<PendingEvent> pendingEvents
             = new java.util.concurrent.LinkedBlockingQueue<>();
+    private final List<Runnable> afterEventOverlayActions = new ArrayList<>();
     private boolean eventOverlayRunning = false;
 
     public void onEventResolved(int eventId, Era era, EventType type) {
@@ -235,6 +290,7 @@ public class GameBoardView {
                                 List<PlayerResourceDelta> deltas) {
         runFx(() -> {
             String label = eventLabel(type);
+            String localDeltaText = localDeltaText(deltas);
             applyResourceDeltas(deltas);
             log("▶ EVENTO: " + label + " (" + era + ", carta #" + eventId + ")");
             if (deltas == null || deltas.isEmpty()) {
@@ -249,7 +305,7 @@ public class GameBoardView {
                 }
             }
             renderPlayers();
-            pendingEvents.offer(new PendingEvent(eventId, era, type, label));
+            pendingEvents.offer(new PendingEvent(eventId, era, type, label, localDeltaText));
             if (!eventOverlayRunning) showNextEventOverlay();
         });
     }
@@ -258,13 +314,34 @@ public class GameBoardView {
         PendingEvent event = pendingEvents.poll();
         if (event == null) {
             eventOverlayRunning = false;
+            drainAfterEventOverlayActions();
             return;
         }
         eventOverlayRunning = true;
-        showEventOverlay(event.era(), event.type(), event.label(), event.eventId());
+        showEventOverlay(event.era(), event.type(), event.label(),
+                event.eventId(), event.localDeltaText());
     }
 
-    private void showEventOverlay(Era era, EventType type, String label, int eventId) {
+    public void runAfterEventOverlays(Runnable action) {
+        if (action == null) return;
+        runFx(() -> {
+            if (!eventOverlayRunning && pendingEvents.isEmpty()) {
+                action.run();
+            } else {
+                afterEventOverlayActions.add(action);
+            }
+        });
+    }
+
+    private void drainAfterEventOverlayActions() {
+        if (afterEventOverlayActions.isEmpty()) return;
+        List<Runnable> actions = new ArrayList<>(afterEventOverlayActions);
+        afterEventOverlayActions.clear();
+        actions.forEach(Runnable::run);
+    }
+
+    private void showEventOverlay(Era era, EventType type, String label,
+                                  int eventId, String localDeltaText) {
         // Stile testo per tipo
         eventOverlayName.getStyleClass().removeIf(s -> s.startsWith("event-"));
         String eventClass = switch (type) {
@@ -275,6 +352,12 @@ public class GameBoardView {
         eventOverlayName.getStyleClass().add(eventClass);
         eventOverlayTitle.setText("Evento — " + era);
         eventOverlayName.setText(label);
+        if (eventOverlayDelta != null) {
+            eventOverlayDelta.setText(localDeltaText == null ? "" : localDeltaText);
+            boolean showDelta = localDeltaText != null && !localDeltaText.isBlank();
+            eventOverlayDelta.setVisible(showDelta);
+            eventOverlayDelta.setManaged(showDelta);
+        }
 
         boolean hasImg1 = loadEventCard(eventCardImageView, eventId);
         if (eventCardImageView2 != null) {
@@ -303,6 +386,25 @@ public class GameBoardView {
             showNextEventOverlay();
         });
         new SequentialTransition(fadeIn, hold, fadeOut).play();
+    }
+
+    private String localDeltaText(List<PlayerResourceDelta> deltas) {
+        if (myNickname == null || myNickname.isBlank()) return "";
+        if (deltas != null) {
+            for (PlayerResourceDelta d : deltas) {
+                if (myNickname.equals(d.playerName())) {
+                    return "Tu  |  cibo " + formatSigned(d.foodDelta())
+                            + " (" + d.foodBefore() + " → " + d.foodAfter() + ")"
+                            + "   ·   PP " + formatSigned(d.prestigeDelta())
+                            + " (" + d.prestigeBefore() + " → " + d.prestigeAfter() + ")";
+                }
+            }
+        }
+        PlayerSnapshot me = players.get(myNickname);
+        if (me == null) return "Tu  |  cibo +0   ·   PP +0";
+        return "Tu  |  cibo +0 (" + me.food() + " → " + me.food() + ")"
+                + "   ·   PP +0 (" + me.prestigePoints() + " → "
+                + me.prestigePoints() + ")";
     }
 
     private void applyResourceDeltas(List<PlayerResourceDelta> deltas) {
@@ -417,9 +519,11 @@ public class GameBoardView {
             renderPlayers();
             bannerLabel.setText("[" + player.name() + "] scegli una carta"
                     + (showPass ? " o passa." : "."));
+            showDrawPrompt(player.name(), lastIsTopRow, player.name().equals(myNickname));
 
             HBox target = lastIsTopRow ? topRowBox : bottomRowBox;
-            renderCards(target, available, this::pushCardChoice);
+            renderCardsForChoice(target, cardsForCurrentPrompt(available, lastIsTopRow),
+                    available, this::pushCardChoice);
 
             setActionButton(passButton,    showPass, () -> pushCardChoice(-1));
             setActionButton(declineButton, false, null);
@@ -432,7 +536,9 @@ public class GameBoardView {
             this.activePlayer = player.name();
             renderPlayers();
             bannerLabel.setText("[Torre di Guardia] " + player.name() + ": scegli o rifiuta.");
-            renderCards(topRowBox, available, this::pushCardChoice);
+            showDrawPrompt(player.name(), true, player.name().equals(myNickname));
+            renderCardsForChoice(topRowBox, cardsForCurrentPrompt(available, true),
+                    available, this::pushCardChoice);
 
             setActionButton(declineButton, true, () -> pushCardChoice(-1));
             setActionButton(passButton,    false, null);
@@ -458,7 +564,16 @@ public class GameBoardView {
     private void setActionButton(Button btn, boolean visible, Runnable action) {
         btn.setVisible(visible);
         btn.setManaged(visible);
-        if (visible && action != null) btn.setOnAction(e -> action.run());
+        btn.setOnAction(visible && action != null ? e -> action.run() : null);
+        updateActionBarVisibility();
+    }
+
+    private void updateActionBarVisibility() {
+        if (actionBar == null) return;
+        boolean visible = (passButton != null && passButton.isVisible())
+                || (declineButton != null && declineButton.isVisible());
+        actionBar.setVisible(visible);
+        actionBar.setManaged(visible);
     }
 
     // ── Push to queues ────────────────────────────────────────────────────────
@@ -466,15 +581,47 @@ public class GameBoardView {
     private void pushCardChoice(int id) {
         if (cardChoiceQueue != null) cardChoiceQueue.offer(id);
         bannerLabel.setText("");
+        clearDrawPrompt();
         clearCardSelectability();
         passButton.setVisible(false);    passButton.setManaged(false);
         declineButton.setVisible(false); declineButton.setManaged(false);
+        updateActionBarVisibility();
     }
 
     private void pushTileChoice(char letter) {
         if (tileChoiceQueue != null) tileChoiceQueue.offer(letter);
         this.awaitingTileChoice = false;
         bannerLabel.setText("");
+    }
+
+    private void showDrawPrompt(String playerName, boolean topRow, boolean mine) {
+        String row = topRow ? "riga superiore" : "riga inferiore";
+        if (drawPromptLabel != null) {
+            drawPromptLabel.setText(mine
+                    ? "Tocca a te: " + row
+                    : playerName + " pesca dalla " + row);
+            drawPromptLabel.setVisible(true);
+            drawPromptLabel.setManaged(true);
+        }
+        updateRowTitle(topRowTitle, "Riga superiore", mine && topRow);
+        updateRowTitle(bottomRowTitle, "Riga inferiore", mine && !topRow);
+    }
+
+    private void clearDrawPrompt() {
+        if (drawPromptLabel != null) {
+            drawPromptLabel.setText("");
+            drawPromptLabel.setVisible(false);
+            drawPromptLabel.setManaged(false);
+        }
+        updateRowTitle(topRowTitle, "Riga superiore", false);
+        updateRowTitle(bottomRowTitle, "Riga inferiore", false);
+    }
+
+    private void updateRowTitle(Label label, String baseText, boolean active) {
+        if (label == null) return;
+        label.setText(active ? baseText + " • pesca qui" : baseText);
+        label.getStyleClass().remove("row-title-active");
+        if (active) label.getStyleClass().add("row-title-active");
     }
 
     /**
@@ -537,28 +684,61 @@ public class GameBoardView {
                 .filter(t -> !t.isFoodOnly() && !t.topCards().isEmpty())
                 .findFirst().orElse(null);
         if (ref == null) return;
-        renderCards(topRowBox,    ref.topCards(),    null);
-        renderCards(bottomRowBox, ref.bottomCards(), null);
+        renderCards(topRowBox,    ref.topCards());
+        renderCards(bottomRowBox, ref.bottomCards());
     }
 
-    private void renderCards(HBox target, List<CardSnapshot> cards, Consumer<Integer> onClick) {
+    private void renderCards(HBox target, List<CardSnapshot> cards) {
         target.getChildren().clear();
         for (CardSnapshot c : cards) {
-            Consumer<Integer> handler = (c.isEvent() ? null : onClick);
-            // Sul board: carte non selezionabili appaiono scurite (disabled)
-            // Nel popup: le carte sono sempre a piena luminosità (buildCard normale)
-            target.getChildren().add(
-                    CardCellFactory.buildCard(c, handler, true));
+            target.getChildren().add(CardCellFactory.buildCard(c, null, false));
         }
+    }
+
+    private void renderCardsForChoice(HBox target, List<CardSnapshot> displayedCards,
+                                      List<CardSnapshot> selectableCards,
+                                      Consumer<Integer> onClick) {
+        Set<Integer> selectableIds = new HashSet<>();
+        for (CardSnapshot c : selectableCards) {
+            if (!c.isEvent()) selectableIds.add(c.id());
+        }
+
+        target.getChildren().clear();
+        for (CardSnapshot c : displayedCards) {
+            boolean selectable = selectableIds.contains(c.id());
+            Consumer<Integer> handler = selectable ? onClick : null;
+            StackPane cell = CardCellFactory.buildCard(c, handler, false);
+            if (!selectable) cell.getStyleClass().add("disabled");
+            target.getChildren().add(cell);
+        }
+    }
+
+    private List<CardSnapshot> cardsForCurrentPrompt(List<CardSnapshot> available,
+                                                     boolean topRow) {
+        if (!activeChoiceRowCards.isEmpty()) return activeChoiceRowCards;
+        List<CardSnapshot> fromBoard = boardRowCards(topRow);
+        return fromBoard.isEmpty() ? available : fromBoard;
+    }
+
+    private List<CardSnapshot> boardRowCards(boolean topRow) {
+        if (lastBoard == null) return List.of();
+        return lastBoard.offerTiles().stream()
+                .filter(t -> !t.isFoodOnly())
+                .map(t -> topRow ? t.topCards() : t.bottomCards())
+                .filter(cards -> !cards.isEmpty())
+                .findFirst()
+                .orElse(List.of());
     }
 
     private void clearCardSelectability() {
         for (Node node : topRowBox.getChildren()) {
             node.getStyleClass().remove("selectable");
+            node.getStyleClass().remove("disabled");
             node.setOnMouseClicked(null);
         }
         for (Node node : bottomRowBox.getChildren()) {
             node.getStyleClass().remove("selectable");
+            node.getStyleClass().remove("disabled");
             node.setOnMouseClicked(null);
         }
     }

@@ -3,9 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.control.ScrollPane?>
-<?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
@@ -17,19 +15,23 @@
 
 <!-- Root: StackPane so the event overlay can sit above everything -->
 <?import javafx.scene.control.ProgressIndicator?>
-<StackPane xmlns="http://javafx.com/javafx"
+<StackPane fx:id="sceneRoot"
+           xmlns="http://javafx.com/javafx"
            xmlns:fx="http://javafx.com/fxml"
            fx:controller="it.polimi.it.view.gui.controllers.GameBoardView"
            prefWidth="1280" prefHeight="800"
            style="-fx-background-color: #0a0805;">
 
     <!-- Background image -->
-    <ImageView preserveRatio="false" fitWidth="1280" fitHeight="800"
+    <ImageView fx:id="backgroundImageView"
+               preserveRatio="false" fitWidth="1280" fitHeight="800"
                opacity="1.0" mouseTransparent="true" smooth="false">
         <image><Image url="@/it/polimi/it/view/gui/mesos_sfondo.png"/></image>
     </ImageView>
 
-    <BorderPane fx:id="root" styleClass="game-root">
+    <BorderPane fx:id="root" styleClass="game-root"
+                minWidth="1280" minHeight="800"
+                prefWidth="1280" prefHeight="800">
 
         <!-- HEADER -->
         <top>
@@ -48,9 +50,9 @@
         <center>
             <StackPane>
                 <VBox spacing="8" styleClass="board-pane" alignment="CENTER">
-                    <padding><Insets top="10" right="16" bottom="10" left="16"/></padding>
+                    <padding><Insets top="18" right="16" bottom="10" left="16"/></padding>
 
-                    <Label text="Riga superiore" styleClass="row-title"/>
+                    <Label fx:id="topRowTitle" text="Riga superiore" translateY="4" styleClass="row-title"/>
                     <ScrollPane hbarPolicy="AS_NEEDED" vbarPolicy="NEVER"
                                 fitToHeight="true" fitToWidth="true"
                                 styleClass="row-scroll" prefHeight="170" minHeight="170">
@@ -58,28 +60,33 @@
                     </ScrollPane>
 
                     <Label text="Tessere offerta" styleClass="row-title"/>
-                    <ScrollPane hbarPolicy="AS_NEEDED" vbarPolicy="NEVER"
-                                fitToHeight="true" fitToWidth="true"
-                                styleClass="row-scroll" prefHeight="155" minHeight="155">
-                        <HBox spacing="10" alignment="CENTER" styleClass="offer-track-container">
-                            <HBox fx:id="turnOrderBox"  spacing="6" alignment="CENTER"       styleClass="turn-order-box"/>
-                            <HBox fx:id="offerTrackBox" spacing="10" alignment="CENTER"      styleClass="tile-row"/>
-                            <HBox fx:id="deckBox"       spacing="6"  alignment="CENTER_RIGHT" styleClass="deck-box"/>
-                        </HBox>
-                    </ScrollPane>
+                    <HBox spacing="12" alignment="CENTER" styleClass="offer-track-container"
+                          prefHeight="170" minHeight="160">
+                        <HBox fx:id="turnOrderBox"  spacing="6"  alignment="CENTER"       styleClass="turn-order-box"/>
+                        <HBox fx:id="offerTrackBox" spacing="12" alignment="CENTER"       styleClass="tile-row"/>
+                        <HBox fx:id="deckBox"       spacing="6"  alignment="CENTER_RIGHT" styleClass="deck-box"/>
+                    </HBox>
 
-                    <Label text="Riga inferiore" styleClass="row-title"/>
+                    <Label fx:id="bottomRowTitle" text="Riga inferiore" translateY="4" styleClass="row-title"/>
                     <ScrollPane hbarPolicy="AS_NEEDED" vbarPolicy="NEVER"
                                 fitToHeight="true" fitToWidth="true"
                                 styleClass="row-scroll" prefHeight="170" minHeight="170">
                         <HBox fx:id="bottomRowBox" spacing="8" alignment="CENTER" styleClass="card-row"/>
                     </ScrollPane>
 
-                    <HBox fx:id="actionBar" spacing="10" alignment="CENTER_RIGHT" styleClass="action-bar">
-                        <Button fx:id="passButton"    text="Passa"   onAction="#onPass"    visible="false" managed="false"/>
-                        <Button fx:id="declineButton" text="Rifiuta" onAction="#onDecline" visible="false" managed="false"/>
-                    </HBox>
+                    <Label fx:id="drawPromptLabel" text="" visible="false" managed="false"
+                           styleClass="draw-prompt"/>
+
                 </VBox>
+
+                <HBox fx:id="actionBar" spacing="10" alignment="CENTER_RIGHT" styleClass="action-bar"
+                      visible="false" managed="false"
+                      maxWidth="-Infinity" maxHeight="-Infinity"
+                      StackPane.alignment="BOTTOM_RIGHT">
+                    <StackPane.margin><Insets right="26" bottom="16"/></StackPane.margin>
+                    <Button fx:id="passButton"    text="Passa"   onAction="#onPass"    visible="false" managed="false"/>
+                    <Button fx:id="declineButton" text="Rifiuta" onAction="#onDecline" visible="false" managed="false"/>
+                </HBox>
 
                 <!-- LOG pannello toggle — inizialmente nascosto -->
                 <VBox fx:id="logPanel" spacing="6" styleClass="log-pane"
@@ -103,9 +110,10 @@
 
         <!-- BOTTOM -->
         <bottom>
-            <ScrollPane fitToHeight="true" hbarPolicy="AS_NEEDED" vbarPolicy="NEVER" styleClass="players-scroll">
+            <ScrollPane fitToHeight="true" hbarPolicy="AS_NEEDED" vbarPolicy="NEVER"
+                        prefHeight="124" minHeight="112" styleClass="players-scroll">
                 <StackPane styleClass="players-bar">
-                    <padding><Insets top="10" right="14" bottom="10" left="14"/></padding>
+                    <padding><Insets top="7" right="14" bottom="7" left="14"/></padding>
                     <HBox fx:id="playersBox" spacing="14" alignment="CENTER_LEFT"/>
                 </StackPane>
             </ScrollPane>
@@ -127,6 +135,8 @@
                            visible="false" managed="false"/>
             </HBox>
             <Label fx:id="eventOverlayName"  styleClass="event-overlay-name"  text=""/>
+            <Label fx:id="eventOverlayDelta" styleClass="event-overlay-delta" text=""
+                   visible="false" managed="false"/>
         </VBox>
     </StackPane>
 

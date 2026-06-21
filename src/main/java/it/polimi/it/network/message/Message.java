@@ -16,7 +16,11 @@ import org.json.JSONObject;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.io.Serial;
+import java.io.Serializable;
 
 
 /**
@@ -259,13 +263,23 @@ public class Message {
                                       int myScore, int myRank, int totalEntries,
                                       int numPlayers,
                                       List<LeaderboardEntry> leaderboard) {
+        return leaderboard(recipient, myScore, myRank, totalEntries, numPlayers,
+                leaderboard, Map.of());
+    }
+
+    public static Message leaderboard(String recipient,
+                                      int myScore, int myRank, int totalEntries,
+                                      int numPlayers,
+                                      List<LeaderboardEntry> leaderboard,
+                                      Map<String, Integer> playerWinCounts) {
         return new Message(LEADERBOARD, new JSONObject()
                 .put("recipient",     recipient)
                 .put("myScore",       myScore)
                 .put("myRank",        myRank)
                 .put("totalEntries",  totalEntries)
                 .put("numPlayers",    numPlayers)
-                .put("entries",       leaderboardEntriesToJson(leaderboard)));
+                .put("entries",       leaderboardEntriesToJson(leaderboard))
+                .put("playerWinCounts", stringIntMapToJson(playerWinCounts)));
     }
 
     // ── JSON helpers ──────────────────────────────────────────────────────────
@@ -285,6 +299,16 @@ public class Message {
         JSONArray arr = new JSONArray();
         if (list != null) list.forEach(e -> arr.put(leaderboardEntryToJson(e)));
         return arr;
+    }
+
+    private static JSONObject stringIntMapToJson(Map<String, Integer> map) {
+        JSONObject obj = new JSONObject();
+        if (map != null) {
+            map.forEach((key, value) -> {
+                if (key != null && value != null) obj.put(key, value);
+            });
+        }
+        return obj;
     }
 
     // ── JSON helpers ──────────────────────────────────────────────────────────
@@ -536,6 +560,17 @@ public class Message {
         return list;
     }
 
+    public Map<String, Integer> intMap(String key) {
+        if (!data.has(key)) return Map.of();
+        JSONObject obj = data.optJSONObject(key);
+        if (obj == null) return Map.of();
+        Map<String, Integer> map = new HashMap<>();
+        for (String name : obj.keySet()) {
+            map.put(name, obj.optInt(name));
+        }
+        return map;
+    }
+
     public List<PlayerResourceDelta> playerResourceDeltaList(String key) {
         if (!data.has(key)) return List.of();
         JSONArray arr = data.getJSONArray(key);
@@ -641,7 +676,9 @@ public class Message {
             String       sessionId,
             int          expectedPlayers,
             int          currentPlayers,
-            java.util.List<String> players) {}
+            java.util.List<String> players) implements Serializable {
+        @Serial private static final long serialVersionUID = 1L;
+    }
 
     /**
      * Client → Server: richiede la lista delle sessioni aperte.

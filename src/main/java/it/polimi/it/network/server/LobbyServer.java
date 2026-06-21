@@ -190,9 +190,14 @@ public class LobbyServer {
                 }
             };
 
-            threadPool.submit(handler);
+            if (!session.addClient(handler)) {
+                writer.println(Message.error("La sessione non è più disponibile.").encode());
+                handler.close();
+                releaseNickname(nickname);
+                return;
+            }
 
-            session.addClient(handler);
+            threadPool.submit(handler);
 
             // FIX #3: move out of waiting list once the session is full
             if (!session.hasRoom()) {

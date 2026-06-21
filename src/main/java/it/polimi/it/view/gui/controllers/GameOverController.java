@@ -49,6 +49,7 @@ public class GameOverController {
     @FXML private TableColumn<Row, String> nameCol;
     @FXML private TableColumn<Row, Number> ppCol;
     @FXML private TableColumn<Row, Number> foodCol;
+    @FXML private TableColumn<Row, String> winsCol;
 
     // ── Leaderboard widgets (FA "Classifica partite su DB") ──────────────────
     @FXML private Label leaderboardHeader;
@@ -68,6 +69,7 @@ public class GameOverController {
         private final SimpleStringProperty  name = new SimpleStringProperty();
         private final SimpleIntegerProperty pp   = new SimpleIntegerProperty();
         private final SimpleIntegerProperty food = new SimpleIntegerProperty();
+        private final SimpleStringProperty  dbWins = new SimpleStringProperty("N.D.");
         private final boolean               winner;
 
         Row(int rank, PlayerSnapshot p, boolean winner) {
@@ -82,7 +84,12 @@ public class GameOverController {
         public String  getName() { return name.get(); }
         public int     getPp()   { return pp.get(); }
         public int     getFood() { return food.get(); }
+        public String  getDbWins() { return dbWins.get(); }
         public boolean isWinner(){ return winner; }
+
+        void setDbWins(Integer wins) {
+            dbWins.set(wins == null ? "N.D." : String.valueOf(wins));
+        }
     }
 
     /** Riga della tabella inferiore (classifica globale storica). */
@@ -114,6 +121,8 @@ public class GameOverController {
         nameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
         ppCol  .setCellValueFactory(new PropertyValueFactory<>("pp"));
         foodCol.setCellValueFactory(new PropertyValueFactory<>("food"));
+        if (winsCol != null) winsCol.setCellValueFactory(new PropertyValueFactory<>("dbWins"));
+        scoreTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
         // Evidenzia la riga vincitrice via classe CSS
         scoreTable.setRowFactory(tv -> new TableRow<>() {
@@ -239,7 +248,19 @@ public class GameOverController {
                                int totalEntries,
                                int numPlayers,
                                List<LeaderboardEntry> leaderboard) {
+        setLeaderboard(recipient, myScore, myRank, totalEntries, numPlayers,
+                leaderboard, Map.of());
+    }
+
+    public void setLeaderboard(String recipient,
+                               int myScore,
+                               int myRank,
+                               int totalEntries,
+                               int numPlayers,
+                               List<LeaderboardEntry> leaderboard,
+                               Map<String, Integer> playerWinCounts) {
         runFx(() -> {
+            applyPlayerWinCounts(playerWinCounts);
             if (leaderboardTable == null) return; // FXML predates this feature
 
             if (leaderboardHeader != null) {
@@ -271,6 +292,14 @@ public class GameOverController {
                 }
             }
         });
+    }
+
+    private void applyPlayerWinCounts(Map<String, Integer> playerWinCounts) {
+        if (scoreTable == null || playerWinCounts == null || playerWinCounts.isEmpty()) return;
+        for (Row row : scoreTable.getItems()) {
+            row.setDbWins(playerWinCounts.get(row.getName()));
+        }
+        scoreTable.refresh();
     }
 
     @FXML

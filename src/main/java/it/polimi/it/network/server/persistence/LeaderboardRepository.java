@@ -193,6 +193,29 @@ public class LeaderboardRepository {
         return 0;
     }
 
+    /**
+     * Counts how many recorded games were won by the given player. Ties count
+     * as wins for every player sharing the highest final score in that game.
+     */
+    public int countWinsForPlayer(String nickname) throws SQLException {
+        String sql = "SELECT COUNT(*) AS wins "
+                + "FROM " + DatabaseInitializer.TABLE_NAME + " r "
+                + "WHERE r.nickname = ? "
+                + "AND r.final_score = ("
+                + "  SELECT MAX(r2.final_score) "
+                + "  FROM " + DatabaseInitializer.TABLE_NAME + " r2 "
+                + "  WHERE r2.game_uuid = r.game_uuid"
+                + ")";
+        try (Connection conn = openConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, nickname);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt("wins");
+            }
+        }
+        return 0;
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private Connection openConnection() throws SQLException {

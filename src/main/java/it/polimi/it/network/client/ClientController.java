@@ -149,7 +149,8 @@ public class ClientController {
                         msg.num("myRank"),
                         msg.num("totalEntries"),
                         msg.num("numPlayers"),
-                        entries);
+                        entries,
+                        msg.intMap("playerWinCounts"));
                 if (gameEndedReceived) gameLatch.countDown();
             }
             case Message.PLAYER_DISCONNECTED -> {

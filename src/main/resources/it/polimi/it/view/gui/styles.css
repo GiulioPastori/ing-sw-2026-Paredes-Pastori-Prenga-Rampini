@@ -145,6 +145,22 @@
     -fx-text-transform: uppercase;
 }
 
+.row-title-active {
+    -fx-text-fill: #f0e0a0;
+    -fx-effect: dropshadow(gaussian, rgba(220,180,60,0.65), 8, 0.3, 0, 0);
+}
+
+.draw-prompt {
+    -fx-text-fill: #f0e0a0;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 3 12 3 12;
+    -fx-background-color: rgba(40, 25, 16, 0.82);
+    -fx-background-radius: 5;
+    -fx-border-color: rgba(220, 180, 60, 0.75);
+    -fx-border-radius: 5;
+}
+
 .row-scroll {
     -fx-background-color: transparent;
     -fx-background: transparent;
@@ -164,7 +180,7 @@
     -fx-pref-height: 160;
 }
 
-.tile-row { -fx-min-height: 135; -fx-pref-height: 150; }
+.tile-row { -fx-min-height: 152; -fx-pref-height: 164; }
 
 /* FIX 1+2: Carte senza bordo */
 .card-cell {
@@ -177,7 +193,7 @@
     -fx-pref-width: 110;
     -fx-pref-height: 148;
     -fx-padding: 0;
-    -fx-cursor: hand;
+    -fx-cursor: default;
 }
 
 .card-cell.disabled {
@@ -220,13 +236,20 @@
     -fx-background-radius: 6;
     -fx-border-color: transparent;
     -fx-border-width: 0;
-    -fx-min-width: 80;
-    -fx-min-height: 70;
-    -fx-pref-width: 80;
-    -fx-pref-height: 70;
-    -fx-cursor: hand;
+    -fx-min-width: 110;
+    -fx-min-height: 148;
+    -fx-pref-width: 110;
+    -fx-pref-height: 148;
+    -fx-cursor: default;
 }
 
+.tile-outline {
+    -fx-fill: transparent;
+    -fx-stroke: rgba(245, 238, 220, 0.86);
+    -fx-stroke-width: 1.4;
+}
+
+.tile-cell.selectable       { -fx-cursor: hand; }
 .tile-cell.selectable:hover { -fx-effect: dropshadow(gaussian, #dcb43c, 12, 0, 0, 0); }
 .tile-cell.disabled         { -fx-opacity: 0.55; -fx-cursor: default; }
 .tile-cell.food-only        { -fx-background-color: transparent; }
@@ -248,7 +271,7 @@
     -fx-background-color: #1a0f08;
     -fx-border-color: #b48c50;
     -fx-border-width: 1 0 0 0;
-    -fx-min-height: 110;
+    -fx-min-height: 106;
 }
 
 .player-card {
@@ -318,15 +341,22 @@
 
 /* Action bar */
 .action-bar {
-    -fx-padding: 6 0 0 0;
+    -fx-padding: 8 10 8 10;
+    -fx-background-color: rgba(20, 10, 5, 0.86);
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(220, 180, 60, 0.72);
+    -fx-border-radius: 6;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.65), 8, 0, 0, 2);
 }
 
 .action-bar .button {
     -fx-background-color: #c87850;
     -fx-text-fill: white;
     -fx-font-weight: bold;
+    -fx-font-size: 13px;
     -fx-padding: 8 18 8 18;
     -fx-background-radius: 4;
+    -fx-min-width: 78;
     -fx-cursor: hand;
 }
 
@@ -368,7 +398,7 @@
 /* ──────────────────────────────────────────────────────────────────────────
  * Offer track container
  * ──────────────────────────────────────────────────────────────────────── */
-.offer-track-container { -fx-padding: 4 0 4 0; }
+.offer-track-container { -fx-padding: 6 0 6 0; }
 .turn-order-box, .deck-box { -fx-padding: 0 4 0 4; }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -413,7 +443,7 @@
     -fx-border-color: #b48c50;
     -fx-border-radius: 8;
     -fx-border-width: 1;
-    -fx-min-width: 200;
+    -fx-min-width: 190;
 }
 .player-panel.active {
     -fx-border-color: #dcb43c;
@@ -423,6 +453,74 @@
 .player-name { -fx-text-fill: #dcc396; -fx-font-weight: bold; -fx-font-size: 13px; }
 .player-food { -fx-text-fill: #64c864; -fx-font-size: 12px; }
 .player-pp   { -fx-text-fill: #dcb43c; -fx-font-size: 12px; }
+
+.tribe-stack-row {
+    -fx-padding: 0;
+}
+
+.tribe-stack-slot {
+    -fx-background-color: rgba(20, 12, 7, 0.46);
+    -fx-background-radius: 4;
+    -fx-border-color: rgba(180, 140, 80, 0.32);
+    -fx-border-radius: 4;
+    -fx-border-width: 1;
+}
+
+.tribe-stack-slot.mine {
+    -fx-cursor: hand;
+}
+
+.tribe-stack-slot.mine:hover {
+    -fx-border-color: rgba(220, 180, 60, 0.82);
+    -fx-effect: dropshadow(gaussian, rgba(220,180,60,0.38), 8, 0.35, 0, 0);
+}
+
+.tribe-stack-slot.empty {
+    -fx-opacity: 0.30;
+}
+
+.tribe-stack-label {
+    -fx-text-fill: rgba(220, 196, 150, 0.86);
+    -fx-font-size: 9px;
+    -fx-padding: 0 0 1 0;
+}
+
+.card-cell.tribe-stack-card {
+    -fx-min-width: 34;
+    -fx-min-height: 48;
+    -fx-pref-width: 34;
+    -fx-pref-height: 48;
+    -fx-max-width: 34;
+    -fx-max-height: 48;
+    -fx-background-radius: 3;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 3, 0, 0, 1);
+    -fx-cursor: default;
+}
+
+.tribe-stack-preview {
+    -fx-padding: 2 0 2 0;
+}
+
+.card-cell.tribe-tooltip-card {
+    -fx-min-width: 70;
+    -fx-min-height: 96;
+    -fx-pref-width: 70;
+    -fx-pref-height: 96;
+    -fx-max-width: 70;
+    -fx-max-height: 96;
+    -fx-background-radius: 4;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.72), 5, 0, 0, 2);
+    -fx-cursor: default;
+}
+
+.tribe-stack-count {
+    -fx-background-color: #dcb43c;
+    -fx-text-fill: #281910;
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 4 0 4;
+    -fx-background-radius: 8;
+}
 
 .char-count {
     -fx-text-fill: #dcc396;
@@ -459,10 +557,25 @@
 /* ──────────────────────────────────────────────────────────────────────────
  * GAME OVER
  * ────────────────────────────────────────────────────────────────────────── */
-.gameover-root { -fx-background-color: linear-gradient(to bottom, #281910, #1a0f08); }
-.gameover-trophy { -fx-effect: dropshadow(gaussian, #dcb43c, 30, 0, 0, 0); }
-.gameover-title { -fx-text-fill: #dcb43c; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.7), 6, 0, 0, 2); }
-.gameover-winners { -fx-text-fill: #dcc396; -fx-font-size: 18px; -fx-text-alignment: center; }
+.gameover-root {
+    -fx-background-color: linear-gradient(to bottom, #32170f, #120905);
+}
+.gameover-trophy { -fx-effect: dropshadow(gaussian, rgba(220,180,60,0.9), 28, 0.35, 0, 0); }
+.gameover-title {
+    -fx-text-fill: #f0d07a;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.72), 8, 0, 0, 2);
+}
+.gameover-winners {
+    -fx-text-fill: #f0e0a0;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-alignment: center;
+    -fx-padding: 8 22 8 22;
+    -fx-background-color: rgba(220,180,60,0.12);
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(220,180,60,0.42);
+    -fx-border-radius: 6;
+}
 .gameover-section-title { -fx-text-fill: #b48c50; -fx-font-weight: bold; -fx-font-size: 12px; -fx-text-transform: uppercase; }
 .gameover-breakdown {
     -fx-background-color: transparent;
@@ -483,6 +596,7 @@
     -fx-text-fill: #dcc396;
     -fx-border-color: #b48c50;
     -fx-border-radius: 6;
+    -fx-background-radius: 6;
 }
 .gameover-table .column-header, .gameover-table .column-header-background { -fx-background-color: #3a2616; }
 .gameover-table .column-header .label { -fx-text-fill: #dcb43c; -fx-font-weight: bold; }
@@ -510,6 +624,16 @@
 .event-overlay-name.event-sustenance { -fx-text-fill: #88cc66; -fx-font-family: "Palatino Linotype"; -fx-font-size: 44px; -fx-font-style: italic; -fx-effect: dropshadow(gaussian, #224400, 18, 0.6, 0, 0); }
 .event-overlay-name.event-shamanic   { -fx-text-fill: #cc88ff; -fx-font-family: "Papyrus"; -fx-font-size: 42px; -fx-effect: dropshadow(gaussian, #330066, 22, 0.7, 0, 0); }
 .event-overlay-name.event-default    { -fx-text-fill: #dcb43c; -fx-font-family: "Georgia"; -fx-font-size: 40px; -fx-effect: dropshadow(gaussian, #5a3a00, 16, 0.5, 0, 0); }
+.event-overlay-delta {
+    -fx-text-fill: #f0e0a0;
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+    -fx-padding: 7 18 7 18;
+    -fx-background-color: rgba(40, 25, 16, 0.86);
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(220,180,60,0.58);
+    -fx-border-radius: 6;
+}
 /* carta evento */
 .event-card-image {
     -fx-effect: dropshadow(gaussian, rgba(220,180,60,0.7), 24, 0.5, 0, 0);
@@ -540,7 +664,7 @@
 
 /* Player panel */
 .player-panel.mine { -fx-border-color: #dcb43c; -fx-border-width: 2; -fx-border-radius: 6; -fx-background-color: rgba(220,180,60,0.06); -fx-background-radius: 6; }
-.tribe-scroll { -fx-background-color: transparent; -fx-background: transparent; -fx-padding: 0; -fx-max-height: 122px; }
+.tribe-scroll { -fx-background-color: transparent; -fx-background: transparent; -fx-padding: 0; -fx-max-height: 90px; }
 .tribe-scroll .viewport { -fx-background-color: transparent; }
 .tribe-eye-btn { -fx-background-color: transparent; -fx-text-fill: #a08040; -fx-font-size: 14px; -fx-cursor: hand; -fx-padding: 0 2 0 2; }
 .tribe-eye-btn:hover { -fx-text-fill: #dcb43c; -fx-scale-x: 1.2; -fx-scale-y: 1.2; }

@@ -9,6 +9,7 @@ import it.polimi.it.observer.PlayerSnapshot;
 import it.polimi.it.observer.PlayerResourceDelta;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * View interface (View role in MVC).
@@ -117,6 +118,16 @@ public interface GameView {
                                  List<LeaderboardEntry> leaderboard) {
         // Default: no-op so implementations that don't care about the
         // leaderboard (e.g. legacy stubs) keep compiling unchanged.
+    }
+
+    default void showLeaderboard(String recipient,
+                                 int myScore,
+                                 int myRank,
+                                 int totalEntries,
+                                 int numPlayers,
+                                 List<LeaderboardEntry> leaderboard,
+                                 Map<String, Integer> playerWinCounts) {
+        showLeaderboard(recipient, myScore, myRank, totalEntries, numPlayers, leaderboard);
     }
 
 

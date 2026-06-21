@@ -3,6 +3,7 @@ package it.polimi.it.network.client;
 import it.polimi.it.network.message.Message;
 import it.polimi.it.enums.TotemColour;
 import it.polimi.it.network.rmi.RmiClient;
+import it.polimi.it.network.rmi.RmiPlayerSession;
 import it.polimi.it.network.rmi.RmiServer;
 import it.polimi.it.network.server.RmiServerImpl;
 
@@ -20,9 +21,9 @@ import java.util.logging.Logger;
  * <p>Implements {@link ServerProxy} (transport-agnostic) and {@link RmiClient}
  * (server → client callback).
  *
- * <p>Sends a heartbeat {@link Message#HEARTBEAT} every
- * {@value #HEARTBEAT_INTERVAL_MS} ms via {@link RmiServer#sendMessage(String)}
- * so that the server can detect RMI disconnections even in the absence of actions.
+ * <p>After registration the server returns a per-player
+ * {@link RmiPlayerSession}; game actions are invoked as explicit remote methods
+ * on that session instead of being tunneled through a generic JSON method.
  */
 
 public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, RmiClient {
@@ -36,11 +37,10 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
     private final int    rmiPort;
 
     private RmiServer         serverStub;
+    private RmiPlayerSession  playerSession;
     private Consumer<Message> onMessage;
     private Runnable          onDisconnect;
     private volatile boolean  connected = false;
-    /** Nickname used during reconnection — It is used to construct the heartbeat message. */
-    private String myNickname;
 
     public RmiServerProxy(String host, int rmiPort) throws RemoteException {
         super();
@@ -61,11 +61,14 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
     public void connectWithSession(String nickname, int numPlayers,
                                    TotemColour totemColour, String sessionId) throws IOException {
         try {
-            this.myNickname = nickname;
             Registry registry = LocateRegistry.getRegistry(host, rmiPort);
             serverStub = (RmiServer) registry.lookup(RmiServerImpl.REGISTRY_NAME);
-            serverStub.registerWithSession(nickname, this, numPlayers,
+            playerSession = serverStub.registerWithSession(nickname, this, numPlayers,
                     totemColour.name(), sessionId);
+            if (playerSession == null) {
+                connected = false;
+                throw new IOException("Join RMI rifiutato dal server.");
+            }
             connected = true;
 
             Thread t = new Thread(this::heartbeatLoop, "rmi-heartbeat");
@@ -84,8 +87,7 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
         try {
             Registry registry = LocateRegistry.getRegistry(host, rmiPort);
             RmiServer stub = (RmiServer) registry.lookup(RmiServerImpl.REGISTRY_NAME);
-            String json = stub.listSessions(numPlayersFilter);
-            return Message.decode(json);
+            return Message.sessionList(stub.listSessions(numPlayersFilter));
         } catch (Exception e) {
             throw new IOException("Impossibile recuperare sessioni RMI: " + e.getMessage(), e);
         }
@@ -93,9 +95,18 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
 
     @Override
     public void send(Message message) {
-        if (!connected || serverStub == null) return;
+        if (!connected || playerSession == null) return;
         try {
-            serverStub.sendMessage(message.encode());
+            switch (message.getType()) {
+                case Message.PLACE_TOTEM -> playerSession.placeTotem(message.ch("tileLetter"));
+                case Message.TAKE_CARD ->
+                        playerSession.takeCard(message.num("cardId"), message.bool("fromTopRow"));
+                case Message.PASS -> playerSession.pass();
+                case Message.POST_ROUND -> playerSession.postRound(message.num("cardId"));
+                case Message.HEARTBEAT, Message.PING, Message.PONG -> playerSession.heartbeat();
+                default -> LOG.warning("Messaggio non inviabile via RMI session API: "
+                        + message.getType());
+            }
         } catch (RemoteException e) {
             LOG.warning("Invio RMI fallito: " + e.getMessage());
             connected = false;
@@ -106,6 +117,7 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
     @Override
     public void disconnect() {
         connected = false;
+        try { if (playerSession != null) playerSession.disconnect(); } catch (Exception ignored) {}
         try { UnicastRemoteObject.unexportObject(this, true); } catch (Exception ignored) {}
     }
 
@@ -120,9 +132,8 @@ public class RmiServerProxy extends UnicastRemoteObject implements ServerProxy, 
 
     /**
      * Sends a HEARTBEAT every {@value #HEARTBEAT_INTERVAL_MS} ms via RMI.
-     * The RMI server uses {@code RmiClientHandler.send()} to detect disconnections;
-     * the failure of the call itself is enough to trigger
-
+     * The server-side player session updates its last-seen timestamp from this
+     * invocation and can therefore detect silent RMI clients with a watchdog.
      */
     private void heartbeatLoop() {
         while (connected) {
