@@ -59,6 +59,19 @@ public final class TileResolutionState {
         return remainingTopCards == 0 && remainingBottomCards == 0;
     }
 
+    /**
+     * Returns true if the <em>current</em> row has no cards left.
+     *
+     * <p>The "current" row is the top row while it still has slots; once
+     * the top is exhausted the bottom row becomes current. This mirrors
+     * the same rule used in {@code Game.handlePass()} and is used by
+     * {@code ActionValidator} to decide whether a pass is legal.
+     */
+    public boolean isCurrentRowEmpty() {
+        if (remainingTopCards > 0) return false;   // fila superiore: ancora carte
+        return remainingBottomCards == 0;           // fila inferiore: nessuna carta
+    }
+
     /** Returns the total number of slots still remaining (top + bottom). */
     public int totalSlotsRemaining() {
         return remainingTopCards + remainingBottomCards;

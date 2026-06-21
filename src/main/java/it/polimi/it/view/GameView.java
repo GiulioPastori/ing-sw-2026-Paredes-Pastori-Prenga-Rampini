@@ -134,9 +134,13 @@ public interface GameView {
 
     /**
      * Asks the player which card to take.
-     * Returns the card ID, or -1 to pass.
+     * Returns the card ID, or -1 to pass (only valid when {@code canPass} is true).
+     *
+     * @param canPass true only when the current row is empty and the player
+     *                has no cards to choose from; false when cards are
+     *                available and the player must take one.
      */
-    int requestCardChoice(PlayerSnapshot player, List<CardSnapshot> available);
+    int requestCardChoice(PlayerSnapshot player, List<CardSnapshot> available, boolean canPass);
 
     /**
      * Asks the Watchtower-owning player which card to take from the top row.

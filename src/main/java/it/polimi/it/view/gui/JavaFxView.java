@@ -354,9 +354,9 @@ public class JavaFxView implements GameView {
     }
 
     @Override
-    public int requestCardChoice(PlayerSnapshot player, List<CardSnapshot> available) {
+    public int requestCardChoice(PlayerSnapshot player, List<CardSnapshot> available, boolean canPass) {
         if (available.isEmpty()) return -1;
-        whenReady(bc -> bc.promptCardChoice(player, available, /*showPass*/ true));
+        whenReady(bc -> bc.promptCardChoice(player, available, canPass));
         try {
             return cardChoiceQueue.take();
         } catch (InterruptedException e) {

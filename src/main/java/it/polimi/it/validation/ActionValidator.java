@@ -9,9 +9,11 @@ import java.util.List;
 
 /**
  * Validates PlayerActions before Game applies them to the model.
+ *
  * Centralises all admissibility rules in one place, keeping Game.execute()
  * readable. Each method returns a ValidationResult: Ok if the action is
- * legal, Fail with a readable message otherwise. */
+ * legal, Fail with a readable message otherwise.
+ */
 public final class ActionValidator {
 
     private ActionValidator() {}
@@ -52,6 +54,14 @@ public final class ActionValidator {
         if (!state.isActingPlayer(player)) {
             return ValidationResult.fail(
                     player.getName() + " is not the active player right now.");
+        }
+        // Il pass è consentito solo se la fila corrente è esaurita.
+        // La fila "corrente" è quella superiore finché ha slot rimasti,
+        // altrimenti quella inferiore — stessa logica di Game.handlePass().
+        // Se almeno uno dei due contatori è > 0, il giocatore deve pescare.
+        if (!state.isCurrentRowEmpty()) {
+            return ValidationResult.fail(
+                    "Non puoi passare: ci sono ancora carte disponibili nella fila corrente.");
         }
         return ValidationResult.ok();
     }

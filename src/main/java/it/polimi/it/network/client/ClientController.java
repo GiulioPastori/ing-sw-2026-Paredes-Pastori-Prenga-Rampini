@@ -1,6 +1,7 @@
 package it.polimi.it.network.client;
 
 import it.polimi.it.enums.Era;
+import it.polimi.it.enums.TotemColour;
 import it.polimi.it.enums.EventType;
 import it.polimi.it.network.message.Message;
 import it.polimi.it.network.server.persistence.LeaderboardEntry;
@@ -18,28 +19,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
- * The controller on the client side.
+ * Controller lato client.
  *
- * <p>It connects the network and the user interface. When a message comes from
- * the server, this class reads it, updates the local game state and tells the
- * {@link GameView} what to show. When the user makes a choice, it builds a
- * {@link Message} and sends it to the server through the {@link ServerProxy}.
+ * <p>Riceve i messaggi dal server e guida la view.
  *
- * <p>{@link #onMessage(Message)} is called by the network thread, so it must
- * not block. When the program has to wait for the user (for example to pick a
- * tile or a card), the work is sent to {@code inputExecutor}, a single thread
- * used only for user input. This keeps the network thread free to read new
- * messages.
- *
- * <p>{@code inputExecutor} is made once and used for the whole game. It is
- * never restarted while playing. The server asks a player to act only when it
- * is really that player's turn, so the input tasks run one after another and
- * no old task is left in the queue. It is closed only in {@link #run()} and
- * {@link #onDisconnect()}.
- *
- * <p>{@link #run()} waits on a {@link CountDownLatch} until the game is over.
- * The latch is freed when the game ends (after the {@code LEADERBOARD} message,
- * or after a short timeout if it does not come) or when the connection drops.
+ * <p><b>Regola fondamentale sull'inputExecutor:</b>
+ * L'executor è <em>uno solo</em> per tutta la durata della partita e non
+ * viene mai ricreato né interrotto durante il gioco. I task di input si
+ * accodano naturalmente: il server invia {@code CARD_SLOT_READY} solo
+ * quando è effettivamente il turno di quel giocatore, quindi non ci
+ * saranno mai task "obsoleti" in coda.
+ * L'executor viene terminato solo in {@link #onDisconnect()} e {@link #run()}.
  */
 public class ClientController {
 
@@ -72,7 +62,8 @@ public class ClientController {
         this.myNickname = myNickname;
     }
 
-    // Lifecycle
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
+
     /** Chiamato quando la connessione cade. */
     public void onDisconnect() {
         inputExecutor.shutdownNow();
@@ -91,7 +82,7 @@ public class ClientController {
         }
     }
 
-    // ── Dispatch
+    // ── Dispatch ──────────────────────────────────────────────────────────────
 
     public void onMessage(Message msg) {
         try {
@@ -186,7 +177,7 @@ public class ClientController {
         }
     } // fine dispatch()
 
-    // ── Handler: piazzamento totem
+    // ── Handler: piazzamento totem ────────────────────────────────────────────
 
     private void handleRoundStarted(Message msg) {
         alreadyPlaced.clear();
@@ -222,7 +213,7 @@ public class ClientController {
         }
     }
 
-    // Handler: scelta carte
+    // ── Handler: scelta carte ─────────────────────────────────────────────────
 
     private void handleCardSlotReady(Message msg) {
         PlayerSnapshot     player        = msg.playerObj("player");
@@ -232,14 +223,16 @@ public class ClientController {
 
         view.showCardSlotReady(player, isTop, cards, visibleEvents);
 
-        // We ask for input only from the player whose turn it is.
-        // We do NOT call shutdownNow or rebuild the executor: the server sends
-        // CARD_SLOT_READY only when it is really this player's turn, so the tasks
-        // queue up correctly and are never "old".
+        // L'input viene richiesto solo al giocatore di turno.
+        // NON si fa shutdownNow/ricreazione: il server manda CARD_SLOT_READY
+        // solo quando è effettivamente il turno di questo giocatore,
+        // quindi i task si accodano correttamente senza mai essere "obsoleti".
         if (!player.name().equals(myNickname)) return;
 
         inputExecutor.submit(() -> {
-            int chosen = view.requestCardChoice(player, cards);
+            // Il giocatore può passare solo se non ci sono carte disponibili.
+            boolean canPass = cards.isEmpty();
+            int chosen = view.requestCardChoice(player, cards, canPass);
             if (chosen == -1) proxy.send(Message.pass(myNickname));
             else              proxy.send(Message.takeCard(myNickname, chosen, isTop));
         });
@@ -255,13 +248,15 @@ public class ClientController {
         if (!player.name().equals(myNickname)) return;
 
         inputExecutor.submit(() -> {
-            int chosen = view.requestCardChoice(player, alternatives);
+            // Il giocatore non riesce a pagare nessuna alternativa:
+            // il pass è sempre consentito in questo caso.
+            int chosen = view.requestCardChoice(player, alternatives, /*canPass*/ true);
             if (chosen == -1) proxy.send(Message.pass(myNickname));
             else proxy.send(Message.takeCard(myNickname, chosen, msg.bool("fromTopRow")));
         });
     }
 
-    // ── Handler: post-round
+    // ── Handler: post-round (Torre di Guardia) ────────────────────────────────
 
     private void handlePostRoundStarted(Message msg) {
         List<PlayerSnapshot> watchtower = msg.playerList("watchtowerPlayers");
