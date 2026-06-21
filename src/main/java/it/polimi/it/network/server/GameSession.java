@@ -119,13 +119,18 @@ public class GameSession implements GameEventListener {
             LOG.info("Game resumed after reconnection of '" + nick + "'.");
             broadcast(Message.error("Partita ripresa — " + nick + " si è riconnesso."));
         }
-        // Resync the reconnecting client with current game state.
+
+        // Resync clients with the current model phase. If the game was
+        // suspended, actions sent during suspension may have been ignored, so
+        // every connected client must receive the current prompt again.
         if (controller != null && !controller.getGame().isGameOver()) {
-            var game = controller.getGame();
-            c.send(Message.roundStarted(
-                    game.getCurrentRound(),
-                    game.getTurnOrderSnapshots(),
-                    game.getBoardSnapshot()));
+            if (wasSuspended) {
+                broadcastCurrentState();
+                replayCurrentPromptTo(clients);
+            } else {
+                sendCurrentState(c);
+                replayCurrentPromptTo(List.of(c));
+            }
         }
     }
 
@@ -261,7 +266,21 @@ public class GameSession implements GameEventListener {
      */
     @Override
     public void onEvent(GameEvent event) {
-        Message msg = switch (event) {
+        if (event instanceof GameEvent.GameEnded) {
+            terminated = true;
+            scheduler.shutdownNow();
+        }
+        Message msg = messageFor(event);
+        broadcast(msg);
+
+        // Side effect: when the game is over, persist + send the leaderboard.
+        if (event instanceof GameEvent.GameEnded ended) {
+            persistAndBroadcastLeaderboard(ended.finalScores());
+        }
+    }
+
+    private Message messageFor(GameEvent event) {
+        return switch (event) {
             case GameEvent.RoundStarted e ->
                     Message.roundStarted(e.round(), e.turnOrder(), e.board());
             case GameEvent.TotemPlaced e ->
@@ -285,8 +304,6 @@ public class GameSession implements GameEventListener {
             case GameEvent.RoundEnded e ->
                     Message.roundEnded(e.round());
             case GameEvent.GameEnded e -> {
-                terminated = true;
-                scheduler.shutdownNow();
                 // Persist + push the per-player leaderboard BEFORE broadcasting
                 // the gameEnded message: the client expects the leaderboard to
                 // arrive shortly after the gameEnded screen, in a separate
@@ -294,12 +311,6 @@ public class GameSession implements GameEventListener {
                 yield Message.gameEnded(e.winners(), e.finalScores(), e.scoreBreakdowns());
             }
         };
-        broadcast(msg);
-
-        // Side effect: when the game is over, persist + send the leaderboard.
-        if (event instanceof GameEvent.GameEnded ended) {
-            persistAndBroadcastLeaderboard(ended.finalScores());
-        }
     }
 
     /**
@@ -459,6 +470,27 @@ public class GameSession implements GameEventListener {
         clients.forEach(ClientConnection::close);
         clients.clear();
         clientMap.clear();
+    }
+
+    private void sendCurrentState(ClientConnection connection) {
+        if (controller == null) return;
+        var game = controller.getGame();
+        connection.send(Message.roundStarted(
+                game.getCurrentRound(),
+                game.getTurnOrderSnapshots(),
+                game.getBoardSnapshot(),
+                game.getCurrentPhaseName()));
+    }
+
+    private void broadcastCurrentState() {
+        clients.forEach(this::sendCurrentState);
+    }
+
+    private void replayCurrentPromptTo(Collection<ClientConnection> targets) {
+        if (controller == null) return;
+        controller.getGame().currentPromptEvent()
+                .map(this::messageFor)
+                .ifPresent(msg -> targets.forEach(c -> c.send(msg)));
     }
 
     private void broadcast(Message msg) {

@@ -162,8 +162,16 @@ public class Message {
     public static Message roundStarted(int round,
                                        List<PlayerSnapshot> turnOrder,
                                        BoardSnapshot board) {
+        return roundStarted(round, turnOrder, board, "PLACING_TOTEMS");
+    }
+
+    public static Message roundStarted(int round,
+                                       List<PlayerSnapshot> turnOrder,
+                                       BoardSnapshot board,
+                                       String phase) {
         return new Message(ROUND_STARTED, new JSONObject()
                 .put("round",     round)
+                .put("phase",     phase)
                 .put("turnOrder", playerListToJson(turnOrder))
                 .put("board",     boardToJson(board)));
     }
@@ -555,6 +563,19 @@ public class Message {
                     playedAt));
         }
         return list;
+    }
+
+    public Map<String, Integer> intMap(String key) {
+        Map<String, Integer> result = new HashMap<>();
+        if (!data.has(key) || data.isNull(key)) return result;
+        JSONObject obj = data.optJSONObject(key);
+        if (obj == null) return result;
+        for (String mapKey : obj.keySet()) {
+            if (!obj.isNull(mapKey)) {
+                result.put(mapKey, obj.getInt(mapKey));
+            }
+        }
+        return result;
     }
 
     public List<PlayerResourceDelta> playerResourceDeltaList(String key) {

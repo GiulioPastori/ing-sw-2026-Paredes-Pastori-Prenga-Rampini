@@ -80,7 +80,7 @@ class GameControllerTest {
 
         // Input stubs — never called in server mode
         @Override public char requestOfferTileChoice(PlayerSnapshot p, BoardSnapshot b) { return 'B'; }
-        @Override public int  requestCardChoice(PlayerSnapshot p, List<CardSnapshot> a) { return -1; }
+        @Override public int  requestCardChoice(PlayerSnapshot p, List<CardSnapshot> a, boolean canPass) { return -1; }
         @Override public int  requestPostRoundCardChoice(PlayerSnapshot p, List<CardSnapshot> a) { return -1; }
 
         boolean called(String method) { return calls.contains(method); }

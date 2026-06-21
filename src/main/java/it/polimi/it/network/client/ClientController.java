@@ -11,7 +11,9 @@ import it.polimi.it.observer.PlayerSnapshot;
 import it.polimi.it.view.GameView;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -43,6 +45,9 @@ public class ClientController {
     private final java.util.Set<String> alreadyPlaced         = new java.util.HashSet<>();
     private final java.util.Set<String> disconnectedNicknames = new java.util.HashSet<>();
     private volatile BoardSnapshot      lastBoard             = null;
+    private volatile int                currentRound          = 0;
+    private volatile String             lastPhase             = "WAITING";
+    private volatile PromptKey          activePrompt          = null;
 
     private final CountDownLatch  gameLatch     = new CountDownLatch(1);
     private final ExecutorService inputExecutor = Executors.newSingleThreadExecutor();
@@ -55,6 +60,8 @@ public class ClientController {
             });
     /** Set to true when GAME_ENDED has been processed, used to gate LEADERBOARD handling. */
     private volatile boolean gameEndedReceived = false;
+
+    private record PromptKey(String kind, String player, String detail) {}
 
     public ClientController(ServerProxy proxy, GameView view, String myNickname) {
         this.proxy      = proxy;
@@ -162,7 +169,7 @@ public class ClientController {
                     disconnectedNicknames.add(who);
                     view.showPlayerDisconnected(who);
                     // Re-prompt placement in case it was this player's turn.
-                    if (lastBoard != null) promptNextTotemPlacement(lastBoard);
+                    if (isPlacementPhase() && lastBoard != null) promptNextTotemPlacement(lastBoard);
                 }
             }
             case Message.PLAYER_RECONNECTED -> {
@@ -173,6 +180,7 @@ public class ClientController {
                 } else {
                     view.showPlayerReconnected(who);
                 }
+                if (isPlacementPhase() && lastBoard != null) promptNextTotemPlacement(lastBoard);
             }
             default -> LOG.warning("Tipo messaggio sconosciuto: " + msg.getType());
         }
@@ -181,15 +189,20 @@ public class ClientController {
     // ── Handler: piazzamento totem ────────────────────────────────────────────
 
     private void handleRoundStarted(Message msg) {
+        currentRound = msg.num("round");
+        String phase = msg.optStr("phase");
+        lastPhase = (phase == null || phase.isBlank()) ? "PLACING_TOTEMS" : phase;
         alreadyPlaced.clear();
         currentTurnOrder = msg.playerList("turnOrder");
         BoardSnapshot board = msg.boardObj("board");
         lastBoard = board;
-        view.showRoundStarted(msg.num("round"), currentTurnOrder, board);
-        promptNextTotemPlacement(board);
+        if (isPlacementPhase()) rememberPlacedTotems(board);
+        view.showRoundStarted(currentRound, currentTurnOrder, board);
+        if (isPlacementPhase()) promptNextTotemPlacement(board);
     }
 
     private void handleTotemPlaced(Message msg) {
+        lastPhase = "PLACING_TOTEMS";
         PlayerSnapshot placed = msg.playerObj("player");
         BoardSnapshot  board  = msg.boardObj("board");
         lastBoard = board;
@@ -198,14 +211,29 @@ public class ClientController {
         promptNextTotemPlacement(board);
     }
 
+    private void rememberPlacedTotems(BoardSnapshot board) {
+        Map<TotemColour, String> playersByTotem = new HashMap<>();
+        for (PlayerSnapshot player : currentTurnOrder) {
+            if (player.totemColour() != null) {
+                playersByTotem.put(player.totemColour(), player.name());
+            }
+        }
+        for (var tile : board.offerTiles()) {
+            if (tile.isFree() || tile.placedTotem() == null) continue;
+            String playerName = playersByTotem.get(tile.placedTotem());
+            if (playerName != null) alreadyPlaced.add(playerName);
+        }
+    }
+
     private void promptNextTotemPlacement(BoardSnapshot board) {
+        if (!isPlacementPhase()) return;
         for (PlayerSnapshot p : currentTurnOrder) {
             if (alreadyPlaced.contains(p.name())) continue;
             if (disconnectedNicknames.contains(p.name())) continue;
             if (p.name().equals(myNickname)) {
                 final PlayerSnapshot me = p;
                 final BoardSnapshot  b  = board;
-                inputExecutor.submit(() -> {
+                submitPrompt(new PromptKey("PLACE_TOTEM", myNickname, String.valueOf(currentRound)), () -> {
                     char chosen = view.requestOfferTileChoice(me, b);
                     proxy.send(Message.placeTotem(myNickname, chosen));
                 });
@@ -217,8 +245,10 @@ public class ClientController {
     // ── Handler: scelta carte ─────────────────────────────────────────────────
 
     private void handleCardSlotReady(Message msg) {
+        lastPhase = "RESOLVING_ACTIONS";
         PlayerSnapshot     player        = msg.playerObj("player");
         boolean            isTop         = msg.bool("isTopRow");
+        int                slotsRemaining = msg.num("slotsRemaining");
         List<CardSnapshot> cards         = msg.cardList("availableCards");
         List<CardSnapshot> visibleEvents = msg.cardList("visibleEvents");
 
@@ -230,10 +260,10 @@ public class ClientController {
         // quindi i task si accodano correttamente senza mai essere "obsoleti".
         if (!player.name().equals(myNickname)) return;
 
-        inputExecutor.submit(() -> {
-            // Il giocatore può passare solo se non ci sono carte disponibili.
-            boolean canPass = cards.isEmpty();
-            int chosen = view.requestCardChoice(player, cards, canPass);
+        PromptKey promptKey = new PromptKey("CARD", myNickname,
+                currentRound + ":" + isTop + ":" + slotsRemaining + ":" + cardIds(cards));
+        submitPrompt(promptKey, () -> {
+            int chosen = view.requestCardChoice(player, cards, /*canPass*/ true);
             if (chosen == -1) proxy.send(Message.pass(myNickname));
             else              proxy.send(Message.takeCard(myNickname, chosen, isTop));
         });
@@ -248,7 +278,9 @@ public class ClientController {
 
         if (!player.name().equals(myNickname)) return;
 
-        inputExecutor.submit(() -> {
+        PromptKey promptKey = new PromptKey("CARD_RETRY", myNickname,
+                currentRound + ":" + msg.bool("fromTopRow") + ":" + cardIds(alternatives));
+        submitPrompt(promptKey, () -> {
             // Il giocatore non riesce a pagare nessuna alternativa:
             // il pass è sempre consentito in questo caso.
             int chosen = view.requestCardChoice(player, alternatives, /*canPass*/ true);
@@ -260,6 +292,7 @@ public class ClientController {
     // ── Handler: post-round (Torre di Guardia) ────────────────────────────────
 
     private void handlePostRoundStarted(Message msg) {
+        lastPhase = "POST_ROUND";
         List<PlayerSnapshot> watchtower = msg.playerList("watchtowerPlayers");
         List<CardSnapshot>   cards      = msg.cardList("availableCards");
 
@@ -272,9 +305,37 @@ public class ClientController {
                 .filter(p -> p.name().equals(myNickname))
                 .findFirst().orElseThrow();
 
-        inputExecutor.submit(() -> {
+        submitPrompt(new PromptKey("POST_ROUND", myNickname,
+                currentRound + ":" + cardIds(cards)), () -> {
             int chosen = view.requestPostRoundCardChoice(me, cards);
             proxy.send(Message.postRound(myNickname, chosen));
+        });
+    }
+
+    private boolean isPlacementPhase() {
+        return "PLACING_TOTEMS".equals(lastPhase);
+    }
+
+    private String cardIds(List<CardSnapshot> cards) {
+        return cards.stream()
+                .map(c -> String.valueOf(c.id()))
+                .reduce((a, b) -> a + "," + b)
+                .orElse("");
+    }
+
+    private void submitPrompt(PromptKey key, Runnable task) {
+        synchronized (this) {
+            if (key.equals(activePrompt)) return;
+            activePrompt = key;
+        }
+        inputExecutor.submit(() -> {
+            try {
+                task.run();
+            } finally {
+                synchronized (ClientController.this) {
+                    if (key.equals(activePrompt)) activePrompt = null;
+                }
+            }
         });
     }
 }

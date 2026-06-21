@@ -16,6 +16,7 @@ import it.polimi.it.view.GameView;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static it.polimi.it.view.tui.AnsiStyle.*;
@@ -240,29 +241,42 @@ public class TuiView implements GameView {
                                 int totalEntries,
                                 int numPlayers,
                                 List<LeaderboardEntry> leaderboard) {
+        showLeaderboard(recipient, myScore, myRank, totalEntries, numPlayers, leaderboard, Map.of());
+    }
+
+    @Override
+    public void showLeaderboard(String recipient,
+                                int myScore,
+                                int myRank,
+                                int totalEntries,
+                                int numPlayers,
+                                List<LeaderboardEntry> leaderboard,
+                                Map<String, Integer> playerWinCounts) {
         println("");
         printBoxTop("CLASSIFICA — Partite a " + numPlayers + " giocatori");
         // Personal summary
         String rankText = myRank > 0
                 ? "#" + myRank + " su " + totalEntries
                 : "non disponibile";
-        printBoxBody(paint(FG_B_CYAN, true, "Sei " + recipient
-                + " — punteggio: " + myScore
-                + " — posizione: " + rankText));
+        String winsText = winCountText(playerWinCounts, recipient);
+        printBoxBody(paint(FG_B_CYAN, true, "Sei " + shorten(recipient, 24)
+                + " — punteggio: " + myScore));
+        printBoxBody(paint(FG_B_CYAN, true, "Posizione: " + rankText
+                + " — vittorie DB: " + winsText));
         printBoxBody("");
         if (leaderboard == null || leaderboard.isEmpty()) {
             printBoxBody(paint(DIM, "Nessuna partita registrata."));
         } else {
-            printBoxBody(paint(FG_B_YELLOW, "  #   Giocatore         PP    Data"));
+            printBoxBody(paint(FG_B_YELLOW, "  #   Giocatore       PP   Vittorie  Data"));
             int shown = 0;
             for (LeaderboardEntry e : leaderboard) {
                 if (shown++ >= LEADERBOARD_MAX_ROWS) break;
-                String name = e.nickname();
-                if (name.length() > 16) name = name.substring(0, 15) + "…";
-                String row = String.format("  %-3d %-16s %5d  %s",
+                String name = shorten(e.nickname(), 14);
+                String row = String.format("  %-3d %-14s %5d  %-8s  %s",
                         e.rank(),
                         name,
                         e.finalScore(),
+                        winCountText(playerWinCounts, e.nickname()),
                         e.playedAt() == null ? "—" : LEADERBOARD_DATE_FMT.format(e.playedAt()));
                 // Highlight the recipient's own row(s)
                 if (recipient != null && recipient.equals(e.nickname())
@@ -279,6 +293,21 @@ public class TuiView implements GameView {
             }
         }
         printBoxBottom();
+    }
+
+    private static String winCountText(Map<String, Integer> playerWinCounts, String nickname) {
+        if (playerWinCounts == null || nickname == null) {
+            return "N.D.";
+        }
+        Integer wins = playerWinCounts.get(nickname);
+        return wins == null ? "N.D." : String.valueOf(wins);
+    }
+
+    private static String shorten(String value, int maxVisibleChars) {
+        if (value == null) return "N.D.";
+        if (value.length() <= maxVisibleChars) return value;
+        if (maxVisibleChars <= 1) return value.substring(0, maxVisibleChars);
+        return value.substring(0, maxVisibleChars - 1) + "…";
     }
 
     @Override

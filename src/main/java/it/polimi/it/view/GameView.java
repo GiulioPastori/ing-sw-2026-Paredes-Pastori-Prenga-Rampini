@@ -147,9 +147,8 @@ public interface GameView {
      * Asks the player which card to take.
      * Returns the card ID, or -1 to pass (only valid when {@code canPass} is true).
      *
-     * @param canPass true only when the current row is empty and the player
-     *                has no cards to choose from; false when cards are
-     *                available and the player must take one.
+     * @param canPass true when the UI must offer the player the option to
+     *                skip the current slot instead of acquiring a card.
      */
     int requestCardChoice(PlayerSnapshot player, List<CardSnapshot> available, boolean canPass);
 

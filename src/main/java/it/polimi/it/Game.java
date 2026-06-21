@@ -211,8 +211,11 @@ public class Game {
     }
 
     private void publishNextSlotReady() {
-        if (currentTileState == null || currentTileState.isExhausted()) return;
+        buildCurrentCardSlotReadyEvent().ifPresent(this::publish);
+    }
 
+    private Optional<GameEvent.CardSlotReady> buildCurrentCardSlotReadyEvent() {
+        if (currentTileState == null || currentTileState.isExhausted()) return Optional.empty();
         boolean    isTop = currentTileState.remainingTopCards() > 0;
         List<Card> row   = isTop ? board.getTopRow() : board.getBottomRow();
 
@@ -228,7 +231,7 @@ public class Game {
                 .map(CardSnapshot::of)
                 .toList();
 
-        publish(new GameEvent.CardSlotReady(
+        return Optional.of(new GameEvent.CardSlotReady(
                 PlayerSnapshot.of(currentTileState.getActingPlayer()),
                 isTop,
                 available,
@@ -344,16 +347,19 @@ public class Game {
         }
 
         currentPhase = Phase.POST_ROUND;
+        publish(buildPostRoundStartedEvent());
+    }
 
+    private GameEvent.PostRoundStarted buildPostRoundStartedEvent() {
         List<CardSnapshot> available = board.getTopRow().stream()
                 .filter(c -> !(c instanceof Event))
                 .map(CardSnapshot::of)
                 .toList();
 
-        publish(new GameEvent.PostRoundStarted(
+        return new GameEvent.PostRoundStarted(
                 currentRound,
                 pendingPostRound.stream().map(PlayerSnapshot::of).toList(),
-                available));
+                available);
     }
 
     private ValidationResult handlePostRound(Player player, PostRoundAction action) {
@@ -646,5 +652,19 @@ public class Game {
         return getPlacementOrder().stream()
                 .map(it.polimi.it.observer.PlayerSnapshot::of)
                 .toList();
+    }
+
+    public String getCurrentPhaseName() {
+        return currentPhase.name();
+    }
+
+    public Optional<GameEvent> currentPromptEvent() {
+        return switch (currentPhase) {
+            case RESOLVING_ACTIONS -> buildCurrentCardSlotReadyEvent().map(e -> (GameEvent) e);
+            case POST_ROUND -> pendingPostRound == null || pendingPostRound.isEmpty()
+                    ? Optional.empty()
+                    : Optional.of(buildPostRoundStartedEvent());
+            default -> Optional.empty();
+        };
     }
 }

@@ -134,93 +134,73 @@ class ActionValidatorTest {
     @DisplayName("PassAction")
     class PassValidation {
 
-        // ── Fila superiore vuota (top=0, bottom=0) ────────────────────────────
+        // ── Slot disponibili ──────────────────────────────────────────────────
 
         @Test
-        @DisplayName("pass with empty top row (tile B: top=1,bottom=0) after consuming is Ok")
-        void passAfterConsumingTopOnlyIsOk() {
-            // Tessera B: 1 carta top, 0 bottom.
-            // Dopo aver consumato l'unico slot, la fila corrente è vuota → pass lecito.
+        @DisplayName("pass with top-row slot available returns Ok")
+        void passWithTopSlotAvailableReturnsOk() {
             OfferTile tile = new OfferTile('B', 2, 1, 0, false);
             TileResolutionState state = new TileResolutionState(alice, tile);
-            state.consumeTopSlot(); // svuota la fila top (la sola presente)
-            assertTrue(state.isCurrentRowEmpty());
+            assertFalse(state.isExhausted());
             assertTrue(ActionValidator.validate(new PassAction("Alice"), alice, state).isOk());
         }
 
         @Test
-        @DisplayName("pass with empty bottom row (tile C: top=0,bottom=1) after consuming is Ok")
-        void passAfterConsumingBottomOnlyIsOk() {
-            // Tessera C: 0 carte top, 1 bottom.
-            // La fila corrente è subito quella inferiore; dopo averla consumata → pass lecito.
+        @DisplayName("pass with bottom-row slot available returns Ok")
+        void passWithBottomSlotAvailableReturnsOk() {
             OfferTile tile = new OfferTile('C', 2, 0, 1, false);
             TileResolutionState state = new TileResolutionState(alice, tile);
-            state.consumeBottomSlot();
-            assertTrue(state.isCurrentRowEmpty());
+            assertFalse(state.isExhausted());
             assertTrue(ActionValidator.validate(new PassAction("Alice"), alice, state).isOk());
         }
 
         @Test
-        @DisplayName("pass when row is empty from the start (tile with 0 top, 0 bottom) is Ok")
-        void passOnTotallyEmptyTileIsOk() {
-            // Tessera con fila completamente vuota fin dall'inizio (es. row esaurita dal board).
+        @DisplayName("pass with multiple slots available returns Ok")
+        void passWithMultipleSlotsAvailableReturnsOk() {
+            OfferTile tile = new OfferTile('F', 4, 2, 1, false);
+            TileResolutionState state = new TileResolutionState(alice, tile);
+            assertFalse(state.isExhausted());
+            assertTrue(ActionValidator.validate(new PassAction("Alice"), alice, state).isOk());
+        }
+
+        @Test
+        @DisplayName("pass after consuming one of two top slots returns Ok")
+        void passAfterPartialTopConsumptionReturnsOk() {
+            OfferTile tile = new OfferTile('F', 4, 2, 1, false);
+            TileResolutionState state = new TileResolutionState(alice, tile);
+            state.consumeTopSlot();
+            assertFalse(state.isExhausted());
+            assertTrue(ActionValidator.validate(new PassAction("Alice"), alice, state).isOk());
+        }
+
+        // ── Nessuno slot disponibile ─────────────────────────────────────────
+
+        @Test
+        @DisplayName("pass on exhausted tile returns Fail")
+        void passOnExhaustedTileReturnsFail() {
+            OfferTile tile = new OfferTile('B', 2, 1, 0, false);
+            TileResolutionState state = new TileResolutionState(alice, tile);
+            state.consumeTopSlot();
+            assertTrue(state.isExhausted());
+            assertFalse(ActionValidator.validate(new PassAction("Alice"), alice, state).isOk());
+        }
+
+        @Test
+        @DisplayName("pass when tile starts with no slots returns Fail")
+        void passOnTotallyEmptyTileReturnsFail() {
             OfferTile tile = new OfferTile('A', 1, 0, 0, false);
             TileResolutionState state = new TileResolutionState(alice, tile);
-            assertTrue(state.isCurrentRowEmpty());
-            assertTrue(ActionValidator.validate(new PassAction("Alice"), alice, state).isOk());
-        }
-
-        // ── Fila superiore NON vuota → pass vietato ───────────────────────────
-
-        @Test
-        @DisplayName("pass with cards still in top row returns Fail")
-        void passWithCardsInTopRowReturnsFail() {
-            // Tessera B: 1 carta top ancora disponibile → non si può passare.
-            OfferTile tile = new OfferTile('B', 2, 1, 0, false);
-            TileResolutionState state = new TileResolutionState(alice, tile);
-            assertFalse(state.isCurrentRowEmpty());
-            assertFalse(ActionValidator.validate(new PassAction("Alice"), alice, state).isOk());
-        }
-
-        @Test
-        @DisplayName("pass with cards still in bottom row returns Fail")
-        void passWithCardsInBottomRowReturnsFail() {
-            // Tessera con solo bottom (top=0, bottom=1): carta disponibile → pass vietato.
-            OfferTile tile = new OfferTile('C', 2, 0, 1, false);
-            TileResolutionState state = new TileResolutionState(alice, tile);
-            assertFalse(state.isCurrentRowEmpty());
-            assertFalse(ActionValidator.validate(new PassAction("Alice"), alice, state).isOk());
-        }
-
-        @Test
-        @DisplayName("pass with multiple cards in top row returns Fail")
-        void passWithMultipleCardsInTopRowReturnsFail() {
-            // Tessera F: 2 top, 1 bottom. Nessuno slot consumato → pass vietato.
-            OfferTile tile = new OfferTile('F', 4, 2, 1, false);
-            TileResolutionState state = new TileResolutionState(alice, tile);
-            assertFalse(ActionValidator.validate(new PassAction("Alice"), alice, state).isOk());
-        }
-
-        @Test
-        @DisplayName("pass after consuming only one of two top cards returns Fail")
-        void passAfterPartialTopConsumptionReturnsFail() {
-            // Tessera F: 2 top, 1 bottom. Consumo 1 top → rimane 1 → pass ancora vietato.
-            OfferTile tile = new OfferTile('F', 4, 2, 1, false);
-            TileResolutionState state = new TileResolutionState(alice, tile);
-            state.consumeTopSlot(); // rimane 1 top
-            assertFalse(state.isCurrentRowEmpty());
+            assertTrue(state.isExhausted());
             assertFalse(ActionValidator.validate(new PassAction("Alice"), alice, state).isOk());
         }
 
         // ── Giocatore errato ──────────────────────────────────────────────────
 
         @Test
-        @DisplayName("wrong player passing on empty row returns Fail")
+        @DisplayName("wrong player passing returns Fail")
         void wrongPlayerPassReturnsFail() {
-            // Anche se la fila è vuota, il giocatore sbagliato non può agire.
             OfferTile tile = new OfferTile('B', 2, 1, 0, false);
             TileResolutionState state = new TileResolutionState(alice, tile);
-            state.consumeTopSlot();
             assertFalse(ActionValidator.validate(new PassAction("Alice"), bob, state).isOk());
         }
     }

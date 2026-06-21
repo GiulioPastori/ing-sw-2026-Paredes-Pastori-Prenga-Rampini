@@ -64,8 +64,7 @@ public final class TileResolutionState {
      *
      * <p>The "current" row is the top row while it still has slots; once
      * the top is exhausted the bottom row becomes current. This mirrors
-     * the same rule used in {@code Game.handlePass()} and is used by
-     * {@code ActionValidator} to decide whether a pass is legal.
+     * the same row ordering used in {@code Game.handlePass()}.
      */
     public boolean isCurrentRowEmpty() {
         if (remainingTopCards > 0) return false;   // fila superiore: ancora carte
