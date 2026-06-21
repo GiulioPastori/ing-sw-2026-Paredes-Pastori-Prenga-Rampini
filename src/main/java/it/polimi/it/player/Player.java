@@ -6,7 +6,6 @@ import it.polimi.it.enums.TotemColour;
 
 /**
  * Represents a player in the game.
- *
  * Personal state: name, totem colour, food supply, prestige points,
  * turn order position, and the player's tribe (characters and buildings).
  *
@@ -35,11 +34,11 @@ public class Player {
 
     /**
      * Adds a character to the tribe, applies the character's immediate effect,
-     * then notifies all buildings with an AcquisitionHook (e.g. complete-set bonus,
-     * inventor pair bonus). The character is added before the hooks fire so it
+     * then notifies all buildings with an AcquisitionHook.
+     * The character is added before the hooks fire so it
      * counts toward the totals they inspect.
      *
-     * @param character the character being acquired
+     * character is the character being acquired
      */
     public void takeCharacterCard(Character character) {
         tribe.addCharacter(character);
@@ -49,13 +48,10 @@ public class Player {
                 .forEach(b -> b.applyAcquisitionHook(this, character));
     }
 
-    /**
-     * Attempts to acquire a building. Verifies the player has enough food after
-     * applying the builder discount from the tribe (rulebook p.5).
-     *
-     * @param building the building to acquire
-     * @return true if acquired, false if food was insufficient
-     */
+    /** Verifies the player has enough food after
+     * applying the builder discount from the tribe.
+     * building is the building to acquire
+     * return true if acquired, false if food was insufficient */
     public boolean takeBuildingCard(Building building) {
         int cost = building.getEffectiveCost(tribe);
         if (food < cost) return false;
@@ -66,11 +62,9 @@ public class Player {
 
     // Resource management
 
-    /**
-     * Adds food to the player's supply.
-     *
-     * @param amount amount to add (must be &gt;= 0; use spendFood to subtract)
-     * @throws IllegalArgumentException if amount is negative
+    /** Adds food to the player's supply.
+     * amount is amount to add
+     *  IllegalArgumentException if amount is negative
      */
     public void addFood(int amount) {
         if (amount < 0) throw new IllegalArgumentException(
@@ -78,12 +72,11 @@ public class Player {
         food += amount;
     }
 
-    /**
-     * Subtracts food from the player's supply.
+    /** Subtracts food from the player's supply.
      *
-     * @param amount amount to spend (must be &gt;= 0 and &lt;= current food)
-     * @throws IllegalArgumentException if amount is negative
-     * @throws IllegalStateException    if the player does not have enough food
+     * amount=amount to spend (must be &gt;= 0 and &lt;= current food)
+     * IllegalArgumentException if amount is negative
+     * IllegalStateException    if the player does not have enough food
      */
     public void spendFood(int amount) {
         if (amount < 0) throw new IllegalArgumentException(
@@ -93,23 +86,15 @@ public class Player {
         food -= amount;
     }
 
-    /**
-     * Adds (or subtracts if negative) prestige points.
-     * Prestige points may go negative (rulebook p.4).
-     *
-     * @param amount PP to add (negative to subtract)
-     */
+    /** Adds (or subtracts if negative) prestige points
+     * amount is PP to add (negative to subtract) */
     public void addPrestigePoints(int amount) { prestigePoints += amount; }
 
     // Final score
 
-    /**
-     * Computes the player's final score as:
+    /** Computes the player's final score as:
      * in-game PP + builder PP + inventor PP + artist PP + building PP.
-     * See rulebook p.7 for details on each component.
-     *
-     * @return total final score
-     */
+     * return total final score */
     public int calculateFinalScore() {
         return prestigePoints
                 + tribe.computeBuilderPoints()
@@ -118,7 +103,6 @@ public class Player {
                 + tribe.computeBuildingPoints(this);
     }
 
-    // Getters and setters
 
     public String      getName()           { return name; }
     public TotemColour getTotemColour()    { return totemColour; }
@@ -127,12 +111,9 @@ public class Player {
     public int         getTurnOrder()      { return turnOrder; }
     public Tribe       getTribe()          { return tribe; }
 
-    /**
-     * Sets the turn order position for the next round.
-     * Called by {@link it.polimi.it.tiles.TurnOrderTile} after totem placement.
-     *
-     * @param order position (1 = first)
-     */
+    /** Sets the turn order position for the next round.
+     * Called by { it.polimi.it.tiles.TurnOrderTile} after totem placement.
+     * order is a position */
     public void setTurnOrder(int order) { this.turnOrder = order; }
 
     @Override

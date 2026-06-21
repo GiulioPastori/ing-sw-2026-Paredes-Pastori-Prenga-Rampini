@@ -117,7 +117,7 @@ public class StubGameView implements GameView {
     }
 
     @Override
-    public int requestCardChoice(PlayerSnapshot player, List<CardSnapshot> available) {
+    public int requestCardChoice(PlayerSnapshot player, List<CardSnapshot> available, boolean canPass) {
         return available.isEmpty() ? -1 : available.get(0).id();
     }
 

@@ -48,14 +48,13 @@ public record CardSnapshot(
     /**
      * Distinguishing data for character cards. The semantics of each field
      * depend on the character type and mirror the printed icons on the card:
-     * <ul>
-     *   <li>Hunter: {@code triggerIcon}</li>
-     *   <li>Shaman: {@code starIcons} (1–3)</li>
-     *   <li>Inventor: {@code inventionIcon} (string identifier of which
-     *       invention is printed, out of N possible)</li>
-     *   <li>Builder: {@code buildingDiscount} and {@code builderPoints}</li>
-     *   <li>Gatherer / Artist: all fields are zero/empty (effect is fixed)</li>
-     * </ul>
+     * <
+     *   Hunter: { triggerIcon}
+     *   Shaman: {starIcons} (1–3)
+     *   Inventor: {inventionIcon} (string identifier of which
+     *       invention is printed, out of N possible)
+     *   Builder: {buildingDiscount} and {builderPoints}
+     *   Gatherer / Artist: all fields are zero/empty (effect is fixed)
      */
     public record CharacterDetails(
             boolean triggerIcon,

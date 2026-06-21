@@ -231,7 +231,9 @@ public class ClientController {
         if (!player.name().equals(myNickname)) return;
 
         inputExecutor.submit(() -> {
-            int chosen = view.requestCardChoice(player, cards);
+            // Il giocatore può passare solo se non ci sono carte disponibili.
+            boolean canPass = cards.isEmpty();
+            int chosen = view.requestCardChoice(player, cards, canPass);
             if (chosen == -1) proxy.send(Message.pass(myNickname));
             else              proxy.send(Message.takeCard(myNickname, chosen, isTop));
         });
@@ -247,7 +249,9 @@ public class ClientController {
         if (!player.name().equals(myNickname)) return;
 
         inputExecutor.submit(() -> {
-            int chosen = view.requestCardChoice(player, alternatives);
+            // Il giocatore non riesce a pagare nessuna alternativa:
+            // il pass è sempre consentito in questo caso.
+            int chosen = view.requestCardChoice(player, alternatives, /*canPass*/ true);
             if (chosen == -1) proxy.send(Message.pass(myNickname));
             else proxy.send(Message.takeCard(myNickname, chosen, msg.bool("fromTopRow")));
         });

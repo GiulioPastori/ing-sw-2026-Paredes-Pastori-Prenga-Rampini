@@ -6,10 +6,10 @@ import it.polimi.it.player.Player;
 import java.util.List;
 
 /**
- * Strategy for the Shamanic Ritual event.
- * The player(s) with the most star icons gain rewardForMost PP.
- * The player(s) with the fewest lose penaltyForFewest PP. IMPORTANT if ALL players have the same number of icons,
- * each player is both max and min, so they first gain the reward and then lose the penalty.
+ Strategy for the Shamanic Ritual event.
+ The player(s) with the most star icons gain rewardForMost PP.
+ The player(s) with the fewest lose penaltyForFewest PP. IMPORTANT if ALL players have the same number of icons,
+ each player is both max and min, so they first gain the reward and then lose the penalty.
  */
 public class ShamanicRitual implements EventStrategy {
 

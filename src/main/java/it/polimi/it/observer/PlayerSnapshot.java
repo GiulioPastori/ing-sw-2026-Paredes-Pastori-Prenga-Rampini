@@ -9,13 +9,11 @@ import java.util.List;
 
 /**
  * Immutable snapshot of a player's visible state at a specific moment.
- *
- * <p>Includes the player's full tribe (characters and buildings acquired so
+ * Includes the player's full tribe (characters and buildings acquired so
  * far) so that every view can render every player's tribe without polling
- * the model. The Mesos rulebook treats tribes as public information: cards
- * stay face-up on the table next to each player.
+ * the model.
  *
- * <p>Implements {@link Serializable} so it can be passed inside Message
+ * Implements { Serializable} so it can be passed inside Message
  * objects over RMI and via Java object serialisation over sockets.
  */
 public record PlayerSnapshot(

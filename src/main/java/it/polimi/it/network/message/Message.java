@@ -25,23 +25,22 @@ import java.io.Serializable;
 
 /**
  * Network message: a type string + a JSON payload.
- *
  * Serialised as a single JSON line:
  *   {"type":"PLACE_TOTEM","playerName":"Alice","tileLetter":"B"}
- *
  * One class replaces all record subtypes — no Jackson, no multiple files.
  * Uses org.json which is already in the project dependencies.
  */
 public class Message {
 
-    // ── Types ─────────────────────────────────────────────────────────────────
+    // Types
     // Client → Server
     public static final String JOIN        = "JOIN";
     public static final String PLACE_TOTEM = "PLACE_TOTEM";
     public static final String TAKE_CARD   = "TAKE_CARD";
     public static final String PASS        = "PASS";
     public static final String POST_ROUND  = "POST_ROUND";
-    /** Heartbeat periodico inviato dal client ogni HEARTBEAT_INTERVAL_MS millisecondi. */
+
+    /** periodic heartbeat  */
     public static final String HEARTBEAT   = "HEARTBEAT";
 
     // Server → Client
@@ -62,17 +61,17 @@ public class Message {
     public static final String PLAYER_RECONNECTED      = "PLAYER_RECONNECTED";
     public static final String LEADERBOARD             = "LEADERBOARD";
 
-    // Mantenuti per retrocompatibilità RMI (vecchi client)
+
     public static final String PING = "PING";
     public static final String PONG = "PONG";
 
-    // Partite multiple — discovery sessioni
-    /** Client → Server: richiede la lista delle sessioni aperte. */
+    // Multiple sessions — session discovery
+    /** Client → Server: asks for the list of open sessions. */
     public static final String LIST_SESSIONS = "LIST_SESSIONS";
-    /** Server → Client: risposta con la lista delle sessioni aperte. */
+    /** Server → Client: reply with the list of open sessions. */
     public static final String SESSION_LIST  = "SESSION_LIST";
 
-    // ── Fields ────────────────────────────────────────────────────────────────
+    //Fields
     private final String     type;
     private final JSONObject data;
 
@@ -84,7 +83,7 @@ public class Message {
     public String     getType() { return type; }
     public JSONObject getData() { return data; }
 
-    // ── Codec ─────────────────────────────────────────────────────────────────
+    //  Codec
 
     /** Serialises to a single JSON line (safe for BufferedWriter.newLine). */
     public String encode() {
@@ -101,7 +100,7 @@ public class Message {
         return new Message(type, obj);
     }
 
-    // ── Client → Server factories ─────────────────────────────────────────────
+    // Client → Server factories
 
     public static Message join(String nickname, int numPlayers, String totemColour) {
         return new Message(JOIN, new JSONObject()
@@ -138,7 +137,7 @@ public class Message {
     public static Message pong()      { return new Message(PONG,      new JSONObject()); }
     public static Message heartbeat() { return new Message(HEARTBEAT, new JSONObject()); }
 
-    // ── Server → Client factories ─────────────────────────────────────────────
+    // Server → Client factories
 
     public static Message error(String reason) {
         return new Message(ERROR, new JSONObject().put("reason", reason));
@@ -248,9 +247,7 @@ public class Message {
                 .put("scoreBreakdowns", finalScoreBreakdownsToJson(breakdowns)));
     }
 
-    /**
-     * Builds a personalised {@code LEADERBOARD} message for one player.
-     *
+    /** Builds a personalised  message for one player
      * @param recipient     nickname of the player this message is addressed to
      * @param myScore       final score the recipient obtained in this game
      * @param myRank        1-based rank of the recipient among all games of
@@ -282,7 +279,7 @@ public class Message {
                 .put("playerWinCounts", stringIntMapToJson(playerWinCounts)));
     }
 
-    // ── JSON helpers ──────────────────────────────────────────────────────────
+    // JSON helpers
 
     private static final DateTimeFormatter ISO_LOCAL_DT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
@@ -311,7 +308,7 @@ public class Message {
         return obj;
     }
 
-    // ── JSON helpers ──────────────────────────────────────────────────────────
+    //  JSON helpers
 
     private static JSONObject playerToJson(PlayerSnapshot p) {
         return new JSONObject()
@@ -422,7 +419,7 @@ public class Message {
         return arr;
     }
 
-    // ── Data accessors (used by ClientController) ─────────────────────────────
+    // Data accessors (used by ClientController)
 
     public String  str(String key)     { return data.getString(key); }
     public int     num(String key)     { return data.getInt(key); }
@@ -489,7 +486,7 @@ public class Message {
                 bottomCards);
     }
 
-    /** Deserializza un JSONArray di carte in List<CardSnapshot>. */
+    /** Deserializes a JSONArray of cards into a List<CardSnapshot>. */
     private static List<CardSnapshot> parseCardArray(JSONArray arr) {
         List<CardSnapshot> list = new ArrayList<>();
 
@@ -558,17 +555,6 @@ public class Message {
                     playedAt));
         }
         return list;
-    }
-
-    public Map<String, Integer> intMap(String key) {
-        if (!data.has(key)) return Map.of();
-        JSONObject obj = data.optJSONObject(key);
-        if (obj == null) return Map.of();
-        Map<String, Integer> map = new HashMap<>();
-        for (String name : obj.keySet()) {
-            map.put(name, obj.optInt(name));
-        }
-        return map;
     }
 
     public List<PlayerResourceDelta> playerResourceDeltaList(String key) {
@@ -676,9 +662,7 @@ public class Message {
             String       sessionId,
             int          expectedPlayers,
             int          currentPlayers,
-            java.util.List<String> players) implements Serializable {
-        @Serial private static final long serialVersionUID = 1L;
-    }
+            java.util.List<String> players) {}
 
     /**
      * Client → Server: richiede la lista delle sessioni aperte.

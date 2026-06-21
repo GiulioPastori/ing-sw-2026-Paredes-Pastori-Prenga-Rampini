@@ -332,14 +332,15 @@ public class TuiView implements GameView {
     }
 
     @Override
-    public int requestCardChoice(PlayerSnapshot player, List<CardSnapshot> available) {
+    public int requestCardChoice(PlayerSnapshot player, List<CardSnapshot> available, boolean canPass) {
         if (available.isEmpty()) {
             println(paint(DIM, "[" + player.name() + "] Nessuna carta disponibile — passo."));
             return -1;
         }
         println("");
+        String passHint = canPass ? " (0 per passare)" : "";
         println(paint(FG_B_CYAN, true, "→ " + formatPlayerName(player)
-                + ", scegli una carta (0 per passare):"));
+                + ", scegli una carta" + passHint + ":"));
         printCards(available);
         print(paint(FG_B_YELLOW, "Numero: "));
         while (true) {
@@ -347,10 +348,15 @@ public class TuiView implements GameView {
             if (line == null) continue; // timeout, riprova
             try {
                 int choice = Integer.parseInt(line.trim());
-                if (choice == 0) return -1;
+                if (choice == 0) {
+                    if (canPass) return -1;
+                    print(paint(FG_RED, "Non puoi passare: devi scegliere una carta. Riprova: "));
+                    continue;
+                }
                 if (choice >= 1 && choice <= available.size())
                     return available.get(choice - 1).id();
-                print(paint(FG_RED, "Scelta non valida (1-" + available.size() + " o 0). Riprova: "));
+                String range = canPass ? "0-" + available.size() : "1-" + available.size();
+                print(paint(FG_RED, "Scelta non valida (" + range + "). Riprova: "));
             } catch (NumberFormatException ignored) {
                 print(paint(FG_RED, "Inserisci un numero. Riprova: "));
             }

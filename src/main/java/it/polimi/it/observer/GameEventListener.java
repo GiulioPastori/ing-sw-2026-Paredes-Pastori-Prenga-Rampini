@@ -1,26 +1,18 @@
 package it.polimi.it.observer;
 
-/**
- * Listener for events published by Game (Observer pattern).
- *
- * Anything that wants to be notified of game state changes —
- * the controller, a TUI view, a GUI view, a test logger — implements
- * this interface and registers via Game.addListener().
- *
- * The single method receives a sealed GameEvent; the listener uses
- * pattern matching (switch or instanceof) to handle only the types
- * it cares about.
- *
- * Listeners must never throw exceptions or modify game state in response
- * to an event.
- */
+/** Lets something listen to what happens in the game (Observer pattern).
+
+ * Game does not know about the network or the views. When the game state
+ * changes, Game just sends a { GameEvent} to everyone who registered with
+ * {Game.addListener()}.
+
+ * A listener should only read and react (send a message, update the screen,
+ * log). It must never throw an exception or change the game state. */
+
 @FunctionalInterface
 public interface GameEventListener {
 
-    /**
-     * Called by Game whenever a significant state change occurs.
-     *
-     * @param event the domain event that just occurred
-     */
+    /** Called by Game whenever a significant state change occurs.
+     event=the domain event that just occurred */
     void onEvent(GameEvent event);
 }

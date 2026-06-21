@@ -94,11 +94,13 @@ public class GameServer {
      * not, as required by the spec) and returns a repository that the game
      * sessions can use to persist results and serve rankings.
      *
-     * @return the configured repository
-     * @throws IOException if MySQL cannot be reached or the schema cannot be
-     *                     created
+     * <p>If MySQL is unreachable the method logs a warning and returns
+     * {@code null}: the server starts normally but leaderboard persistence
+     * is disabled for the session.
+     *
+     * @return the configured repository, or {@code null} if the DB is unavailable
      */
-    private LeaderboardRepository bootstrapLeaderboard() throws IOException {
+    private LeaderboardRepository bootstrapLeaderboard() {
         DatabaseConfig config = DatabaseConfig.load();
         DatabaseInitializer init = new DatabaseInitializer(config);
         try {
@@ -106,10 +108,10 @@ public class GameServer {
             LOG.info("Leaderboard database ready (" + config.databaseName() + ").");
             return new LeaderboardRepository(config);
         } catch (Exception e) {
-            throw new IOException("Leaderboard DB startup failed. MySQL is required and "
-                    + "the database '" + config.databaseName()
-                    + "' must be creatable by the configured user. Cause: "
-                    + e.getMessage(), e);
+            LOG.warning("Leaderboard DB unavailable — server will run without persistence. "
+                    + "Start MySQL and restart to enable the leaderboard. Cause: "
+                    + e.getMessage());
+            return null;
         }
     }
 
