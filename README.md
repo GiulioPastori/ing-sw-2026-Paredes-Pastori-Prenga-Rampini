@@ -23,6 +23,25 @@ The GUI uses JavaFX. Build the client jar on the same operating system on which
 it will be executed, because JavaFX dependencies include platform-specific
 native components.
 
+## Implemented Functionalities
+
+Those are the functionalities we have implemented:
+
+<table>
+  <tr>
+    <th>Feature</th>
+    <th>Status</th>
+  </tr>
+  <tr><td>Socket</td><td align="center">✅</td></tr>
+  <tr><td>RMI</td><td align="center">✅</td></tr>
+  <tr><td>TUI</td><td align="center">✅</td></tr>
+  <tr><td>GUI</td><td align="center">✅</td></tr>
+  <tr><td>Multiple games</td><td align="center">✅</td></tr>
+  <tr><td>Persistence</td><td align="center">❌</td></tr>
+  <tr><td>Disconnections</td><td align="center">✅</td></tr>
+  <tr><td>Database</td><td align="center">✅</td></tr>
+</table>
+
 ## Build
 
 From the project root:
