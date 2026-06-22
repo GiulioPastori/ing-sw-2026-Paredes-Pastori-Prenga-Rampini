@@ -155,8 +155,9 @@ java -Ddb.user=mesos -Ddb.password=secret -jar target/mesos-server.jar
 ## Documentation
 
 - Client-server communication: [`docs/client-server-communication.md`](docs/client-server-communication.md)
+- High-level UML overview: [`docs/high-level-uml.md`](docs/high-level-uml.md)
+- High-level UML image: [`docs/high-level-uml.svg`](docs/high-level-uml.svg)
 - UML diagrams currently available in the repository:
-  - `Mesos.drawio.png`
   - `mesos_final.drawio.png`
 - Generated Javadoc:
 
