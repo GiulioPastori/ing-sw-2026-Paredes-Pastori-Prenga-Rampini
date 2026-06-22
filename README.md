@@ -155,7 +155,8 @@ java -Ddb.user=mesos -Ddb.password=secret -jar target/mesos-server.jar
 ## Documentation
 
 - Client-server communication: [`deliverables/client-server-communication.md`](deliverables/client-server-communication.md)
-- High-level UML image: [`deliverables/high-level-uml.svg`](deliverables/high-level-uml.svg)
+- High-level UML editable source: [`deliverables/high-level-uml.drawio`](deliverables/high-level-uml.drawio)
+- High-level UML image preview: [`deliverables/high-level-uml.svg`](deliverables/high-level-uml.svg)
 - UML diagrams currently available in the repository:
   - `deliverables/uml_dettaglio.png`
   - `mesos_final.drawio.png`
