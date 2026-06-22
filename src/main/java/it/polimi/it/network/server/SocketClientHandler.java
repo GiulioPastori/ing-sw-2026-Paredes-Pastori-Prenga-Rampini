@@ -53,7 +53,7 @@ public class SocketClientHandler implements ClientConnection, Runnable {
 
     /**
      * true after the first disconnection report to the session.
-     * Ensures that {@link GameSession#onPlayerDisconnected(String)} is
+     * Ensures that {@link GameSession#onPlayerDisconnected} is
      * called only once even if both readLoop and watchdog detect it.
      */
     private final AtomicBoolean disconnectReported = new AtomicBoolean(false);
