@@ -107,15 +107,15 @@ public class GameBuilder {
     }
 
     /**
-     * Assegna casualmente l'ordine di turno iniziale e distribuisce il cibo
-     * iniziale in base alla posizione (regolamento p.3):
+     * Randomly assigns the initial turn order and starting food according to
+     * the player position (rulebook p.3):
      * <ul>
-     *   <li>Posizione 1 → 2 Cibo</li>
-     *   <li>Posizioni 2-3 → 3 Cibo</li>
-     *   <li>Posizioni 4-5 → 4 Cibo</li>
+     *   <li>Position 1: 2 food</li>
+     *   <li>Positions 2-3: 3 food</li>
+     *   <li>Positions 4-5: 4 food</li>
      * </ul>
-     * Il cibo viene assegnato QUI, dopo aver determinato l'ordine, in modo che
-     * la posizione di turno e il cibo iniziale siano sempre coerenti.
+     * Food is assigned here, after the order is known, so the turn position and
+     * starting food are always consistent.
      */
     private void assignInitialTurnOrder(List<Player> players) {
         List<Player> shuffled = new ArrayList<>(players);
@@ -136,7 +136,7 @@ public class GameBuilder {
      * - Groups are added in era order (Era I on top, Era III at the bottom)
      * - The 2 FinalEvent cards are placed at the very bottom
      */
-    private List<Card> buildTribeDeck(int numPlayers) {  // ← aggiungi numPlayers
+    private List<Card> buildTribeDeck(int numPlayers) {
         List<Card>       eraI   = new ArrayList<>();
         List<Card>       eraII  = new ArrayList<>();
         List<Card>       eraIII = new ArrayList<>();
@@ -144,7 +144,7 @@ public class GameBuilder {
 
         for (Card card : allCards) {
             if (card instanceof Building) continue;
-            if (card.getMinPlayers() > numPlayers) continue; // ← FILTRO
+            if (card.getMinPlayers() > numPlayers) continue;
             if (card instanceof FinalEvent fe) { finals.add(fe); continue; }
             switch (card.getEra()) {
                 case ERA_I   -> eraI.add(card);
@@ -224,23 +224,23 @@ public class GameBuilder {
     private OfferTiles buildOfferTiles(int numPlayers) {
         List<OfferTile> tiles = new ArrayList<>();
 
-        // Tessera A: solo con 5 giocatori, dà 3 food
+        // Tile A: 5 players only, gives 3 food.
         if (numPlayers >= 5) tiles.add(new OfferTile('A', 5, 0, 0, true));
 
-        // B e C: sempre presenti (2P+)
+        // Tiles B and C: always present in 2+ player games.
         if (numPlayers >= 2) tiles.add(new OfferTile('B', 2, 0, 1, false));
         if (numPlayers >= 2) tiles.add(new OfferTile('C', 2, 1, 0, false));
 
-        // D: da 3 giocatori in su
+        // Tile D: 3+ player games.
         if (numPlayers >= 3) tiles.add(new OfferTile('D', 3,0, 2, false));
 
-        // E: sempre presente (2P+)
+        // Tile E: always present in 2+ player games.
         if (numPlayers >= 2) tiles.add(new OfferTile('E', 2, 1, 1, false));
 
-        // F: sempre presente (2P+)
+        // Tile F: always present in 2+ player games.
         if (numPlayers >= 2) tiles.add(new OfferTile('F', 2, 2, 0, false));
 
-        // G: da 4 giocatori in su
+        // Tile G: 4+ player games.
         if (numPlayers >= 4) tiles.add(new OfferTile('G', 4, 2, 1, false));
 
         return new OfferTiles(tiles);

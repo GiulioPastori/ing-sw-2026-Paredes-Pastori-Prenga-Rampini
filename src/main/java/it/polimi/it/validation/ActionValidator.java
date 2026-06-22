@@ -18,6 +18,14 @@ public final class ActionValidator {
 
     private ActionValidator() {}
 
+    /**
+     * Validates totem placement on a free offer tile.
+     *
+     * @param action placement action to validate
+     * @param player acting player
+     * @param freeTiles offer tiles currently available for placement
+     * @return validation result
+     */
     public static ValidationResult validate(PlaceTotemAction action,
                                             Player player,
                                             List<OfferTile> freeTiles) {
@@ -30,6 +38,14 @@ public final class ActionValidator {
         return ValidationResult.ok();
     }
 
+    /**
+     * Validates card acquisition from the current tile-resolution slot.
+     *
+     * @param action card acquisition action to validate
+     * @param player acting player
+     * @param state current tile-resolution state
+     * @return validation result
+     */
     public static ValidationResult validate(TakeCardAction action,
                                             Player player,
                                             TileResolutionState state) {
@@ -48,6 +64,14 @@ public final class ActionValidator {
         return ValidationResult.ok();
     }
 
+    /**
+     * Validates passing the current card slot.
+     *
+     * @param action pass action to validate
+     * @param player acting player
+     * @param state current tile-resolution state
+     * @return validation result
+     */
     public static ValidationResult validate(PassAction action,
                                             Player player,
                                             TileResolutionState state) {
@@ -61,6 +85,14 @@ public final class ActionValidator {
         return ValidationResult.ok();
     }
 
+    /**
+     * Validates the post-round Watchtower choice.
+     *
+     * @param action post-round action to validate
+     * @param player acting player
+     * @param pendingPlayers players expected to answer in the post-round phase
+     * @return validation result
+     */
     public static ValidationResult validate(PostRoundAction action,
                                             Player player,
                                             List<Player> pendingPlayers) {

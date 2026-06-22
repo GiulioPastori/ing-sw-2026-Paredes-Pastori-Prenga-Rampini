@@ -19,14 +19,14 @@ import java.util.logging.Logger;
  * Defaults:
  *   socketPort    = 12345
  *   rmiPort       = 12346
- *   cardsJsonPath = src/main/resources/cards.json
+ *   cardsJsonPath = cards.json
  */
 public class ServerApp {
 
     private static final Logger LOG           = Logger.getLogger(ServerApp.class.getName());
     private static final int    DEFAULT_SOCKET = 12345;
     private static final int    DEFAULT_RMI    = 12346;
-    private static final String DEFAULT_CARDS  = "src/main/resources/cards.json";
+    private static final String DEFAULT_CARDS  = "cards.json";
 
     /** Shared card list — loaded once at startup, read by every GameSession. */
     private static List<Card> cardList;

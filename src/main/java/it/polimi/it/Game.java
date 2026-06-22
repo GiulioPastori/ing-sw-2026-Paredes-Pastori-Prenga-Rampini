@@ -219,13 +219,13 @@ public class Game {
         boolean    isTop = currentTileState.remainingTopCards() > 0;
         List<Card> row   = isTop ? board.getTopRow() : board.getBottomRow();
 
-        // Carte acquisibili (no eventi)
+        // Acquirable cards only; event cards remain visible but cannot be taken.
         List<CardSnapshot> available = row.stream()
                 .filter(c -> !(c instanceof Event))
                 .map(CardSnapshot::of)
                 .toList();
 
-        // Carte evento visibili nella riga (non acquisibili ma mostrate al giocatore)
+        // Event cards visible in the same row.
         List<CardSnapshot> visibleEvents = row.stream()
                 .filter(c -> c instanceof Event)
                 .map(CardSnapshot::of)
@@ -294,11 +294,10 @@ public class Game {
         ValidationResult v = ActionValidator.validate(action, player, currentTileState);
         if (!v.isOk()) return v;
 
-        // Se ci sono ancora slot top da consumare siamo nella riga superiore,
-        // altrimenti siamo nella riga inferiore.
-        // NOTA: NON usare "remainingBottomCards == 0" perché quando entrambi i
-        // contatori sono > 0 (tessera E: top=1, bottom=1) quella formula
-        // restituisce false e consuma erroneamente lo slot bottom al posto del top.
+        // If top slots are still pending, the current choice belongs to the top
+        // row; otherwise it belongs to the bottom row. Do not use
+        // "remainingBottomCards == 0": on tile E both counters can be positive
+        // and that formula would consume the bottom slot too early.
         boolean fromTop = currentTileState.remainingTopCards() > 0;
         consumeSlot(fromTop);
         return ValidationResult.ok();
@@ -484,12 +483,12 @@ public class Game {
     private void beginRound() {
         currentRound++;
         currentPhase = Phase.PLACING_TOTEMS;
-        LOG.info("[beginRound] inizio round " + currentRound);
+        LOG.info("[beginRound] starting round " + currentRound);
 
-        // Rientra i giocatori che si erano riconnessi durante il round precedente
-        // (erano rimasti in pendingReconnect per non disturbare la fase in corso).
+        // Bring back players who reconnected during the previous round. They
+        // stayed in pendingReconnect to avoid changing the active phase.
         if (!pendingReconnect.isEmpty()) {
-            LOG.info("[beginRound] rientro giocatori in attesa: " + pendingReconnect);
+            LOG.info("[beginRound] restoring pending players: " + pendingReconnect);
             disconnectedPlayers.removeAll(pendingReconnect);
             pendingReconnect.clear();
         }
@@ -499,8 +498,8 @@ public class Game {
 
         BoardSnapshot snapshot = BoardSnapshot.of(board);
 
-        LOG.info("[beginRound] tessere totali: " + snapshot.offerTiles().size()
-                + " (libere: " + snapshot.offerTiles().stream()
+        LOG.info("[beginRound] total tiles: " + snapshot.offerTiles().size()
+                + " (free: " + snapshot.offerTiles().stream()
                 .filter(t -> t.isFree()).count() + ")"
                 + " top=" + board.getTopRow().size() + " bottom=" + board.getBottomRow().size()
                 + " deck=" + snapshot.tribeDeckSize());
@@ -612,14 +611,15 @@ public class Game {
     }
 
     public void markReconnected(String nickname) {
-        // Se la reconnessione avviene durante RESOLVING_ACTIONS o POST_ROUND,
-        // il giocatore non può partecipare al round corrente (il suo totem è già
-        // stato auto-saltato o non è mai stato piazzato).
-        // Lo teniamo in disconnectedPlayers fino a beginRound(), che lo rimuoverà
-        // all'inizio del round successivo quando tutti possono piazzare.
+        // If reconnection happens during RESOLVING_ACTIONS or POST_ROUND, the
+        // player cannot re-enter the current round: their totem was already
+        // auto-skipped or was never placed. Keep the player in
+        // disconnectedPlayers until beginRound() removes them at the start of
+        // the next round, when everyone can place again.
         if (currentPhase == Phase.RESOLVING_ACTIONS || currentPhase == Phase.POST_ROUND) {
-            // Segna come "in attesa di rientrare": si comporta come disconnesso
-            // per il round corrente ma il GameSession sa già che è riconnesso.
+            // Mark the player as pending re-entry: the model still treats them
+            // as disconnected for this round, while GameSession already knows
+            // that the transport has reconnected.
             pendingReconnect.add(nickname);
         } else {
             disconnectedPlayers.remove(nickname);

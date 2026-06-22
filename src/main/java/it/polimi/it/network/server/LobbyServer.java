@@ -23,7 +23,7 @@ import java.util.logging.Logger;
  * <p>The lobby holds a (possibly {@code null}) {@link LeaderboardRepository}
  * provided by {@link GameServer} and forwards it to every new
  * {@link GameSession}; sessions use it to persist game results and serve
- * end-of-game rankings (FA "Classifica partite su DB").
+ * end-of-game rankings (DB leaderboard feature).
  */
 public class LobbyServer {
 
@@ -110,11 +110,11 @@ public class LobbyServer {
 
             Message msg = Message.decode(firstLine);
 
-            // ── Partite multiple: il client può chiedere la lista prima del JOIN ──
+            // Multiple games: the client may request the session list before JOIN.
             if (Message.LIST_SESSIONS.equals(msg.getType())) {
                 int filter = msg.num("numPlayersFilter");
                 writer.println(Message.sessionList(getOpenSessions(filter)).encode());
-                // Legge il JOIN vero che arriva subito dopo
+                // Read the actual JOIN that follows immediately.
                 String joinLine = reader.readLine();
                 if (joinLine == null) { socket.close(); return; }
                 msg = Message.decode(joinLine);
@@ -128,7 +128,7 @@ public class LobbyServer {
 
             String nickname     = msg.str("nickname").trim();
             int    numPlayers   = msg.num("numPlayers");
-            // sessionId opzionale: se presente il client vuole unirsi a quella partita specifica
+            // Optional sessionId: when present, the client wants that session.
             String sessionId    = msg.optStr("sessionId");
             String colourStr    = msg.str("totemColour");
             TotemColour totemColour;
@@ -156,20 +156,20 @@ public class LobbyServer {
                 return;
             }
 
-            // Risolvi la sessione target: join diretto, nuova forzata o matchmaking
+            // Resolve the target session: direct join, forced new game, or matchmaking.
             final GameSession session;
             if (NEW_SESSION.equals(sessionId)) {
-                // L'utente ha scelto esplicitamente "Crea nuova partita"
+                // The user explicitly chose to create a new game.
                 session = getOrCreateSession(numPlayers, true);
-                LOG.info("Player '" + nickname + "' ha scelto di creare una nuova sessione.");
+                LOG.info("Player '" + nickname + "' chose to create a new session.");
             } else if (sessionId != null && !sessionId.isBlank()) {
                 GameSession found = getSessionById(sessionId);
                 if (found == null) {
-                    // Race condition: la sessione è diventata piena o è iniziata
-                    // mentre il client stava scegliendo — fallback a nuova sessione.
-                    LOG.warning("Sessione '" + sessionId
-                            + "' non disponibile — fallback a nuova sessione per "
-                            + numPlayers + " giocatori.");
+                    // Race condition: the session became full or started while
+                    // the client was choosing, so fall back to a new session.
+                    LOG.warning("Session '" + sessionId
+                            + "' unavailable; falling back to a new session for "
+                            + numPlayers + " players.");
                     writer.println(Message.error(
                             "La sessione scelta non è più disponibile. "
                                     + "Sei stato assegnato a una nuova sessione.").encode());
@@ -245,19 +245,18 @@ public class LobbyServer {
     }
 
     /**
-     * Sentinel sessionId che il client invia quando l'utente sceglie
-     * esplicitamente "Crea nuova partita" nella lista sessioni.
-     * Diverso da null (= matchmaking automatico) e da un ID reale.
+     * Sentinel session id sent by the client when the user explicitly chooses
+     * to create a new game in the session list. It differs from {@code null},
+     * which means automatic matchmaking, and from any real session id.
      */
     public static final String NEW_SESSION = "NEW";
 
     /**
      * Returns an existing waiting session or creates a new one.
      *
-     * @param requestedPlayers numero di giocatori desiderato
-     * @param forceNew         se true crea sempre una nuova sessione,
-     *                         ignorando quelle già aperte (l'utente ha scelto
-     *                         "Crea nuova partita" nella lista)
+     * @param requestedPlayers requested player count
+     * @param forceNew         if true, always creates a new session and ignores
+     *                         already open sessions
      */
     public synchronized GameSession getOrCreateSession(int requestedPlayers, boolean forceNew) {
         activeSessions.removeIf(GameSession::isTerminated);
@@ -279,17 +278,18 @@ public class LobbyServer {
         return session;
     }
 
-    /** Backward-compatible overload: matchmaking automatico (forceNew=false). */
+    /** Backward-compatible overload: automatic matchmaking with forceNew=false. */
     public synchronized GameSession getOrCreateSession(int requestedPlayers) {
         return getOrCreateSession(requestedPlayers, false);
     }
 
-    // ── Partite multiple: discovery e join diretto ────────────────────────────
+    // Multiple games: discovery and direct join.
 
     /**
-     * Snapshot di tutte le sessioni aperte (non ancora iniziate), con filtro opzionale.
+     * Snapshot of all open sessions, optionally filtered by player count.
      *
-     * @param numPlayersFilter se &gt; 0 filtra per numero di giocatori atteso; 0 = tutte
+     * @param numPlayersFilter if greater than 0, filters by expected player
+     *                         count; 0 returns all sessions
      */
     public synchronized java.util.List<Message.SessionInfo> getOpenSessions(int numPlayersFilter) {
         waitingSessions.removeIf(s -> s.isTerminated() || s.isStarted());
@@ -306,8 +306,8 @@ public class LobbyServer {
     }
 
     /**
-     * Restituisce la sessione in attesa con l'id dato, o {@code null} se non trovata
-     * (già iniziata, terminata o id sconosciuto).
+     * Returns the waiting session with the given id, or {@code null} if it is
+     * not found, already started, terminated, or unknown.
      */
     public synchronized GameSession getSessionById(String sessionId) {
         if (sessionId == null || sessionId.isBlank()) return null;

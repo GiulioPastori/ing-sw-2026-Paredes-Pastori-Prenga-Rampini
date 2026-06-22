@@ -7,8 +7,12 @@ import it.polimi.it.cards.events.Hunt;
 import it.polimi.it.enums.Era;
 import it.polimi.it.enums.EventType;
 import it.polimi.it.enums.CharacterType;
+import it.polimi.it.enums.TotemColour;
+import it.polimi.it.network.message.Message;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -34,6 +38,20 @@ class CardSnapshotTest {
         assertEquals(1001,              snap.id());
         assertEquals(Era.ERA_I,         snap.era());
         assertEquals(CharacterType.HUNTER, snap.characterType());
+    }
+
+    @Test
+    @DisplayName("character details survive message round-trip")
+    void characterDetailsSurviveMessageRoundTrip() {
+        CardSnapshot snap = CardSnapshot.of(new Hunter(1001, Era.ERA_I, true));
+        PlayerSnapshot player = new PlayerSnapshot(
+                "Alice", TotemColour.RED, 2, 0, 1, List.of(snap), List.of());
+
+        Message encoded = Message.cardAcquired(player, snap);
+        CardSnapshot decoded = Message.decode(encoded.encode()).cardObj("card");
+
+        assertNotNull(decoded.details());
+        assertTrue(decoded.details().triggerIcon());
     }
 
     @Test

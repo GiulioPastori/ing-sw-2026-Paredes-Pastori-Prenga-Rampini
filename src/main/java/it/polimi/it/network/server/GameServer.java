@@ -7,6 +7,7 @@ import it.polimi.it.network.server.persistence.DatabaseInitializer;
 import it.polimi.it.network.server.persistence.LeaderboardRepository;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.logging.Logger;
@@ -14,7 +15,7 @@ import java.util.logging.Logger;
 /**
  * GameServer encapsulates the complete server startup:
  * - Loads cards from JSON
- * - Bootstraps the leaderboard database (FA "Classifica partite su DB")
+ * - Bootstraps the leaderboard database
  * - Starts the LobbyServer (Socket TCP)
  * - Starts the RMI registry alongside
  *
@@ -29,7 +30,7 @@ import java.util.logging.Logger;
  *
  * <p>Usage:
  * <pre>
- *   GameServer server = new GameServer(12345, 12346, "src/main/resources/cards.json");
+ *   GameServer server = new GameServer(12345, 12346, "cards.json");
  *   server.start(); // blocks until stop() is called
  * </pre>
  */
@@ -59,7 +60,7 @@ public class GameServer {
      */
     public void start() throws IOException {
         // 1. Load cards
-        List<Card> cards = CardLoader.loadAll(Path.of(cardsJsonPath));
+        List<Card> cards = loadCards();
         ServerApp.setCardList(cards);
         LOG.info("Loaded " + cards.size() + " cards from " + cardsJsonPath);
 
@@ -87,6 +88,14 @@ public class GameServer {
         // 6. Start accepting TCP connections (blocks here)
         LOG.info("Mesos server ready  Socket=" + socketPort + "  RMI=" + rmiPort);
         lobbyServer.start();
+    }
+
+    private List<Card> loadCards() throws IOException {
+        Path path = Path.of(cardsJsonPath);
+        if (Files.exists(path)) {
+            return CardLoader.loadAll(path);
+        }
+        return CardLoader.loadAllFromResource(cardsJsonPath);
     }
 
     /**

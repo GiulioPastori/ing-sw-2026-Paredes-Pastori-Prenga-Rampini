@@ -8,14 +8,18 @@ import java.util.List;
 
 /**
  * Immutable snapshot of the visible board state at a given moment.
-
- * Carried by events that change the board
- * {TotemPlaced}). Adding a new field to this record affects only events
- * that already include a { BoardSnapshot}; consumers that ignore the
- * field continue to work.
  *
- * Implements {Serializable} so it can be passed inside Message
+ * <p>Carried by events that change the board, such as
+ * {@link GameEvent.TotemPlaced}. Adding a new field to this record affects
+ * only events that already include a {@link BoardSnapshot}; consumers that
+ * ignore the field continue to work.
+ *
+ * <p>Implements {@link Serializable} so it can be passed inside Message
  * objects over RMI and via Java object serialisation over sockets.
+ *
+ * @param offerTiles visible offer tiles, including free and occupied tiles
+ * @param turnOrderTile snapshot of the Turn Order Tile
+ * @param tribeDeckSize number of cards remaining in the tribe deck
  */
 public record BoardSnapshot(
         List<OfferTileSnapshot> offerTiles,

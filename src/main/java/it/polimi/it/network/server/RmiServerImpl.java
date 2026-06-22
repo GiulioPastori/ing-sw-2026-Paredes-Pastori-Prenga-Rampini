@@ -17,13 +17,15 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Logger;
 
 /**
- * Implementazione RMI lato server.
+ * Server-side RMI implementation.
  *
- * <p>Esportata nel registry RMI sotto {@value #REGISTRY_NAME}.
- * Condivide {@link LobbyServer} con il server Socket per partite miste.
+ * <p>Exported in the RMI registry under {@value #REGISTRY_NAME}.
+ * Shares {@link LobbyServer} with the Socket server so mixed-transport games
+ * use the same lobby and nickname authority.
  *
- * <p>Ogni client RMI è avvolto in un {@link RmiClientHandler} che implementa
- * {@link ClientConnection}, rendendo il trasporto trasparente a {@link GameSession}.
+ * <p>Each RMI client callback is wrapped in an {@link RmiClientHandler}, which
+ * implements {@link ClientConnection} and makes the transport transparent to
+ * {@link GameSession}.
  */
 public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
 
@@ -92,12 +94,12 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
             } else {
                 GameSession session;
                 if (LobbyServer.NEW_SESSION.equals(sessionId)) {
-                    // Utente ha scelto "Crea nuova partita"
+                    // The user explicitly chose to create a new game.
                     session = lobby.getOrCreateSession(numPlayers, true);
                 } else if (sessionId != null && !sessionId.isBlank()) {
                     session = lobby.getSessionById(sessionId);
                     if (session == null) {
-                        // Race condition: fallback a nuova sessione
+                        // Race condition: fall back to a new session.
                         session = lobby.getOrCreateSession(numPlayers, true);
                         client.receiveMessage(Message.error(
                                 "La sessione scelta non è più disponibile. "
@@ -134,13 +136,12 @@ public class RmiServerImpl extends UnicastRemoteObject implements RmiServer {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Avvolge un callback RMI come {@link ClientConnection}.
+ * Wraps an RMI callback as a {@link ClientConnection}.
  *
- * <p><b>Send asincrono</b>: i messaggi in uscita vengono accodati in una
- * {@link BlockingQueue} e spediti da un thread daemon separato. In questo modo
- * {@link GameSession} non viene mai bloccato da timeout RMI o
- * eccezioni di rete, e le eccezioni durante l'invio non interrompono il flusso
- * di gioco del server.
+ * <p><b>Asynchronous send:</b> outbound messages are queued in a
+ * {@link BlockingQueue} and sent by a separate daemon thread. This prevents
+ * {@link GameSession} from being blocked by RMI timeouts or network
+ * exceptions, and send failures do not interrupt the server game flow.
  */
 class RmiClientHandler extends UnicastRemoteObject
         implements ClientConnection, RmiPlayerSession {
@@ -169,7 +170,7 @@ class RmiClientHandler extends UnicastRemoteObject
         this.totemColour = totemColour;
         this.stub     = stub;
 
-        // Thread daemon che invia i messaggi in coda via RMI
+        // Daemon thread that sends queued messages through RMI.
         senderThread = new Thread(this::sendLoop, "rmi-sender-" + nickname);
         senderThread.setDaemon(true);
         senderThread.start();
@@ -186,8 +187,8 @@ class RmiClientHandler extends UnicastRemoteObject
     @Override public String getNickname() { return nickname; }
 
     /**
-     * Aggiunge il messaggio alla coda di uscita. Non bloccante.
-     * Il thread sender si occupa dell'invio effettivo via RMI.
+     * Adds a message to the outbound queue. Non-blocking; the sender thread
+     * performs the actual RMI call.
      */
     @Override
     public void send(Message message) {

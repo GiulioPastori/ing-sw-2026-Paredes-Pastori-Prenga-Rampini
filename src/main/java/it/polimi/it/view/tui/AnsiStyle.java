@@ -149,7 +149,12 @@ public final class AnsiStyle {
         };
     }
 
-    /** Italian display name for a totem colour. */
+    /**
+     * Returns the Italian display name for a totem colour.
+     *
+     * @param tc totem colour
+     * @return localized display name
+     */
     public static String totemNameIt(TotemColour tc) {
         if (tc == null) return "?";
         return switch (tc) {

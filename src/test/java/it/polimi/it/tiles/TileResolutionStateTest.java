@@ -126,13 +126,13 @@ class TileResolutionStateTest {
     }
 
     // ── isCurrentRowEmpty ─────────────────────────────────────────────────────
-    // La "fila corrente" è quella superiore finché ha slot; poi quella inferiore.
-    // Questo metodo è usato da ActionValidator per decidere se il pass è lecito.
+    // The current row is the top row while it has slots, then the bottom row.
+    // ActionValidator uses this method to decide whether passing is legal.
 
     @Test
     @DisplayName("isCurrentRowEmpty false when top row has cards")
     void currentRowNotEmptyWhenTopHasCards() {
-        // tileWithBoth: top=2, bottom=1 → fila corrente = top → non vuota
+        // tileWithBoth: top=2, bottom=1, so the current row is top and non-empty.
         TileResolutionState state = new TileResolutionState(alice, tileWithBoth);
         assertFalse(state.isCurrentRowEmpty());
     }
@@ -141,7 +141,7 @@ class TileResolutionStateTest {
     @DisplayName("isCurrentRowEmpty false after consuming one of two top cards")
     void currentRowNotEmptyAfterPartialTopConsumption() {
         TileResolutionState state = new TileResolutionState(alice, tileWithBoth);
-        state.consumeTopSlot(); // rimane 1 top
+        state.consumeTopSlot(); // 1 top slot remains
         assertFalse(state.isCurrentRowEmpty());
     }
 
@@ -149,8 +149,8 @@ class TileResolutionStateTest {
     @DisplayName("isCurrentRowEmpty false when top exhausted but bottom has cards")
     void currentRowNotEmptyWhenBottomHasCards() {
         // tileWithBoth: top=2, bottom=1.
-        // Dopo aver consumato entrambi i top, la fila corrente diventa quella inferiore
-        // che ha ancora 1 carta → non vuota.
+        // After consuming both top slots, the current row becomes the bottom
+        // row, which still has one card.
         TileResolutionState state = new TileResolutionState(alice, tileWithBoth);
         state.consumeTopSlot();
         state.consumeTopSlot();
@@ -160,7 +160,7 @@ class TileResolutionStateTest {
     @Test
     @DisplayName("isCurrentRowEmpty true after consuming the only top card (no bottom)")
     void currentRowEmptyAfterOnlyTopConsumed() {
-        // tileTopOnly: top=1, bottom=0. Dopo aver consumato l'unico top → vuota.
+        // tileTopOnly: top=1, bottom=0. After consuming the only top slot it is empty.
         TileResolutionState state = new TileResolutionState(alice, tileTopOnly);
         state.consumeTopSlot();
         assertTrue(state.isCurrentRowEmpty());
@@ -169,7 +169,7 @@ class TileResolutionStateTest {
     @Test
     @DisplayName("isCurrentRowEmpty true when tile starts with 0 top and 0 bottom")
     void currentRowEmptyFromStart() {
-        // Tessera totalmente esaurita (es. tutte le carte già prese da altri giocatori).
+        // Fully exhausted tile, as if all cards had already been taken.
         OfferTile emptyTile = new OfferTile('A', 1, 0, 0, false);
         TileResolutionState state = new TileResolutionState(alice, emptyTile);
         assertTrue(state.isCurrentRowEmpty());
@@ -183,13 +183,13 @@ class TileResolutionStateTest {
         state.consumeTopSlot();
         state.consumeBottomSlot();
         assertTrue(state.isCurrentRowEmpty());
-        assertTrue(state.isExhausted()); // isCurrentRowEmpty e isExhausted coincidono qui
+        assertTrue(state.isExhausted()); // isCurrentRowEmpty and isExhausted match here
     }
 
     @Test
     @DisplayName("isCurrentRowEmpty false when tile has only bottom cards (top=0, bottom=1)")
     void currentRowNotEmptyWhenOnlyBottomHasCards() {
-        // Tessera C: top=0, bottom=1. La fila corrente è subito quella inferiore → non vuota.
+        // Tile C: top=0, bottom=1. The current row is immediately the bottom row.
         OfferTile bottomOnly = new OfferTile('C', 2, 0, 1, false);
         TileResolutionState state = new TileResolutionState(alice, bottomOnly);
         assertFalse(state.isCurrentRowEmpty());

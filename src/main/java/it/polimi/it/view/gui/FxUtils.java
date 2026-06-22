@@ -3,15 +3,16 @@ package it.polimi.it.view.gui;
 import javafx.application.Platform;
 
 /**
- * Utilità condivise per i controller JavaFX.
+ * Shared utilities for JavaFX controllers.
  */
 public final class FxUtils {
 
     private FxUtils() { /* utility */ }
 
     /**
-     * Esegue il task sul JavaFX Application Thread.
-     * Se siamo già sul thread FX lo esegue subito, altrimenti usa runLater.
+     * Runs the task on the JavaFX Application Thread.
+     * If the current thread is already the FX thread, the task runs immediately;
+     * otherwise it is scheduled with {@link Platform#runLater(Runnable)}.
      */
     public static void runFx(Runnable r) {
         if (Platform.isFxApplicationThread()) r.run();

@@ -67,8 +67,8 @@ public final class TileResolutionState {
      * the same row ordering used in {@code Game.handlePass()}.
      */
     public boolean isCurrentRowEmpty() {
-        if (remainingTopCards > 0) return false;   // fila superiore: ancora carte
-        return remainingBottomCards == 0;           // fila inferiore: nessuna carta
+        if (remainingTopCards > 0) return false;   // top row still has cards
+        return remainingBottomCards == 0;           // bottom row has no cards
     }
 
     /** Returns the total number of slots still remaining (top + bottom). */

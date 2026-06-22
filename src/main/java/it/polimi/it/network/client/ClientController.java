@@ -21,17 +21,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
- * Controller lato client.
+ * Client-side controller.
  *
- * <p>Riceve i messaggi dal server e guida la view.
+ * <p>Receives messages from the server and drives the view.
  *
- * <p><b>Regola fondamentale sull'inputExecutor:</b>
- * L'executor è <em>uno solo</em> per tutta la durata della partita e non
- * viene mai ricreato né interrotto durante il gioco. I task di input si
- * accodano naturalmente: il server invia {@code CARD_SLOT_READY} solo
- * quando è effettivamente il turno di quel giocatore, quindi non ci
- * saranno mai task "obsoleti" in coda.
- * L'executor viene terminato solo in {@link #onDisconnect()} e {@link #run()}.
+ * <p><b>Input executor rule:</b> there is exactly one executor for the whole
+ * game. It is never recreated or interrupted while the game is active. Input
+ * tasks naturally queue up: the server sends {@code CARD_SLOT_READY} only when
+ * it is actually that player's turn, so queued tasks are not obsolete. The
+ * executor is shut down only in {@link #onDisconnect()} and {@link #run()}.
  */
 public class ClientController {
 
@@ -71,7 +69,7 @@ public class ClientController {
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
-    /** Chiamato quando la connessione cade. */
+    /** Called when the connection drops. */
     public void onDisconnect() {
         inputExecutor.shutdownNow();
         postGameScheduler.shutdownNow();
@@ -79,7 +77,7 @@ public class ClientController {
         gameLatch.countDown();
     }
 
-    /** Blocca finché la partita non finisce. Da chiamare dopo proxy.connect(). */
+    /** Blocks until the game ends. Call after proxy.connect(). */
     public void run() {
         try { gameLatch.await(); }
         catch (InterruptedException e) { Thread.currentThread().interrupt(); }
@@ -95,7 +93,7 @@ public class ClientController {
         try {
             dispatch(msg);
         } catch (Exception e) {
-            LOG.severe("Eccezione in onMessage tipo=" + msg.getType() + ": " + e);
+            LOG.severe("Exception in onMessage type=" + msg.getType() + ": " + e);
             for (StackTraceElement el : e.getStackTrace()) LOG.severe("  at " + el);
         }
     }
@@ -110,8 +108,8 @@ public class ClientController {
             }
             case Message.ERROR ->
                     view.showInvalidAction("SERVER", msg.str("reason"));
-            // Heartbeat e keep-alive: aggiornano solo il timestamp nel proxy, niente altro
-            case Message.HEARTBEAT, Message.PING, Message.PONG -> { /* ignorati */ }
+            // Heartbeat and keep-alive messages only refresh proxy timestamps.
+            case Message.HEARTBEAT, Message.PING, Message.PONG -> { /* ignored */ }
             case Message.ROUND_STARTED      -> handleRoundStarted(msg);
             case Message.TOTEM_PLACED       -> handleTotemPlaced(msg);
             case Message.CARD_SLOT_READY    -> handleCardSlotReady(msg);
@@ -182,11 +180,11 @@ public class ClientController {
                 }
                 if (isPlacementPhase() && lastBoard != null) promptNextTotemPlacement(lastBoard);
             }
-            default -> LOG.warning("Tipo messaggio sconosciuto: " + msg.getType());
+            default -> LOG.warning("Unknown message type: " + msg.getType());
         }
-    } // fine dispatch()
+    }
 
-    // ── Handler: piazzamento totem ────────────────────────────────────────────
+    // Totem placement handler.
 
     private void handleRoundStarted(Message msg) {
         currentRound = msg.num("round");
@@ -242,7 +240,7 @@ public class ClientController {
         }
     }
 
-    // ── Handler: scelta carte ─────────────────────────────────────────────────
+    // Card-choice handler.
 
     private void handleCardSlotReady(Message msg) {
         lastPhase = "RESOLVING_ACTIONS";
@@ -254,10 +252,10 @@ public class ClientController {
 
         view.showCardSlotReady(player, isTop, cards, visibleEvents);
 
-        // L'input viene richiesto solo al giocatore di turno.
-        // NON si fa shutdownNow/ricreazione: il server manda CARD_SLOT_READY
-        // solo quando è effettivamente il turno di questo giocatore,
-        // quindi i task si accodano correttamente senza mai essere "obsoleti".
+        // Only the active player is prompted. Do not call shutdownNow() or
+        // recreate the executor: the server sends CARD_SLOT_READY only when it
+        // is actually this player's turn, so tasks queue without becoming
+        // obsolete.
         if (!player.name().equals(myNickname)) return;
 
         PromptKey promptKey = new PromptKey("CARD", myNickname,
@@ -281,15 +279,14 @@ public class ClientController {
         PromptKey promptKey = new PromptKey("CARD_RETRY", myNickname,
                 currentRound + ":" + msg.bool("fromTopRow") + ":" + cardIds(alternatives));
         submitPrompt(promptKey, () -> {
-            // Il giocatore non riesce a pagare nessuna alternativa:
-            // il pass è sempre consentito in questo caso.
+            // The player cannot afford any alternative, so passing is allowed.
             int chosen = view.requestCardChoice(player, alternatives, /*canPass*/ true);
             if (chosen == -1) proxy.send(Message.pass(myNickname));
             else proxy.send(Message.takeCard(myNickname, chosen, msg.bool("fromTopRow")));
         });
     }
 
-    // ── Handler: post-round (Torre di Guardia) ────────────────────────────────
+    // Post-round handler for Watchtower.
 
     private void handlePostRoundStarted(Message msg) {
         lastPhase = "POST_ROUND";

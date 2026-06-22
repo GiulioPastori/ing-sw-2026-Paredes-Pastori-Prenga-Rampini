@@ -32,32 +32,31 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Implementazione JavaFX di {@link GameView}.
+ * JavaFX implementation of {@link GameView}.
  *
- * <p>È istanziata sul thread di rete (dal {@link it.polimi.it.network.client.ClientController})
- * e fa da ponte verso il {@link GameBoardView} che vive sul JavaFX
- * Application Thread.
+ * <p>It is instantiated on the network thread by
+ * {@link it.polimi.it.network.client.ClientController} and bridges calls to
+ * {@link GameBoardView}, which lives on the JavaFX Application Thread.
  *
  * <p><b>Threading:</b>
  * <ul>
- *   <li>Tutti i metodi {@code showXxx} sono asincroni: incapsulano la
- *       chiamata in {@link Platform#runLater(Runnable)}.</li>
- *   <li>Tutti i metodi {@code requestXxx} sono bloccanti: riempiono il
- *       prompt sulla UI e attendono la scelta dell'utente tramite
- *       {@link BlockingQueue}.</li>
+ *   <li>All {@code showXxx} methods are asynchronous: they wrap the UI update
+ *       in {@link Platform#runLater(Runnable)}.</li>
+ *   <li>All {@code requestXxx} methods are blocking: they render the prompt on
+ *       the UI and wait for the user's choice through a {@link BlockingQueue}.</li>
  * </ul>
  *
- * <p><b>Race-free initialisation:</b> il network thread può ricevere i primi
- * messaggi del server (in particolare {@code ROUND_STARTED}) <em>prima</em>
- * che {@link #showBoard(String)} abbia caricato l'FXML e creato il
- * {@link GameBoardView}. Per evitare che questi eventi vengano persi,
- * tutti i metodi {@code showXxx}/{@code requestXxx} passano per
- * {@link #whenReady(Consumer)}: se il controller è pronto eseguono subito,
- * altrimenti vengono accodati in {@link #pendingActions} e replayati in
- * ordine non appena {@link #showBoard(String)} ha terminato l'inizializzazione.
+ * <p><b>Race-free initialisation:</b> the network thread can receive early
+ * server messages, especially {@code ROUND_STARTED}, before
+ * {@link #showBoard(String)} has loaded the FXML and created the
+ * {@link GameBoardView}. To avoid losing those events, all
+ * {@code showXxx}/{@code requestXxx} methods go through
+ * {@link #whenReady(Consumer)}. If the controller is ready, the action runs
+ * immediately; otherwise it is queued in {@link #pendingActions} and replayed
+ * in order once {@link #showBoard(String)} completes.
  *
- * <p>La coda è solo "pre-init": una volta riempito il riferimento al
- * controller, ogni successiva chiamata viene eseguita immediatamente.
+ * <p>The queue is only for pre-initialisation calls. Once the controller
+ * reference is set, later calls run immediately.
  */
 public class JavaFxView implements GameView {
 
@@ -106,9 +105,9 @@ public class JavaFxView implements GameView {
                                       Map<String, Integer> playerWinCounts) {}
 
     /**
-     * @param primaryStage lo {@link Stage} principale dove montare la board.
-     *                     Tipicamente la stessa usata dalla lobby — la view
-     *                     ne sostituisce la scena.
+     * @param primaryStage main {@link Stage} used to mount the board; usually
+     *                     the same one used by the lobby, with its scene
+     *                     replaced by this view
      */
     public JavaFxView(Stage primaryStage, LobbyController lobbyController) {
         this.lobbyController = lobbyController;
@@ -116,12 +115,12 @@ public class JavaFxView implements GameView {
     }
 
     /**
-     * Costruisce e mostra la board nello stage. Da chiamare DOPO che la lobby
-     * ha confermato la connessione; sincronizza la chiamata sul JavaFX
+     * Builds and shows the board in the stage. Call this after the lobby has
+     * confirmed the connection; the method synchronises with the JavaFX
      * Application Thread.
      *
-     * <p>Quando questo metodo termina, il {@link GameBoardView} è
-     * disponibile e qualsiasi evento precedentemente accodato viene replayato.
+     * <p>When this method returns, {@link GameBoardView} is available and all
+     * previously queued events have been replayed.
      */
     public void showBoard(String myNickname) {
         try { gameStartedLatch.await(); }
@@ -156,7 +155,7 @@ public class JavaFxView implements GameView {
                     toReplay.forEach(a -> a.accept(bc));
                 }
             } catch (IOException e) {
-                LOG.log(Level.SEVERE, "Impossibile caricare game.fxml", e);
+                LOG.log(Level.SEVERE, "Unable to load game.fxml", e);
             } finally {
                 ready.countDown();
             }
@@ -317,7 +316,7 @@ public class JavaFxView implements GameView {
             primaryStage.setScene(scene);
             primaryStage.setTitle("MESOS — Game Over");
         } catch (IOException e) {
-            LOG.log(Level.SEVERE, "Impossibile caricare gameover.fxml", e);
+            LOG.log(Level.SEVERE, "Unable to load gameover.fxml", e);
         }
     }
 

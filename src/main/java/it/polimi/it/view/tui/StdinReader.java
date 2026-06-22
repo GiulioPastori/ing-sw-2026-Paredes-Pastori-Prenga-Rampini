@@ -8,30 +8,30 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
- * Lettore stdin dedicato con coda bloccante.
+ * Dedicated stdin reader backed by a blocking queue.
  *
- * <p>Un unico thread daemon legge righe da stdin con il normale
- * {@link BufferedReader#readLine()} (bloccante, funziona su tutti i sistemi
- * e in tutti gli IDE). Ogni riga letta viene inserita in una
+ * <p>A single daemon thread reads stdin lines through the regular
+ * {@link BufferedReader#readLine()} call. This blocking call works reliably
+ * across systems and IDEs. Each line is then inserted into a
  * {@link BlockingQueue}.
  *
- * <p>I metodi di input della {@link TuiView} chiamano {@link #readLine(long, TimeUnit)}
- * che preleva dalla coda con timeout. In questo modo:
+ * <p>The input methods in {@link TuiView} call {@link #readLine(long, TimeUnit)}
+ * to poll the queue with a timeout. This guarantees that:
  * <ul>
- *   <li>stdin viene letto da <em>un solo thread</em> → nessuna race condition</li>
- *   <li>i task dell'inputExecutor non bloccano su syscall non interrompibili</li>
- *   <li>il timeout permette al task di svegliarsi e controllare se è stato
- *       interrotto o se la partita è finita</li>
+ *   <li>stdin is read by <em>one thread only</em>, avoiding input races;</li>
+ *   <li>inputExecutor tasks do not block on non-interruptible system calls;</li>
+ *   <li>the timeout lets a task wake up and check whether it was interrupted
+ *       or the game has ended.</li>
  * </ul>
  */
 public class StdinReader {
 
     private static final Logger LOG = Logger.getLogger(StdinReader.class.getName());
 
-    /** Coda delle righe lette da stdin, non ancora consumate. */
+    /** Lines read from stdin and not yet consumed. */
     private final BlockingQueue<String> lines = new LinkedBlockingQueue<>();
 
-    /** Singleton: un solo lettore per tutta l'applicazione. */
+    /** Singleton: one reader for the whole application. */
     private static final StdinReader INSTANCE = new StdinReader();
 
     public static StdinReader getInstance() { return INSTANCE; }
@@ -42,7 +42,7 @@ public class StdinReader {
         t.start();
     }
 
-    // ── Loop di lettura (thread daemon) ───────────────────────────────────────
+    // Daemon read loop.
 
     private void readLoop() {
         try (BufferedReader br = new BufferedReader(new InputStreamReader(System.in))) {
@@ -53,28 +53,27 @@ public class StdinReader {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } catch (Exception e) {
-            LOG.warning("stdin-reader terminato: " + e.getMessage());
+            LOG.warning("stdin-reader stopped: " + e.getMessage());
         }
     }
 
-    // ── API pubblica ──────────────────────────────────────────────────────────
+    // Public API.
 
     /**
-     * Preleva la prossima riga dalla coda, bloccando per al massimo
-     * {@code timeout} {@code unit}.
+     * Polls the next line from the queue, waiting at most the given timeout.
      *
-     * @return la riga letta, oppure {@code null} se il timeout è scaduto
-     * @throws InterruptedException se il thread viene interrotto
+     * @return the line read from stdin, or {@code null} if the timeout expires
+     * @throws InterruptedException if the thread is interrupted
      */
     public String readLine(long timeout, TimeUnit unit) throws InterruptedException {
         return lines.poll(timeout, unit);
     }
 
     /**
-     * Preleva la prossima riga dalla coda, bloccando indefinitamente.
+     * Takes the next line from the queue, blocking indefinitely.
      *
-     * @return la riga letta (mai null)
-     * @throws InterruptedException se il thread viene interrotto
+     * @return the line read from stdin, never {@code null}
+     * @throws InterruptedException if the thread is interrupted
      */
     public String readLine() throws InterruptedException {
         return lines.take();

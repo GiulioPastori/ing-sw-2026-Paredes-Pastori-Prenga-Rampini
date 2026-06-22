@@ -11,7 +11,10 @@ import it.polimi.it.cards.character.Character;
 @FunctionalInterface
 public interface AcquisitionHook {
 
-    /** @param player   the player who owns the building
+    /**
+     * Applies the building hook after a character has been acquired.
+     *
+     * @param player   the player who owns the building
      * @param acquired the character just added to the tribe
      */
     void apply(Player player, Character acquired);

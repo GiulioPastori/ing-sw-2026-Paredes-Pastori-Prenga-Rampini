@@ -4,25 +4,24 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Lettura da stdin interrompibile via {@link Thread#interrupt()}.
+ * Stdin reader that can be interrupted through {@link Thread#interrupt()}.
  *
- * <p>{@link java.util.Scanner#nextLine()} e {@link java.io.BufferedReader#readLine()}
- * bloccano il thread in una syscall non interrompibile: anche chiamando
- * {@code Thread.interrupt()} o {@code ExecutorService.shutdownNow()}, il thread
- * rimane bloccato finché l'utente non preme Invio.
+ * <p>{@link java.util.Scanner#nextLine()} and {@link java.io.BufferedReader#readLine()}
+ * block inside a non-interruptible system call: even after
+ * {@code Thread.interrupt()} or {@code ExecutorService.shutdownNow()}, the
+ * thread remains blocked until the user presses Enter.
  *
- * <p>Questo helper legge byte per byte usando {@link InputStream#available()}
- * per verificare se ci sono dati prima di bloccarsi, con brevi sleep tra un
- * controllo e l'altro. In questo modo {@code Thread.interrupt()} viene
- * controllato regolarmente e il thread si sveglia entro {@value #POLL_MS} ms.
+ * <p>This helper reads byte by byte and checks {@link InputStream#available()}
+ * before blocking, with short sleeps between checks. This makes the thread
+ * observe {@code Thread.interrupt()} regularly and wake within
+ * {@value #POLL_MS} ms.
  *
- * <p>Usato da {@link TuiView} per rendere tutti i metodi di input interrompibili,
- * così il {@code ClientController} può cancellare un task di input in attesa
- * quando il turno cambia.
+ * <p>{@link TuiView} uses it to make input methods interruptible, allowing the
+ * {@code ClientController} to cancel pending input when the turn changes.
  */
 public class InterruptibleInput {
 
-    /** Intervallo di polling in ms — bilanciamento tra reattività e CPU. */
+    /** Polling interval in milliseconds; balances responsiveness and CPU use. */
     private static final int POLL_MS = 100;
 
     private final InputStream in;
@@ -32,24 +31,24 @@ public class InterruptibleInput {
     }
 
     /**
-     * Legge una riga da stdin, interrompibile tramite {@link Thread#interrupt()}.
+     * Reads a stdin line, interruptible through {@link Thread#interrupt()}.
      *
-     * @return la riga letta (senza newline), oppure {@code null} se EOF
-     * @throws InterruptedException se il thread viene interrotto durante l'attesa
-     * @throws IOException          in caso di errore di I/O
+     * @return the line without the trailing newline, or {@code null} on EOF
+     * @throws InterruptedException if the thread is interrupted while waiting
+     * @throws IOException          on I/O errors
      */
     public String readLine() throws InterruptedException, IOException {
         StringBuilder sb = new StringBuilder();
         while (true) {
             if (Thread.interrupted()) {
-                throw new InterruptedException("Input interrotto");
+                throw new InterruptedException("Input interrupted");
             }
             int available = in.available();
             if (available > 0) {
                 int b = in.read();
                 if (b == -1) return sb.isEmpty() ? null : sb.toString();
                 char c = (char) b;
-                if (c == '\n') return sb.toString().stripTrailing(); // rimuove \r su Windows
+                if (c == '\n') return sb.toString().stripTrailing(); // removes \r on Windows
                 sb.append(c);
             } else {
                 Thread.sleep(POLL_MS);

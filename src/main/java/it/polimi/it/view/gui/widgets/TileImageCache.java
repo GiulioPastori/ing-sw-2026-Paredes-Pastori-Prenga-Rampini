@@ -7,14 +7,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Caricatore (con cache) delle immagini delle tessere offerta.
+ * Cached loader for offer tile images.
  *
- * <p>Convenzione: ogni tessera ha un PNG in
+ * <p>Convention: each tile has a PNG in
  * {@code resources/it/polimi/it/view/gui/tiles/tile_<letter>.png}
- * (es. {@code tile_A.png}, {@code tile_B.png}, …). Le lettere disponibili
- * sono A–G (sufficienti per le 6 offer tile + 1 food-only del gioco a 5
- * giocatori). Se l'immagine non è presente, viene restituito {@code null} e
- * la {@link CardCellFactory} userà un placeholder testuale.
+ * (for example {@code tile_A.png}, {@code tile_B.png}). Available letters are
+ * A-G, enough for the six offer tiles plus the food-only tile in a 5-player
+ * game. If the image is missing, this class returns {@code null} and
+ * {@link CardCellFactory} uses a textual placeholder.
  */
 public final class TileImageCache {
 
@@ -51,7 +51,7 @@ public final class TileImageCache {
     /**
      * Returns the variant image for the Turn Order Tile based on player count.
      *
-     * <p>Convention: {@code tiles/<numPlayers>_players_tile.png} (es.
+     * <p>Convention: {@code tiles/<numPlayers>_players_tile.png}, for example
      * {@code 2_players_tile.png}). Returns {@code null} if the asset is not
      * present (the {@link CardCellFactory} falls back to a procedural,
      * stylesheet-only rendering).

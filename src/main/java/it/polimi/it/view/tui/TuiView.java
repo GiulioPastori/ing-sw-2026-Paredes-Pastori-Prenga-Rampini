@@ -22,29 +22,28 @@ import java.util.concurrent.TimeUnit;
 import static it.polimi.it.view.tui.AnsiStyle.*;
 
 /**
- * Interfaccia utente testuale (TUI).
+ * Text user interface (TUI).
  *
- * <p>Output su stdout con codici ANSI per il colore, emoji per i ruoli dei
- * personaggi e per i tipi di evento, e una formattazione a riquadri per
- * separare visivamente i diversi contesti (round / fase azione / post-round
- * / fine partita).
+ * <p>Writes to stdout using ANSI colours, role/event glyphs, and boxed sections
+ * to separate the main contexts: round start, action phase, post-round, and
+ * game over.
  *
- * <p>Input tramite {@link StdinReader}: un singolo thread daemon legge stdin
- * con {@code BufferedReader.readLine()} bloccante e mette le righe in una
- * {@code BlockingQueue}. I metodi di input prelevano dalla coda con un
- * timeout di {@value #INPUT_TIMEOUT_S}s, così il thread di input è sempre
- * interrompibile e non tiene mai bloccato il sistema.
+ * <p>Input goes through {@link StdinReader}: a single daemon thread reads stdin
+ * with blocking {@code BufferedReader.readLine()} and puts lines in a
+ * {@code BlockingQueue}. Input methods poll the queue with a
+ * {@value #INPUT_TIMEOUT_S}s timeout, so input handling remains interruptible.
  *
- * <p>Sostituibile con una GUI JavaFX implementando {@link GameView}.
+ * <p>Can be replaced by any other {@link GameView}, such as the JavaFX GUI.
  */
 public class TuiView implements GameView {
 
-    /** Timeout per ogni singola lettura da stdin (secondi).
-     *  Se scade, viene ritentato — il loop continua finché l'utente non risponde
-     *  o il thread viene interrotto. */
+    /**
+     * Timeout for each stdin poll, in seconds. If it expires, the prompt loop
+     * retries until the user answers or the thread is interrupted.
+     */
     private static final long INPUT_TIMEOUT_S = 5;
 
-    /** Larghezza fissa dei riquadri principali (in caratteri). */
+    /** Fixed width of the main boxes, in terminal columns. */
     private static final int BOX_WIDTH = 64;
 
     private final StdinReader stdin = StdinReader.getInstance();
@@ -77,7 +76,7 @@ public class TuiView implements GameView {
                 + paint(totemColor(player.totemColour()), true, "●")
                 + " sulla tessera "
                 + paint(FG_B_YELLOW, true, String.valueOf(tileLetter)) + ".");
-        // Riassunto dello stato del tracciato dopo il piazzamento
+        // Summary of the offer track after placement.
         printOfferTrackOneLiner(board.offerTiles());
     }
 
@@ -124,7 +123,7 @@ public class TuiView implements GameView {
                 + paint(FG_B_YELLOW, true, "#" + position)
                 + paint(DIM, "  [🍖 " + player.food()
                 + " | ⭐ " + player.prestigePoints() + "]"));
-        // Stato aggiornato della Turn Order Tile
+        // Updated Turn Order Tile state.
         renderTurnOrderTile(board.turnOrderTile());
     }
 
@@ -338,8 +337,8 @@ public class TuiView implements GameView {
         println(paint(FG_B_CYAN, true, "→ " + formatPlayerName(player)
                 + ", scegli una tessera:"));
         renderBoard(board);
-        // L'utente vede tutto il tracciato (libere + occupate) ma può scegliere
-        // solo le libere; la validazione è nel loop sotto.
+        // The user sees the whole offer track, including occupied tiles, but
+        // can choose only free tiles. Validation happens in the loop below.
         List<Character> freeLetters = board.offerTiles().stream()
                 .filter(OfferTileSnapshot::isFree)
                 .map(OfferTileSnapshot::letter)
@@ -374,7 +373,7 @@ public class TuiView implements GameView {
         print(paint(FG_B_YELLOW, "Numero: "));
         while (true) {
             String line = nextLine();
-            if (line == null) continue; // timeout, riprova
+            if (line == null) continue; // timeout, retry
             try {
                 int choice = Integer.parseInt(line.trim());
                 if (choice == 0) {
@@ -424,10 +423,9 @@ public class TuiView implements GameView {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     /**
-     * Legge la prossima riga con timeout {@value #INPUT_TIMEOUT_S}s.
-     * Ritorna {@code null} se il timeout scade (il chiamante deve riprovare).
-     * Ritorna {@code null} anche se il thread viene interrotto
-     * (il chiamante deve uscire dal loop o passare).
+     * Reads the next line with a {@value #INPUT_TIMEOUT_S}s timeout.
+     * Returns {@code null} on timeout, so the caller can retry. Also returns
+     * {@code null} when interrupted, so the caller can leave the loop or pass.
      */
     private String nextLine() {
         try {
@@ -620,10 +618,10 @@ public class TuiView implements GameView {
     }
 
     /**
-     * Formato carta dettagliato:
-     *   PERSONAGGIO  → emoji + ruolo colorato + era
-     *   EDIFICIO     → costo, PP finali, descrizione effetto in italiano
-     *   EVENTO       → tipo + emoji + nota "non acquisibile"
+     * Detailed card format:
+     *   CHARACTER: role glyph, coloured role name, and era
+     *   BUILDING: cost, final points, and localized effect description
+     *   EVENT: event type, glyph, and non-acquirable marker
      */
     private String formatCard(CardSnapshot c) {
         return switch (c.type()) {
@@ -645,13 +643,12 @@ public class TuiView implements GameView {
     }
 
     /**
-     * Costruisce la stringa con le icone distintive di un personaggio in base
-     * al tipo. Per:
-     *  - HUNTER:   "🎯" se ha l'icona trigger (caccia immediata), altrimenti vuoto
-     *  - SHAMAN:   stelline pari a starIcons (★ ★★ ★★★)
-     *  - INVENTOR: l'identificatore dell'invenzione fra parentesi
-     *  - BUILDER:  sconto al costo edifici e PP a fine partita
-     *  - GATHERER, ARTIST: nessun dato distintivo (effetto fisso)
+     * Builds the string with character-specific printed icons:
+     *  - HUNTER: trigger marker, when printed on the card
+     *  - SHAMAN: as many stars as {@code starIcons}
+     *  - INVENTOR: invention identifier
+     *  - BUILDER: building-cost discount and end-game points
+     *  - GATHERER, ARTIST: no distinguishing data because the effect is fixed
      */
     private String formatCharacterDetails(CardSnapshot c) {
         if (c.details() == null || c.characterType() == null) return "";
@@ -678,7 +675,7 @@ public class TuiView implements GameView {
                 }
                 yield sb.toString();
             }
-            case GATHERER, ARTIST -> ""; // effetto fisso, niente da differenziare
+            case GATHERER, ARTIST -> ""; // fixed effect, no distinguishing data
         };
     }
 
@@ -702,7 +699,7 @@ public class TuiView implements GameView {
                 + paint(DIM, "  (id:" + c.id() + ")");
     }
 
-    /** Player riepilogo lungo (ordine di turno + risorse). */
+    /** Long player summary with turn order and resources. */
     private String formatPlayer(PlayerSnapshot p) {
         return formatPlayerName(p)
                 + paint(DIM, "  [")
@@ -718,9 +715,8 @@ public class TuiView implements GameView {
     }
 
     /**
-     * Recupera l'EventType dall'effectDescription dello snapshot.
-     * Lo snapshot di un evento mette il nome dell'enum dentro effectDescription
-     * (vedi {@link CardSnapshot#of}).
+     * Parses the EventType from the snapshot effectDescription. Event snapshots
+     * store the enum name in that field; see {@link CardSnapshot#of}.
      */
     private static EventType parseEventType(String name) {
         try { return EventType.valueOf(name); }
@@ -729,7 +725,7 @@ public class TuiView implements GameView {
 
     // ── Box drawing ───────────────────────────────────────────────────────────
 
-    /** Stampa un riquadro con titolo. La larghezza è fissa per allinearsi tra messaggi. */
+    /** Prints a titled box; fixed width keeps messages aligned. */
     private void printBoxTop(String title) {
         String inner = " " + title + " ";
         // padding centered

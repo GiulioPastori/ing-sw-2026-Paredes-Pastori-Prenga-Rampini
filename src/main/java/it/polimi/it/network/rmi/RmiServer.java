@@ -12,33 +12,34 @@ import java.util.List;
 public interface RmiServer extends Remote {
 
     /**
-     * Registra un client assegnandolo automaticamente a una sessione aperta
-     * con {@code numPlayers} giocatori attesi (o ne crea una nuova).
+     * Registers a client by assigning it automatically to an open session with
+     * the requested player count, or by creating a new session.
      *
-     * @return lo stub remoto della sessione giocatore, o {@code null} se il
-     *         join è stato rifiutato; in quel caso il server invia anche un
-     *         messaggio di errore al callback client
+     * @return the remote player-session stub, or {@code null} if the join was
+     *         rejected; in that case the server also sends an error message to
+     *         the client callback
      */
     RmiPlayerSession register(String nickname, RmiClient client, int numPlayers, String totemColour)
             throws RemoteException;
 
     /**
-     * Come {@link #register} ma consente di unirsi a una sessione specifica
-     * identificata da {@code sessionId} (feature partite multiple).
-     * Se {@code sessionId} è null o blank si comporta come {@link #register}.
+     * Like {@link #register}, but joins the specific session identified by
+     * {@code sessionId}. If {@code sessionId} is null or blank, this behaves
+     * like {@link #register}.
      *
-     * @return lo stub remoto della sessione giocatore, o {@code null} se il
-     *         join è stato rifiutato
+     * @return the remote player-session stub, or {@code null} if the join was
+     *         rejected
      */
     RmiPlayerSession registerWithSession(String nickname, RmiClient client,
                                          int numPlayers, String totemColour, String sessionId)
             throws RemoteException;
 
     /**
-     * Restituisce la lista delle sessioni aperte.
-     * Da chiamare prima di {@link #registerWithSession} per mostrare le partite disponibili.
+     * Returns the list of open sessions.
+     * Call this before {@link #registerWithSession} to show available games.
      *
-     * @param numPlayersFilter se &gt; 0 filtra per numero di giocatori; 0 = tutte
+     * @param numPlayersFilter if greater than 0, filters by player count; 0
+     *                         returns all sessions
      */
     List<Message.SessionInfo> listSessions(int numPlayersFilter) throws RemoteException;
 }

@@ -27,16 +27,15 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Controller della schermata di fine partita.
+ * Controller for the game-over screen.
  *
- * <p>Riceve la lista dei vincitori e la classifica finale, popola la
- * {@link TableView} con i punteggi e mette in risalto le righe corrispondenti
- * ai vincitori.
+ * <p>Receives winners and final scores, fills the {@link TableView}, and
+ * highlights winner rows.
  *
- * <p>Espone inoltre il metodo {@link #setLeaderboard} che, quando arriva il
- * messaggio {@code LEADERBOARD} dal server (FA "Classifica partite su DB"),
- * popola la tabella inferiore con la classifica globale per le partite con
- * lo stesso numero di giocatori, evidenziando la riga del giocatore corrente.
+ * <p>Also exposes {@link #setLeaderboard}; when the server sends a
+ * {@code LEADERBOARD} message, it fills the lower table with the global
+ * leaderboard for games with the same player count and highlights the current
+ * player row.
  */
 public class GameOverController {
 
@@ -51,7 +50,7 @@ public class GameOverController {
     @FXML private TableColumn<Row, Number> foodCol;
     @FXML private TableColumn<Row, String> winsCol;
 
-    // ── Leaderboard widgets (FA "Classifica partite su DB") ──────────────────
+    // Leaderboard widgets.
     @FXML private Label leaderboardHeader;
     @FXML private Label leaderboardSummary;
     @FXML private TableView<LbRow>           leaderboardTable;
@@ -63,7 +62,7 @@ public class GameOverController {
     private static final DateTimeFormatter LB_DATE_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    /** POJO/record-like riga della classifica della partita corrente. */
+    /** Row for the current game's final ranking table. */
     public static class Row {
         private final SimpleIntegerProperty rank = new SimpleIntegerProperty();
         private final SimpleStringProperty  name = new SimpleStringProperty();
@@ -92,7 +91,7 @@ public class GameOverController {
         }
     }
 
-    /** Riga della tabella inferiore (classifica globale storica). */
+    /** Row for the lower historical leaderboard table. */
     public static class LbRow {
         private final SimpleIntegerProperty rank  = new SimpleIntegerProperty();
         private final SimpleStringProperty  name  = new SimpleStringProperty();
@@ -124,7 +123,7 @@ public class GameOverController {
         if (winsCol != null) winsCol.setCellValueFactory(new PropertyValueFactory<>("dbWins"));
         scoreTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        // Evidenzia la riga vincitrice via classe CSS
+        // Highlight winner rows through CSS.
         scoreTable.setRowFactory(tv -> new TableRow<>() {
             @Override
             protected void updateItem(Row item, boolean empty) {
@@ -162,15 +161,14 @@ public class GameOverController {
     }
 
     /**
-     * Popola la schermata con vincitori e classifica della partita.
+     * Populates the screen with winners and final ranking for the game.
      */
     public void setResults(List<PlayerSnapshot> winners, List<PlayerSnapshot> finalScores) {
         setResults(winners, finalScores, List.of());
     }
 
     /**
-     * Popola la schermata con vincitori, resoconto del calcolo punti e
-     * classifica della partita.
+     * Populates the screen with winners, score breakdown, and final ranking.
      */
     public void setResults(List<PlayerSnapshot> winners, List<PlayerSnapshot> finalScores,
                            List<FinalScoreBreakdown> scoreBreakdowns) {
@@ -183,7 +181,7 @@ public class GameOverController {
             Set<String> winSet = new HashSet<>();
             for (PlayerSnapshot w : winners) winSet.add(w.name());
 
-            // Ordina per PP desc, poi per food desc (come da regolamento)
+            // Sort by prestige points descending, then by food descending.
             List<PlayerSnapshot> sorted = finalScores.stream()
                     .sorted(Comparator
                             .comparingInt(PlayerSnapshot::prestigePoints).reversed()
@@ -230,17 +228,15 @@ public class GameOverController {
     }
 
     /**
-     * Popola la tabella inferiore con la classifica globale ricevuta dal
+     * Populates the lower table with the global leaderboard received from the
      * server.
      *
-     * @param recipient    nickname del giocatore corrente (riga evidenziata)
-     * @param myScore      punteggio finale del giocatore corrente
-     * @param myRank       posizione 1-based del giocatore corrente
-     * @param totalEntries numero totale di risultati registrati per quel
-     *                     numero di giocatori
-     * @param numPlayers   numero di giocatori delle partite considerate
-     * @param leaderboard  classifica globale (già ordinata, con rank
-     *                     impostato)
+     * @param recipient    nickname of the current player, whose row is highlighted
+     * @param myScore      final score of the current player
+     * @param myRank       1-based rank of the current player
+     * @param totalEntries total recorded results for the given player count
+     * @param numPlayers   player count of the considered games
+     * @param leaderboard  global leaderboard, already sorted and ranked
      */
     public void setLeaderboard(String recipient,
                                int myScore,

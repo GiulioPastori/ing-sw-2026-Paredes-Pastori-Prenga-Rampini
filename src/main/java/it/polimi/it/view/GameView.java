@@ -43,8 +43,12 @@ public interface GameView {
     void showTotemPlaced(PlayerSnapshot player, char tileLetter,
                          BoardSnapshot board);
 
-    /** Mostra le carte disponibili in una riga per il giocatore attivo.
-     *  visibleEvents contiene gli eventi presenti nella stessa riga (non acquisibili). */
+    /**
+     * Shows the cards available in a row for the active player.
+     *
+     * @param visibleEvents event cards in the same row; they are visible but
+     *                      cannot be acquired
+     */
     void showCardSlotReady(PlayerSnapshot player, boolean isTopRow,
                            List<CardSnapshot> availableCards,
                            List<CardSnapshot> visibleEvents);
@@ -96,7 +100,7 @@ public interface GameView {
 
     /**
      * Displays the persistent leaderboard delivered by the server after a
-     * game ends (FA "Classifica partite su DB").
+     * game ends (DB leaderboard feature).
      *
      * <p>The same method is invoked on every client: each instance receives
      * its own {@code recipient}, score and rank, plus the same global

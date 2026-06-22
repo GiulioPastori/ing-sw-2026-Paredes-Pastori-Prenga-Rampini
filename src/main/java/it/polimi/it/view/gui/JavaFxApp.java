@@ -18,22 +18,22 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Entry point JavaFX dell'applicazione client.
+ * JavaFX entry point for the client application.
  *
- * <p>Flusso:
+ * <p>Flow:
  * <ol>
- *   <li>{@link #start(Stage)} mostra la lobby (FXML);</li>
- *   <li>quando l'utente preme "Connetti" il
- *       {@link LobbyController} invoca il consumer registrato qui;</li>
- *   <li>la connessione viene tentata su un thread dedicato (non FX);</li>
- *   <li>al successo, {@link JavaFxView#showBoard(String)} sostituisce la
- *       scena della lobby con la board, e il thread di rete entra in
- *       {@link ClientController#run()} (bloccante fino a fine partita).</li>
+ *   <li>{@link #start(Stage)} shows the lobby FXML.</li>
+ *   <li>When the user presses the connect button, {@link LobbyController}
+ *       invokes the callback registered here.</li>
+ *   <li>The connection attempt runs on a dedicated non-FX thread.</li>
+ *   <li>On success, {@link JavaFxView#showBoard(String)} replaces the lobby
+ *       scene with the board, then the network thread enters
+ *       {@link ClientController#run()} until the game ends.</li>
  * </ol>
  *
- * <p>I parametri opzionali da CLI (host/port di default) vengono passati
- * tramite {@link Application#getParameters()}; vedi {@link #main(String[])}
- * e {@link it.polimi.it.network.client.ClientApp} per il punto di lancio.
+ * <p>Optional CLI parameters are passed through
+ * {@link Application#getParameters()}; see {@link #main(String[])} and
+ * {@link it.polimi.it.network.client.ClientApp} for the launch path.
  */
 public class JavaFxApp extends Application {
 
@@ -60,21 +60,21 @@ public class JavaFxApp extends Application {
         stage.setTitle("MESOS — Lobby");
         stage.setScene(scene);
         stage.setOnCloseRequest(e -> {
-            // Quando l'utente chiude la finestra, abbatti il runtime JavaFX
+            // Stop the JavaFX runtime when the user closes the window.
             Platform.exit();
-            // System.exit chiude anche eventuali thread di rete bloccati su take()
+            // System.exit also closes network threads that may be blocked on take().
             System.exit(0);
         });
         stage.show();
     }
 
     /**
-     * Callback dalla lobby. Esegue la connessione di rete su un thread
-     * dedicato per non bloccare il JavaFX Application Thread.
+     * Lobby callback. Performs the network connection on a dedicated thread so
+     * the JavaFX Application Thread is not blocked.
      *
-     * <p>Il feedback di errore alla lobby (in caso di fallimento) avviene
-     * tramite {@link #reportLobbyError(String)}, che cerca i nodi della
-     * scena ancora attiva via lookup CSS.
+     * <p>On failure, lobby feedback is sent through
+     * {@link #reportLobbyError(String)}, which looks up nodes in the still
+     * active lobby scene.
      */
     private void handleConnect(LobbyController.ConnectionParams p) {
         Thread netThread = new Thread(() -> doConnect(p), "mesos-client-network");
@@ -83,11 +83,11 @@ public class JavaFxApp extends Application {
     }
 
     /**
-     * Costruisce il proxy, il controller di rete, mostra la board e blocca
-     * fino a fine partita. Gira sempre su un thread non-FX.
+     * Builds the proxy and network controller, shows the board, and blocks
+     * until the game ends. Always runs on a non-FX thread.
      */
     private void doConnect(LobbyController.ConnectionParams p) {
-        // Per RMI usiamo la convenzione del progetto: porta_rmi = porta_socket+1.
+        // Project convention: the RMI port is the socket port plus one.
         int connectPort = p.useRmi() ? p.port() + 1 : p.port();
 
         ServerProxy proxy;
@@ -100,7 +100,7 @@ public class JavaFxApp extends Application {
             return;
         }
 
-        // ── Partite multiple: recupera sessioni aperte e mostra la scelta ─────
+        // Multiple games: fetch open sessions and show the choice dialog.
         String chosenSessionId = null;
         try {
             java.util.List<it.polimi.it.network.message.Message.SessionInfo> sessions =
@@ -112,15 +112,14 @@ public class JavaFxApp extends Application {
                         () -> lobbyController.showSessionList(sessions, future));
                 try {
                     chosenSessionId = future.get(60, java.util.concurrent.TimeUnit.SECONDS);
-                } catch (Exception ignored) { /* timeout → nuova sessione */ }
+                } catch (Exception ignored) { /* timeout, create a new session */ }
             }
         } catch (IOException e) {
-            LOG.warning("Lista sessioni non disponibile: " + e.getMessage());
+            LOG.warning("Session list unavailable: " + e.getMessage());
         }
 
-        // Crea la View JavaFX prima di tentare la connessione, così il
-        // ClientController può chiamarne i metodi non appena arrivano i primi
-        // messaggi del server.
+        // Create the JavaFX view before connecting so ClientController can call
+        // it as soon as the first server messages arrive.
         JavaFxView view = new JavaFxView(primaryStage, lobbyController);
         ClientController controller = new ClientController(proxy, view, p.nickname());
         proxy.setOnMessage(controller::onMessage);
@@ -136,34 +135,29 @@ public class JavaFxApp extends Application {
             return;
         }
 
-        // Connessione OK: scambia la scena con il tabellone.
+        // Connection succeeded: replace the lobby scene with the board.
         view.showBoard(p.nickname());
 
-        // Blocca questo thread fino al termine della partita. Il dispatching
-        // dei messaggi avviene su altri thread (i reader del proxy);
-        // run() resta in attesa sul gameLatch del controller.
+        // Block this thread until the game ends. Message dispatching happens
+        // on proxy reader threads; run() waits on the controller game latch.
         try {
             controller.run();
         } finally {
             try { proxy.disconnect(); } catch (Exception ignored) { /* best effort */ }
-            // Quando la partita finisce, la GameOverController gestisce il bottone
-            // "Chiudi". Non chiudiamo qui automaticamente: l'utente vuole vedere
-            // la classifica.
+            // When the game ends, GameOverController owns the close button. Do
+            // not close automatically because the user needs to see the ranking.
         }
     }
 
     /**
-     * Mostra un messaggio di errore nella lobby. Recupera il
-     * {@link LobbyController} dalla scena attiva: questo metodo va invocato
-     * solo finché la lobby è ancora a video.
+     * Shows an error message in the lobby. This method must only be invoked
+     * while the lobby scene is still active.
      */
     private void reportLobbyError(String msg) {
         Platform.runLater(() -> {
             try {
-                // La lobby è ancora la scena corrente: il suo root è il VBox
-                // gestito dal LobbyController. Ricarichiamo il controller via
-                // userData impostata da setOnConnectRequest? In modo più
-                // pulito: usiamo lookup sul campo statusLabel.
+                // The lobby is still the current scene, so CSS lookup can
+                // access the status controls without reloading the controller.
                 var scene = primaryStage.getScene();
                 if (scene == null) return;
                 var statusNode = scene.lookup("#statusLabel");
@@ -177,16 +171,16 @@ public class JavaFxApp extends Application {
                 var spinner = scene.lookup("#spinner");
                 if (spinner != null) spinner.setVisible(false);
             } catch (Exception e) {
-                LOG.log(Level.WARNING, "Impossibile mostrare errore nella lobby", e);
+                LOG.log(Level.WARNING, "Unable to show lobby error", e);
             }
         });
     }
 
     /**
-     * Punto di ingresso quando l'app è lanciata direttamente (es. via
-     * {@code mvn javafx:run}). Per l'integrazione col flusso TUI/GUI esistente
-     * vedi {@link it.polimi.it.network.client.ClientApp}, che instrada l'utente
-     * verso questa Application a seconda della scelta.
+     * Entry point used when the app is launched directly, for example through
+     * {@code mvn javafx:run}. The TUI/GUI selection flow starts from
+     * {@link it.polimi.it.network.client.ClientApp}, which delegates here when
+     * the user chooses the GUI.
      */
     public static void main(String[] args) {
         Application.launch(JavaFxApp.class, args);

@@ -9,12 +9,20 @@ import java.util.List;
 
 /**
  * Immutable snapshot of a player's visible state at a specific moment.
- * Includes the player's full tribe (characters and buildings acquired so
+ * <p>Includes the player's full tribe (characters and buildings acquired so
  * far) so that every view can render every player's tribe without polling
  * the model.
  *
- * Implements { Serializable} so it can be passed inside Message
+ * <p>Implements {@link Serializable} so it can be passed inside Message
  * objects over RMI and via Java object serialisation over sockets.
+ *
+ * @param name player nickname
+ * @param totemColour chosen totem colour
+ * @param food current food amount
+ * @param prestigePoints current prestige points
+ * @param turnOrder current turn-order position
+ * @param tribeCharacters acquired character cards
+ * @param tribeBuildings acquired building cards
  */
 public record PlayerSnapshot(
         String             name,

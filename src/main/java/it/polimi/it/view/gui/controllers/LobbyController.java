@@ -16,16 +16,16 @@ import javafx.scene.layout.VBox;
 import java.util.function.Consumer;
 
 /**
- * Controller della schermata di lobby/login.
+ * Controller for the lobby/login screen.
  *
- * <p>Raccoglie i parametri di connessione (host, porta, protocollo,
- * nickname, numero giocatori). Quando l'utente preme "Connetti" invoca il
- * {@link #onConnectRequest} fornito dalla {@code JavaFxView}, che si occupa
- * della logica di rete vera e propria.
+ * <p>Collects connection parameters: host, port, protocol, nickname, and
+ * player count. When the user presses the connect button, it invokes the
+ * {@link #onConnectRequest} callback provided by {@code JavaFxView}, which
+ * handles the network flow.
  *
- * <p>Lo stato "connecting" è esposto via {@link #showConnecting} /
- * {@link #showError}: è la {@code JavaFxView} a gestire la transizione di
- * scena al tabellone una volta che la connessione è stabilita.
+ * <p>The connecting state is exposed through {@link #showConnecting} and
+ * {@link #showError}; {@code JavaFxView} handles the scene transition to the
+ * board once the connection is established.
  */
 public class LobbyController {
 
@@ -46,12 +46,12 @@ public class LobbyController {
     @FXML private Label             statusLabel;
 
     /**
-     * Nodo radice della scena lobby — impostato da JavaFxApp subito dopo il load FXML.
-     * Non iniettato via @FXML perché il nodo radice non ha fx:id nell'FXML.
+     * Root node of the lobby scene, set by JavaFxApp after loading FXML.
+     * It is not injected via @FXML because the root node has no fx:id.
      */
     private javafx.scene.layout.StackPane sceneRoot;
 
-    /** Chiamato da JavaFxApp dopo FXMLLoader.load() per fornire il nodo radice. */
+    /** Called by JavaFxApp after FXMLLoader.load() to provide the root node. */
     public void setSceneRoot(javafx.scene.layout.StackPane root) {
         this.sceneRoot = root;
     }
@@ -60,8 +60,15 @@ public class LobbyController {
     private TotemColour selectedColour = TotemColour.RED; // default
 
     /**
-     * Parametri raccolti dal form e passati alla {@code JavaFxView} per la
-     * connessione vera e propria.
+     * Parameters collected from the form and passed to {@code JavaFxView} for
+     * the actual connection.
+     *
+     * @param host server host
+     * @param port socket port
+     * @param useRmi whether to use RMI instead of sockets
+     * @param nickname player nickname
+     * @param numPlayers requested player count
+     * @param totemColour selected totem colour
      */
     public record ConnectionParams(
             String      host,
@@ -125,7 +132,7 @@ public class LobbyController {
         };
     }
 
-    /** Imposta il consumer chiamato al click di "Connetti". */
+    /** Sets the callback invoked when the connect button is clicked. */
     public void setOnConnectRequest(Consumer<ConnectionParams> handler) {
         this.onConnectRequest = handler;
     }
@@ -194,11 +201,12 @@ public class LobbyController {
     }
 
     /**
-     * Mostra un overlay con la lista delle sessioni aperte.
-     * Completata la scelta (o "nuova partita"), completa {@code future} con il sessionId
-     * oppure con {@code null} per creare una nuova partita.
+     * Shows an overlay with the list of open sessions.
+     * After the choice, or after selecting a new game, completes
+     * {@code future} with the selected session id or {@code null}.
      *
-     * <p>Usa {@link #sceneRoot} impostato da {@code JavaFxApp} — mai null a questo punto.
+     * <p>Uses {@link #sceneRoot}, set by {@code JavaFxApp}; it should not be
+     * null at this point.
      */
     public void showSessionList(
             java.util.List<it.polimi.it.network.message.Message.SessionInfo> sessions,
@@ -207,7 +215,7 @@ public class LobbyController {
         runFx(() -> {
             if (sceneRoot == null) { future.complete(null); return; }
 
-            // Pannello centrale
+            // Center panel.
             javafx.scene.layout.VBox panel = new javafx.scene.layout.VBox(8);
             panel.setStyle(
                     "-fx-background-color: #2a2a2a;" +
@@ -223,11 +231,11 @@ public class LobbyController {
             title.setStyle("-fx-text-fill: #fff; -fx-font-size: 14px; -fx-font-weight: bold;");
             panel.getChildren().add(title);
 
-            // Overlay semitrasparente che copre tutta la lobby
+            // Semi-transparent overlay covering the whole lobby.
             javafx.scene.layout.StackPane overlay = new javafx.scene.layout.StackPane(panel);
             overlay.setStyle("-fx-background-color: rgba(0,0,0,0.65);");
 
-            // Un bottone per ogni sessione aperta
+            // One button for each open session.
             for (var s : sessions) {
                 String lbl = String.format("[%s]  %d/%d giocatori  —  %s",
                         s.sessionId(), s.currentPlayers(), s.expectedPlayers(),
@@ -244,7 +252,7 @@ public class LobbyController {
                 panel.getChildren().add(btn);
             }
 
-            // Bottone "nuova partita"
+            // New-game button.
             javafx.scene.control.Button newGame =
                     new javafx.scene.control.Button("+ Crea nuova partita");
             newGame.setMaxWidth(Double.MAX_VALUE);
@@ -252,8 +260,8 @@ public class LobbyController {
                     "-fx-cursor: hand; -fx-font-size: 12px;");
             newGame.setOnAction(e -> {
                 sceneRoot.getChildren().remove(overlay);
-                // Usa il sentinel NEW invece di null: così il server crea
-                // sempre una sessione nuova invece di riusare quella esistente.
+                // Use the NEW sentinel instead of null so the server always
+                // creates a new session instead of reusing an existing one.
                 future.complete(it.polimi.it.network.server.LobbyServer.NEW_SESSION);
             });
             panel.getChildren().add(newGame);

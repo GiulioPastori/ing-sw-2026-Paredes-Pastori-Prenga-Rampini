@@ -12,31 +12,36 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 /**
- * Gestore TCP lato server per un singolo client connesso.
+ * Server-side TCP handler for one connected client.
  *
- * <p>Tre thread per client:
+ * <p>Each client uses three threads:
  * <ul>
- *   <li><b>reader</b> – legge i messaggi in arrivo (thread principale via {@link #run()}).</li>
- *   <li><b>writer</b> – svuota la coda di uscita {@link BlockingQueue}.</li>
- *   <li><b>watchdog</b> – controlla ogni {@value #WATCHDOG_INTERVAL_MS} ms se il client
- *       ha inviato almeno un messaggio negli ultimi {@value #HEARTBEAT_TIMEOUT_MS} ms;
- *       se scade, chiude la connessione.</li>
+ *   <li><b>reader</b>: reads inbound messages on the main handler thread via
+ *       {@link #run()}.</li>
+ *   <li><b>writer</b>: drains the outbound {@link BlockingQueue}.</li>
+ *   <li><b>watchdog</b>: every {@value #WATCHDOG_INTERVAL_MS} ms, checks
+ *       whether the client has sent any message during the last
+ *       {@value #HEARTBEAT_TIMEOUT_MS} ms; on timeout it closes the
+ *       connection.</li>
  * </ul>
  *
- * grazie all'{@link AtomicBoolean} {@code disconnectReported}: sia il readLoop
- * che il watchdog possono rilevare la disconnessione, ma solo il primo a farlo
- * notifica la sessione.
+ * <p>{@link #disconnectReported} guarantees that the session is notified once:
+ * both the read loop and watchdog can detect disconnection, but only the first
+ * one reports it.
  */
 public class SocketClientHandler implements ClientConnection, Runnable {
 
     private static final Logger LOG = Logger.getLogger(SocketClientHandler.class.getName());
 
-    /** Intervallo di controllo del watchdog (ms). */
+    /** Watchdog polling interval, in milliseconds. */
     static final long WATCHDOG_INTERVAL_MS = 5_000;
 
-    /** Silenzio massimo dal client prima di considerarlo disconnesso (ms).
-     *  Con heartbeat ogni 5s lato client, 30s = 6 heartbeat di tolleranza —
-     *  abbastanza per un utente lento ma reattivo in caso di crash reale. */
+    /**
+     * Maximum client silence before considering it disconnected, in
+     * milliseconds. With a client heartbeat every 5 seconds, 30 seconds allow
+     * six missed heartbeats: enough for slow users while still reacting to real
+     * crashes.
+     */
     static final long HEARTBEAT_TIMEOUT_MS = 30_000;
 
     private final Socket                 socket;
@@ -48,17 +53,17 @@ public class SocketClientHandler implements ClientConnection, Runnable {
     private BufferedReader reader;
     private PrintWriter    writer;
 
-    /** true dopo close(): impedisce operazioni multiple di chiusura. */
+    /** True after close(), preventing repeated close operations. */
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     /**
-     * true dopo la prima segnalazione di disconnessione alla sessione.
-     * Garantisce che {@link GameSession#onPlayerDisconnected(String)} venga
-     * invocata una sola volta anche se readLoop e watchdog la rilevano entrambi.
+     * True after the first disconnect report to the session. Guarantees that
+     * {@link GameSession#onPlayerDisconnected(String, ClientConnection)} is invoked only once,
+     * even if both the read loop and watchdog detect the disconnection.
      */
     private final AtomicBoolean disconnectReported = new AtomicBoolean(false);
 
-    /** Timestamp dell'ultimo messaggio ricevuto dal client (qualsiasi tipo). */
+    /** Timestamp of the last message received from the client, of any type. */
     private volatile long lastSeenTime = System.currentTimeMillis();
 
     public SocketClientHandler(Socket socket, String nickname, GameSession session, TotemColour totemColour) {
@@ -96,35 +101,35 @@ public class SocketClientHandler implements ClientConnection, Runnable {
             new Thread(this::watchdogLoop, "watchdog-" + nickname).start();
             readLoop();
         } catch (IOException e) {
-            if (!closed.get()) LOG.warning("Errore di lettura per '" + nickname + "': " + e.getMessage());
+            if (!closed.get()) LOG.warning("Read error for '" + nickname + "': " + e.getMessage());
         } finally {
             close();
             reportDisconnect();
         }
     }
 
-    // ── Lettura ───────────────────────────────────────────────────────────────
+    // Reading.
 
     private void readLoop() throws IOException {
         LOG.info("READ LOOP START " + nickname);
         String line;
         while (!closed.get() && (line = reader.readLine()) != null) {
-            lastSeenTime = System.currentTimeMillis(); // qualsiasi dato = client vivo
+            lastSeenTime = System.currentTimeMillis(); // any data means the client is alive
             try {
                 Message msg = Message.decode(line);
-                // HEARTBEAT e PONG (legacy): aggiornano solo il timestamp
+                // HEARTBEAT and legacy PONG only refresh the timestamp.
                 if (Message.HEARTBEAT.equals(msg.getType())
                         || Message.PONG.equals(msg.getType())) {
                     continue;
                 }
                 session.handleMessage(msg, this);
             } catch (Exception e) {
-                send(Message.error("Messaggio malformato: " + e.getMessage()));
+                send(Message.error("Malformed message: " + e.getMessage()));
             }
         }
     }
 
-    // ── Scrittura ─────────────────────────────────────────────────────────────
+    // Writing.
 
     private void writeLoop() {
         LOG.info("WRITE LOOP START " + nickname);
@@ -140,7 +145,7 @@ public class SocketClientHandler implements ClientConnection, Runnable {
         }
     }
 
-    // ── Watchdog ──────────────────────────────────────────────────────────────
+    // Watchdog.
 
     private void watchdogLoop() {
         while (!closed.get()) {
@@ -150,8 +155,8 @@ public class SocketClientHandler implements ClientConnection, Runnable {
 
                 long elapsed = System.currentTimeMillis() - lastSeenTime;
                 if (elapsed > HEARTBEAT_TIMEOUT_MS) {
-                    LOG.warning("Timeout heartbeat per '" + nickname
-                            + "' (" + elapsed + " ms senza messaggi).");
+                    LOG.warning("Heartbeat timeout for '" + nickname
+                            + "' (" + elapsed + " ms without messages).");
                     close();
                     reportDisconnect();
                     return;
@@ -163,7 +168,7 @@ public class SocketClientHandler implements ClientConnection, Runnable {
         }
     }
 
-    // ── Disconnessione (chiamata al massimo una volta) ─────────────────────────
+    // Disconnect reporting, called at most once.
 
     private void reportDisconnect() {
         if (disconnectReported.compareAndSet(false, true)) {

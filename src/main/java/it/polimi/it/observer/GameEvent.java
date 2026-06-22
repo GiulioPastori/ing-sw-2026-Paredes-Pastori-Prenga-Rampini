@@ -4,23 +4,17 @@ import it.polimi.it.enums.Era;
 
 import java.util.List;
 
-/** Domain events published by Game to its registered listeners.
-
- * All data carried by events is immutable (PlayerSnapshot, CardSnapshot,
- * BoardSnapshot, OfferTileSnapshot, TurnOrderTileSnapshot). Listeners never
- * receive direct references to model objects and therefore cannot alter
- * game state.
-
- * Each event carries everything the Controller and View need to react,
- * so the Controller never needs to query the model after receiving an event:
-      - RoundStarted carries the full turn order and a BoardSnapshot.
-     - TotemPlaced carries the updated BoardSnapshot.
-     - TotemReturnedToTurnOrder carries the updated BoardSnapshot.
-     - CardSlotReady carries the available cards inline.
-     - PostRoundStarted carries Watchtower players and available cards inline.
-
- * Player tribes (acquired characters and buildings) travel inside{ PlayerSnapshot},
- *  so any event that already carries a player snapshot also carries that player's up-to-date tribe. */
+/**
+ * Domain events published by Game to its registered listeners.
+ *
+ * <p>All data carried by events is immutable. Listeners receive snapshots
+ * rather than direct model objects, so they cannot alter game state.
+ *
+ * <p>Each event carries the data the controller and view need to react without
+ * querying the model again. Player tribes travel inside {@link PlayerSnapshot},
+ * so any event that carries a player snapshot also carries that player's
+ * up-to-date tribe.
+ */
 public sealed interface GameEvent permits
         GameEvent.RoundStarted,
         GameEvent.TotemPlaced,
@@ -34,35 +28,41 @@ public sealed interface GameEvent permits
         GameEvent.RoundEnded,
         GameEvent.GameEnded {
 
-    /** A new round has started.
-     * round=round number (1–10)
-     * turnOrder=players in placement order (first to last); each
-     *                  player snapshot carries their full tribe
-     * board = full snapshot of the board state at round start */
+    /**
+     * A new round has started.
+     *
+     * @param round round number
+     * @param turnOrder players in placement order, from first to last
+     * @param board full board state at round start
+     */
     record RoundStarted(
             int                  round,
             List<PlayerSnapshot> turnOrder,
             BoardSnapshot        board
     ) implements GameEvent {}
 
-    /** A player has placed their totem on an offer tile.
-     *  player=snapshot of the player after placement
-     * tileLetter=letter of the chosen tile
-     * board=full snapshot of the board state after the placement */
-
+    /**
+     * A player has placed their totem on an offer tile.
+     *
+     * @param player player snapshot after placement
+     * @param tileLetter letter of the chosen tile
+     * @param board full board state after placement
+     */
     record TotemPlaced(
             PlayerSnapshot player,
             char           tileLetter,
             BoardSnapshot  board
     ) implements GameEvent {}
 
-    /** The model is waiting for a TakeCardAction or a PassAction.
-     * player=the player who has to choose
-     * isTopRow =true if the slot is in the top row
-     * availableCards= the cards that can be selected
-     * visibleEvents =the event cards visible in the row (cannot be taken, shown for info only)
-     * slotsRemaining=the slots still left to consume after this one */
-
+    /**
+     * The model is waiting for a TakeCardAction or a PassAction.
+     *
+     * @param player player who has to choose
+     * @param isTopRow true if the slot is in the top row
+     * @param availableCards selectable cards in the current row
+     * @param visibleEvents event cards visible in the row; they cannot be taken
+     * @param slotsRemaining slots left to consume after this one
+     */
     record CardSlotReady(
             PlayerSnapshot     player,
             boolean            isTopRow,
@@ -71,25 +71,27 @@ public sealed interface GameEvent permits
             int                slotsRemaining
     ) implements GameEvent {}
 
-    /** A player has acquired a card. The { PlayerSnapshot} reflects
-     * the tribe AFTER the new card was added.
-     * player is a snapshot of the player after acquisition
-     * card is snapshot of the acquired card */
-
-
+    /**
+     * A player has acquired a card.
+     *
+     * @param player player snapshot after the new card was added to the tribe
+     * @param card acquired card snapshot
+     */
     record CardAcquired(
             PlayerSnapshot player,
             CardSnapshot   card
     ) implements GameEvent {}
 
-    /** A player attempted to take a building but had insufficient food.
+    /**
+     * A player attempted to take a building but had insufficient food.
      * The card stays on the board; the controller may propose an alternative.
-     * player=snapshot of the player
-     * card=snapshot of the building that could not be taken
-     * missingFood= how much food is still needed
-     * fromTopRow=true if the failed card was in the top row */
-
-
+     *
+     * @param player player snapshot
+     * @param card building card that could not be taken
+     * @param missingFood food still needed
+     * @param fromTopRow true if the failed card was in the top row
+     * @param alternatives alternative cards in the same row
+     */
     record CardAcquisitionFailed(
             PlayerSnapshot     player,
             CardSnapshot       card,
@@ -98,11 +100,14 @@ public sealed interface GameEvent permits
             List<CardSnapshot> alternatives
     ) implements GameEvent {}
 
-    /** A player finished their tile action and placed their totem
+    /**
+     * A player finished their tile action and placed their totem
      * on the Turn Order Tile.
-     * player =snapshot of the player after repositioning
-     * position =space occupied (1 = first)
-     * board = full snapshot of the board state after the move */
+     *
+     * @param player player snapshot after repositioning
+     * @param position occupied turn-order space; 1 is first
+     * @param board full board state after the move
+     */
     record TotemReturnedToTurnOrder(
             PlayerSnapshot player,
             int            position,
@@ -112,22 +117,25 @@ public sealed interface GameEvent permits
     /**
      * Post-round phase: all totems are on the Turn Order Tile.
      * Only players listed in watchtowerPlayers must respond with PostRoundAction.
-     * round =current round
-     * watchtowerPlayers= players who own the Watchtower building
-     * availableCards= top-row cards available for the Watchtower action */
-
-
+     *
+     * @param round current round
+     * @param watchtowerPlayers players who own the Watchtower building
+     * @param availableCards top-row cards available for the Watchtower action
+     */
     record PostRoundStarted(
             int                  round,
             List<PlayerSnapshot> watchtowerPlayers,
             List<CardSnapshot>   availableCards
     ) implements GameEvent {}
 
-    /** An event card has been resolved.
-     * eventId= ID of the event card
-     * era=era of the event
-     * type= type of the event
-     *  deltas =per-player resource changes caused by this event */
+    /**
+     * An event card has been resolved.
+     *
+     * @param eventId event card identifier
+     * @param era era of the event card
+     * @param type event type
+     * @param deltas per-player resource changes caused by this event
+     */
     record EventResolved(
             int                          eventId,
             Era                          era,
@@ -135,16 +143,27 @@ public sealed interface GameEvent permits
             List<PlayerResourceDelta>    deltas
     ) implements GameEvent {}
 
-    /** A new era has begun. */
+    /**
+     * A new era has begun.
+     *
+     * @param newEra newly active era
+     */
     record EraChanged(Era newEra) implements GameEvent {}
 
-    /** The round has ended (after events, discard, and row refill). */
+    /**
+     * The round has ended after events, discard, and row refill.
+     *
+     * @param round ended round number
+     */
     record RoundEnded(int round) implements GameEvent {}
 
-    /** The game is over.
-     * winners=snapshots of the winning player(s); each carries the final tribe
-     *  finalScores=snapshots of all players with their final scores and tribes
-     * scoreBreakdowns=detailed final score calculation for every players */
+    /**
+     * The game is over.
+     *
+     * @param winners winning player snapshots, including final tribes
+     * @param finalScores all player snapshots with final scores and tribes
+     * @param scoreBreakdowns detailed final-score calculations
+     */
     record GameEnded(
             List<PlayerSnapshot> winners,
             List<PlayerSnapshot> finalScores,

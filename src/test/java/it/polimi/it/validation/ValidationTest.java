@@ -194,7 +194,7 @@ class ActionValidatorTest {
             assertFalse(ActionValidator.validate(new PassAction("Alice"), alice, state).isOk());
         }
 
-        // ── Giocatore errato ──────────────────────────────────────────────────
+        // Wrong player.
 
         @Test
         @DisplayName("wrong player passing returns Fail")

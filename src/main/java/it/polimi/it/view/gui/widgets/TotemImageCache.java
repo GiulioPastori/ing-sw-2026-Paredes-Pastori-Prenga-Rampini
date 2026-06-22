@@ -7,19 +7,18 @@ import java.util.EnumMap;
 import java.util.Map;
 
 /**
- * Caricatore (con cache) delle immagini dei totem.
+ * Cached loader for totem images.
  *
- * <p>Convenzione: ogni totem ha un PNG con sfondo trasparente in
- * {@code resources/it/polimi/it/view/gui/cards/totem_<color>.png}, dove
- * {@code <color>} è la versione minuscola del nome dell'enum (es.
+ * <p>Convention: each totem has a transparent-background PNG in
+ * {@code resources/it/polimi/it/view/gui/cards/totem_<color>.png}, where
+ * {@code <color>} is the lowercase enum name, for example
  * {@code totem_red.png}, {@code totem_white.png}).
  *
- * <p>Il totem bianco rimane visibile su sfondi scuri (è in realtà un grigio
- * chiaro, non bianco puro): questa è una proprietà del PNG di partenza, qui
- * non c'è logica di tinta.
+ * <p>The white totem remains visible on dark backgrounds because the source
+ * PNG is light gray rather than pure white; no tinting logic is applied here.
  *
- * <p>Se l'immagine non è presente, viene restituito {@code null} e la
- * {@link CardCellFactory} ricade sul placeholder a pallino colorato.
+ * <p>If the image is missing, this class returns {@code null} and
+ * {@link CardCellFactory} falls back to a coloured-dot placeholder.
  */
 public final class TotemImageCache {
 

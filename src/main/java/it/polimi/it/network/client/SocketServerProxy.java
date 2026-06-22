@@ -24,6 +24,11 @@ import java.util.logging.Logger;
  *       callback. If reading returns nothing or fails, this is how the proxy
  *       knows the connection is gone: it marks itself as not connected and runs
  *       the {@code onDisconnect} callback.</li>
+ *   <li><b>heartbeat</b> — sends a {@code HEARTBEAT} every
+ *       {@value #HEARTBEAT_INTERVAL_MS} ms. Any game message already works as a
+ *       heartbeat, but this loop keeps sending one even while the user is slow
+ *       to act, so the server does not think the client is gone.</li>
+ * </ul>
  */
 public class SocketServerProxy implements ServerProxy {
 
@@ -67,7 +72,7 @@ public class SocketServerProxy implements ServerProxy {
                 new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true);
         connected = true;
 
-        // Usa joinWithSession: include sessionId nel payload se non-null
+        // Use joinWithSession so a non-null sessionId is included in the payload.
         writer.println(Message.joinWithSession(
                 nickname, numPlayers, totemColour.name(), sessionId).encode());
 
@@ -79,13 +84,13 @@ public class SocketServerProxy implements ServerProxy {
         heartbeatThread.setDaemon(true);
         heartbeatThread.start();
 
-        LOG.info("Connesso a " + host + ":" + port + " come '" + nickname + "'"
-                + (sessionId != null ? " sessione=" + sessionId : ""));
+        LOG.info("Connected to " + host + ":" + port + " as '" + nickname + "'"
+                + (sessionId != null ? " session=" + sessionId : ""));
     }
 
     @Override
     public Message fetchSessionList(int numPlayersFilter) throws IOException {
-        // Connessione temporanea: invia LIST_SESSIONS, legge SESSION_LIST, chiude subito.
+        // Temporary connection: send LIST_SESSIONS, read SESSION_LIST, then close.
         try (java.net.Socket tmp = new java.net.Socket(host, port);
              java.io.BufferedReader r = new java.io.BufferedReader(
                      new java.io.InputStreamReader(tmp.getInputStream(), StandardCharsets.UTF_8));
@@ -94,10 +99,10 @@ public class SocketServerProxy implements ServerProxy {
 
             w.println(Message.listSessions(numPlayersFilter).encode());
             String line = r.readLine();
-            if (line == null) throw new IOException("Nessuna risposta dal server.");
+            if (line == null) throw new IOException("No response from the server.");
             Message resp = Message.decode(line);
             if (!Message.SESSION_LIST.equals(resp.getType()))
-                throw new IOException("Risposta inattesa: " + resp.getType());
+                throw new IOException("Unexpected response: " + resp.getType());
             return resp;
         }
     }
@@ -114,14 +119,14 @@ public class SocketServerProxy implements ServerProxy {
         try { if (socket != null) socket.close(); } catch (IOException ignored) {}
     }
 
-    // ── Lettura messaggi dal server ───────────────────────────────────────────
+    // Reads messages from the server.
 
     private void readLoop() {
         try {
             String line;
             while (connected && (line = reader.readLine()) != null) {
                 Message msg = Message.decode(line);
-                // PING legacy: risponde con PONG per compatibilità
+                // Legacy PING support: answer with PONG for compatibility.
                 if (Message.PING.equals(msg.getType())) {
                     send(Message.pong());
                 } else if (onMessage != null) {
@@ -129,20 +134,17 @@ public class SocketServerProxy implements ServerProxy {
                 }
             }
         } catch (IOException e) {
-            if (connected) LOG.warning("Connessione persa: " + e.getMessage());
+            if (connected) LOG.warning("Connection lost: " + e.getMessage());
         } finally {
             connected = false;
             if (onDisconnect != null) onDisconnect.run();
         }
     }
 
-    // ── Heartbeat periodico verso il server ───────────────────────────────────
+    // Periodic heartbeat sent to the server.
 
     /**
-     *   <li><b>heartbeat</b> — sends a {@code HEARTBEAT} every
-     *       {@value #HEARTBEAT_INTERVAL_MS} ms. Any game message already works as a
-     *       heartbeat, but this loop keeps sending one even while the user is slow
-     *       to act, so the server does not think the client is gone.
+     * Keeps the connection alive while the user is not sending game actions.
      */
     private void heartbeatLoop() {
         while (connected) {

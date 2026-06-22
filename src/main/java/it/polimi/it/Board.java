@@ -17,17 +17,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Ground truth of the current game state (the Board).
- * Holds the observable state of the table:
- * - the tribe deck
- * - the top row and bottom row of visible cards
- * - the building decks per era (I, II, III)
- * - the Offer Track
- * - the Turn Order Tile
- * - the current era
+ * Ground truth of the current game state.
  *
- * Board exposes methods to modify and query state.
- * Event order, era change,etc. lives in Game.
+ * <p>Holds the observable state of the table: the tribe deck, visible card
+ * rows, per-era building decks, Offer Track, Turn Order Tile, and current era.
+ *
+ * <p>Board exposes methods to modify and query state. Event order and era
+ * transitions are coordinated by {@link Game}.
  */
 public class Board {
 
@@ -70,9 +66,22 @@ public class Board {
     /** Current era (changes when the first card of a new era is drawn). */
     private Era currentEra;
 
-    /** Result of resolving one event, including per-player resource changes. */
+    /**
+     * Result of resolving one event, including per-player resource changes.
+     *
+     * @param event resolved event card
+     * @param deltas per-player food and prestige changes
+     */
     public record ResolvedEvent(Event event, List<PlayerResourceDelta> deltas) {}
 
+    /**
+     * Creates an empty board with the supplied decks and tiles.
+     *
+     * @param tribeDeck tribe deck in draw order
+     * @param buildingDecks building decks grouped by era
+     * @param offerTiles active offer tiles
+     * @param turnOrderTile turn order tile for the player count
+     */
     public Board(Deque<Card> tribeDeck,
                  Map<Era, Deque<Building>> buildingDecks,
                  OfferTiles offerTiles,
@@ -302,19 +311,52 @@ public class Board {
 
     // Observable state
 
-    /** Returns an unmodifiable view of the top row. */
+    /**
+     * Returns an unmodifiable view of the top row.
+     *
+     * @return top-row cards
+     */
     public List<Card> getTopRow()    { return List.copyOf(topRow); }
 
-    /** Returns an unmodifiable view of the bottom row. */
+    /**
+     * Returns an unmodifiable view of the bottom row.
+     *
+     * @return bottom-row cards
+     */
     public List<Card> getBottomRow() { return List.copyOf(bottomRow); }
 
-    /** Returns true if the tribe deck is empty. */
+    /**
+     * Returns true if the tribe deck is empty.
+     *
+     * @return true when the tribe deck has no cards left
+     */
     public boolean isTribeDeckEmpty() { return tribeDeck.isEmpty(); }
 
-    /** Returns the number of cards remaining in the tribe deck. */
+    /**
+     * Returns the number of cards remaining in the tribe deck.
+     *
+     * @return remaining tribe-deck size
+     */
     public int getTribeDeckSize() { return tribeDeck.size(); }
 
+    /**
+     * Returns the offer tiles for this board.
+     *
+     * @return offer tiles
+     */
     public OfferTiles getOfferTiles()    { return offerTiles; }
+
+    /**
+     * Returns the Turn Order Tile for this board.
+     *
+     * @return turn order tile
+     */
     public TurnOrderTile getTurnOrderTile() { return turnOrderTile; }
+
+    /**
+     * Returns the currently active era.
+     *
+     * @return current era
+     */
     public Era           getCurrentEra()    { return currentEra; }
 }

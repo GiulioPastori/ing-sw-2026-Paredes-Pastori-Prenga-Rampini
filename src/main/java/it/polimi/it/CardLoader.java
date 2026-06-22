@@ -15,6 +15,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -50,6 +52,29 @@ public class CardLoader {
      */
     public static List<Card> loadAll(Path jsonPath) throws IOException {
         String content = Files.readString(jsonPath);
+        return parseAll(content);
+    }
+
+    /**
+     * Loads and returns all cards from a classpath resource.
+     *
+     * @param resourceName classpath resource name
+     * @return all cards (characters, events, buildings)
+     * @throws IOException if the resource cannot be read
+     */
+    public static List<Card> loadAllFromResource(String resourceName) throws IOException {
+        String normalized = resourceName.startsWith("/")
+                ? resourceName.substring(1)
+                : resourceName;
+        try (InputStream in = CardLoader.class.getClassLoader().getResourceAsStream(normalized)) {
+            if (in == null) {
+                throw new IOException("Classpath resource not found: " + normalized);
+            }
+            return parseAll(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+        }
+    }
+
+    private static List<Card> parseAll(String content) {
         JSONObject root = new JSONObject(content);
 
         List<Card> all = new ArrayList<>();
@@ -141,7 +166,7 @@ public class CardLoader {
         EventType type       = EventType.valueOf(obj.getString("type"));
         boolean   isFinal    = obj.optBoolean("isFinal", false);
         int       value      = obj.optInt("value", 0);
-        int       minPlayers = obj.optInt("minPlayers", 2); // ← aggiunto
+        int       minPlayers = obj.optInt("minPlayers", 2);
 
         EventStrategy strategy = parseStrategy(type, obj);
 
@@ -149,7 +174,7 @@ public class CardLoader {
         if (isFinal) e = new FinalEvent(id, type, value, strategy);
         else         e = new Event(id, era, type, value, strategy);
 
-        e.setMinPlayers(minPlayers); // ← aggiunto
+        e.setMinPlayers(minPlayers);
         return e;
     }
 
@@ -196,7 +221,7 @@ public class CardLoader {
         int    foodCost    = obj.getInt("foodCost");
         int    finalPoints = obj.getInt("finalPoints");
         String effectDesc  = obj.optString("effectDescription", "");
-        int    minPlayers  = obj.optInt("minPlayers", 2); // ← aggiunto
+        int    minPlayers  = obj.optInt("minPlayers", 2);
 
         if (obj.has("ppPerCharacter") && obj.has("targetCharacterType")) {
             int           ppPerCharacter = obj.getInt("ppPerCharacter");
@@ -207,7 +232,7 @@ public class CardLoader {
         }
 
         Building b = new Building(id, era, foodCost, finalPoints, effectDesc);
-        b.setMinPlayers(minPlayers); // ← aggiunto
+        b.setMinPlayers(minPlayers);
         return b;
     }
 }

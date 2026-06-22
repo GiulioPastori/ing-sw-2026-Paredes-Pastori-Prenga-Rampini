@@ -99,7 +99,7 @@ public class GameBoardView {
     @FXML private Label      eventOverlayTitle;
     @FXML private Label      eventOverlayName;
     @FXML private Label      eventOverlayDelta;
-    // FIX 5: carte evento in grande (fino a 2 affiancate)
+    // Large event cards, up to two side by side.
     @FXML private HBox       eventCardBox;
     @FXML private javafx.scene.image.ImageView eventCardImageView;
     @FXML private javafx.scene.image.ImageView eventCardImageView2;
@@ -275,8 +275,8 @@ public class GameBoardView {
     private record PendingEvent(int eventId, Era era, EventType type,
                                 String label, String localDeltaText) {}
 
-    // Coda overlay: gli eventi arrivano spesso in rapida successione, ma vanno
-    // mostrati uno alla volta per evitare banner con tipo/immagine sbagliati.
+    // Overlay queue: events often arrive in quick succession and must be shown
+    // one at a time to avoid mixing banner text and images.
     private final java.util.concurrent.BlockingQueue<PendingEvent> pendingEvents
             = new java.util.concurrent.LinkedBlockingQueue<>();
     private final List<Runnable> afterEventOverlayActions = new ArrayList<>();
@@ -777,7 +777,7 @@ public class GameBoardView {
 
         boolean empty = true;
 
-        // Personaggi — tutte le carte in un WrapPane, niente scroll
+        // Characters: all cards in a WrapPane, no scrolling.
         if (!p.tribeCharacters().isEmpty()) {
             empty = false;
             Label lbl = new Label("Personaggi");
@@ -786,7 +786,7 @@ public class GameBoardView {
             root.getChildren().add(buildCardRow(p.tribeCharacters()));
         }
 
-        // Edifici
+        // Buildings.
         if (!p.tribeBuildings().isEmpty()) {
             empty = false;
             Label lbl = new Label("Edifici");
@@ -823,7 +823,7 @@ public class GameBoardView {
         for (var card : cards) {
             javafx.scene.layout.StackPane cell =
                     it.polimi.it.view.gui.widgets.CardCellFactory.buildCard(card, null, 110, 154);
-            // Rimuovi qualsiasi effetto che oscura la carta
+            // Remove any effect that dims the card.
             cell.setEffect(null);
             cell.setOpacity(1.0);
             row.getChildren().add(cell);

@@ -14,18 +14,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
- * Punto di ingresso del client.
+ * Client entry point.
  *
- * <p>Uso: {@code java -jar mesos-client.jar [host] [socketPort]}
- * (default: host=localhost, socketPort=12345; la porta RMI è socketPort+1).
+ * <p>Usage: {@code java -jar mesos-client.jar [host] [socketPort]}.
+ * Defaults are host=localhost and socketPort=12345; the RMI port is
+ * socketPort+1.
  *
- * <p>L'app chiede da stdin se usare TUI o GUI:
+ * <p>The application asks on stdin whether to use the TUI or GUI:
  * <ul>
- *   <li>TUI → continua il flusso classico su console e crea una {@link TuiView};</li>
- *   <li>GUI → cede il controllo a {@link JavaFxApp}, che si occupa di tutto
- *       (lobby + connessione + board) sul JavaFX runtime. In questo ramo
- *       gli altri input da stdin (host/porta/nickname) vengono saltati:
- *       li raccoglie la lobby grafica.</li>
+ *   <li>TUI: continues the console flow and creates a {@link TuiView}.</li>
+ *   <li>GUI: delegates to {@link JavaFxApp}, which owns the lobby,
+ *       connection, and board on the JavaFX runtime. In this branch the
+ *       remaining stdin prompts are skipped because the graphical lobby
+ *       collects those parameters.</li>
  * </ul>
  */
 public class ClientApp {
@@ -41,15 +42,14 @@ public class ClientApp {
         boolean useGui = readLine(stdin).equals("2");
 
         if (useGui) {
-            // Cediamo il controllo a JavaFX: la lobby raccoglie host/porta/
-            // protocollo/nickname/numero giocatori e gestisce la connessione.
-            // Application.launch è bloccante e termina solo quando la finestra
-            // viene chiusa (o Platform.exit() è invocato).
+            // Delegate to JavaFX: the lobby collects host, port, protocol,
+            // nickname, and player count, then manages the connection.
+            // Application.launch blocks until the window is closed or
+            // Platform.exit() is invoked.
             Application.launch(JavaFxApp.class, args);
             return;
         }
 
-        //  Tui
         runTui(stdin, args);
     }
 
@@ -58,17 +58,17 @@ public class ClientApp {
         int    socketPort = 12345;
         if (args.length >= 2) {
             try { socketPort = Integer.parseInt(args[1]); }
-            catch (NumberFormatException e) { LOG.warning("Porta non valida, uso 12345"); }
+            catch (NumberFormatException e) { LOG.warning("Invalid port, using 12345"); }
         }
         int rmiPort = socketPort + 1;
 
-        // rmi o socket
+        // Transport selection.
         System.out.println("Scegli connessione:  1) Socket (TCP)   2) RMI");
         System.out.print("> ");
         String netChoice = readLine(stdin).toLowerCase();
         boolean useRmi = netChoice.equals("2") || netChoice.equals("rmi");
 
-        // nickname
+        // Nickname.
         System.out.print("Il tuo nickname: ");
         String nickname = readLine(stdin).trim();
         while (nickname.isBlank()) {
@@ -83,7 +83,7 @@ public class ClientApp {
         catch (NumberFormatException ignored) {}
         numPlayers = Math.max(2, Math.min(5, numPlayers));
 
-        // Totem colour
+        // Totem colour.
         TotemColour[] allColours = TotemColour.values();
         System.out.println("Scegli il colore del tuo totem:");
         for (int i = 0; i < allColours.length; i++) {
@@ -96,7 +96,7 @@ public class ClientApp {
             if (idx >= 0 && idx < allColours.length) chosenColour = allColours[idx];
         } catch (NumberFormatException ignored) {}
 
-        //  View
+        // View.
         GameView view = new TuiView();
 
         // Proxy
@@ -115,14 +115,14 @@ public class ClientApp {
             System.out.println("Connessione Socket sulla porta " + socketPort);
         }
 
-        // Controller + connessione
+        // Controller and connection.
         ClientController controller = new ClientController(proxy, view, nickname);
         proxy.setOnMessage(controller::onMessage);
         proxy.setOnDisconnect(controller::onDisconnect);
 
         int connectPort = useRmi ? rmiPort : socketPort;
 
-        // Partite multiple: mostra sessioni aperte e lascia scegliere
+        // Multiple games: show open sessions and let the user choose one.
         String chosenSessionId = null;
         try {
             java.util.List<it.polimi.it.network.message.Message.SessionInfo> sessions =
@@ -171,7 +171,7 @@ public class ClientApp {
         System.out.println("Arrivederci!");
     }
 
-    /** Legge una riga da StdinReader con retry fino a quando arriva qualcosa. */
+    /** Reads a line from StdinReader, retrying until input is available. */
     private static String readLine(StdinReader stdin) {
         while (true) {
             try {

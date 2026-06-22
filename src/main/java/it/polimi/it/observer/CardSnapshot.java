@@ -27,6 +27,15 @@ import java.io.Serializable;
  * and end-game points for Builders). It is {@code null} for non-character
  * cards. Keeping these fields separate avoids inflating the main record
  * with optional values.
+ *
+ * @param id card identifier from the card database
+ * @param era era printed on the card
+ * @param type broad card category
+ * @param characterType character role, or {@code null} for non-character cards
+ * @param foodCost building food cost; 0 for non-building cards
+ * @param finalPoints building final points; 0 for non-building cards
+ * @param effectDescription effect text or event type name, depending on card type
+ * @param details character-specific printed data, or {@code null}
  */
 public record CardSnapshot(
         int               id,
@@ -48,13 +57,21 @@ public record CardSnapshot(
     /**
      * Distinguishing data for character cards. The semantics of each field
      * depend on the character type and mirror the printed icons on the card:
-     * <
-     *   Hunter: { triggerIcon}
-     *   Shaman: {starIcons} (1–3)
-     *   Inventor: {inventionIcon} (string identifier of which
-     *       invention is printed, out of N possible)
-     *   Builder: {buildingDiscount} and {builderPoints}
-     *   Gatherer / Artist: all fields are zero/empty (effect is fixed)
+     *
+     * <ul>
+     *   <li>Hunter: {@code triggerIcon}</li>
+     *   <li>Shaman: {@code starIcons} (1-3)</li>
+     *   <li>Inventor: {@code inventionIcon}, the printed invention identifier</li>
+     *   <li>Builder: {@code buildingDiscount} and {@code builderPoints}</li>
+     *   <li>Gatherer / Artist: all fields are zero or empty because their
+     *       effects are fixed</li>
+     * </ul>
+     *
+     * @param triggerIcon true when a Hunter has the printed trigger icon
+     * @param starIcons number of Shaman stars
+     * @param inventionIcon Inventor invention identifier
+     * @param buildingDiscount Builder discount on building acquisition
+     * @param builderPoints Builder end-game points
      */
     public record CharacterDetails(
             boolean triggerIcon,

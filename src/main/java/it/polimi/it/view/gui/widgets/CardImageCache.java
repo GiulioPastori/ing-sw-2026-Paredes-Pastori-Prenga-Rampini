@@ -8,12 +8,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Caricatore (con cache) delle immagini delle carte.
+ * Cached loader for card images.
  *
- * Convenzione: ogni carta ha un PNG in
+ * Convention: each card has a PNG in
  * {@code resources/it/polimi/it/view/gui/cards/card_<id>.png}.
- * Il retro generico è in {@code cards/card_back.png}.
- * I retri per era sono in {@code cards/tribe_back_era1.png},
+ * The generic card back is {@code cards/card_back.png}.
+ * Era-specific backs are {@code cards/tribe_back_era1.png},
  * {@code tribe_back_era2.png}, {@code tribe_back_era3.png}.
  */
 public final class CardImageCache {

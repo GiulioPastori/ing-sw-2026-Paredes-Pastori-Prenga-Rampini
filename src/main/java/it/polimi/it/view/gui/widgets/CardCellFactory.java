@@ -67,7 +67,7 @@ public final class CardCellFactory {
             CharacterType.ARTIST
     };
 
-    /** Dimensioni del nodo Turn Order Tile (ratio ~0.65 dell'immagine). */
+    /** Turn Order Tile node size, roughly 0.65 of the source image ratio. */
     private static final double TURN_TILE_W = 110;
     private static final double TURN_TILE_H = 165;
 
@@ -158,7 +158,7 @@ public final class CardCellFactory {
             cell.getChildren().add(box);
         }
 
-        // Tooltip only — no overlay strip on the card image
+        // Tooltip only; no overlay strip on the card image.
         attachTooltip(cell, card);
 
         if (onClick != null && !card.isEvent()) {
@@ -166,9 +166,9 @@ public final class CardCellFactory {
             final int id = card.id();
             cell.setOnMouseClicked(e -> onClick.accept(id));
         }
-        // Non aggiungere "disabled" se onClick == null: potrebbe essere
-        // una carta mostrata in sola visualizzazione (popup tribù, evento).
-        // "disabled" viene aggiunto esplicitamente solo dove serve (board rows).
+        // Do not add "disabled" only because onClick is null: this may be a
+        // read-only card in a tribe popup or event overlay. The "disabled"
+        // style is added explicitly where needed, such as board rows.
         return cell;
     }
 
@@ -566,13 +566,8 @@ public final class CardCellFactory {
     // ── Player + Tribe panel ──────────────────────────────────────────────────
 
     /**
-     * Builds the per-player panel: name + totem + resources, plus the player's
-     * tribe (characters grouped by role with counts, then buildings as small
-     * thumbnails with tooltips). The whole panel is highlighted when the
-     * player is the active one this turn.
-     */
-    /**
      * Builds the player panel shown at the bottom of the board.
+     * Includes name, totem, resources, and a compact tribe summary.
      *
      * @param p        the player snapshot
      * @param active   true if this player is the current active player

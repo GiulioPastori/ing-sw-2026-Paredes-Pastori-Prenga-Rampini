@@ -211,8 +211,8 @@ public class GameSession implements GameEventListener {
      * to the client that sent the bad action.
      */
     public synchronized void handleMessage(Message msg, ClientConnection sender) {
-        // HEARTBEAT/PONG/PING: aggiornano solo il timestamp nel handler (già fatto dal reader),
-        // non devono produrre azioni di gioco né messaggi di errore.
+        // HEARTBEAT/PONG/PING only refresh the handler timestamp, already done
+        // by the reader, and must not produce game actions or error messages.
         if (Message.HEARTBEAT.equals(msg.getType())
                 || Message.PONG.equals(msg.getType())
                 || Message.PING.equals(msg.getType())) {

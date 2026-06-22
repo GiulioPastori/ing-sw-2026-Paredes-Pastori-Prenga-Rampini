@@ -19,8 +19,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.io.Serial;
-import java.io.Serializable;
 
 
 /**
@@ -385,7 +383,18 @@ public class Message {
                 .put("effectDescription", c.effectDescription());
         if (c.characterType() != null)
             obj.put("characterType", c.characterType().name());
+        if (c.details() != null)
+            obj.put("details", characterDetailsToJson(c.details()));
         return obj;
+    }
+
+    private static JSONObject characterDetailsToJson(CardSnapshot.CharacterDetails d) {
+        return new JSONObject()
+                .put("triggerIcon",      d.triggerIcon())
+                .put("starIcons",        d.starIcons())
+                .put("inventionIcon",    d.inventionIcon())
+                .put("buildingDiscount", d.buildingDiscount())
+                .put("builderPoints",    d.builderPoints());
     }
 
     private static JSONArray cardListToJson(List<CardSnapshot> list) {
@@ -497,53 +506,45 @@ public class Message {
     /** Deserializes a JSONArray of cards into a List<CardSnapshot>. */
     private static List<CardSnapshot> parseCardArray(JSONArray arr) {
         List<CardSnapshot> list = new ArrayList<>();
-
         for (int i = 0; i < arr.length(); i++) {
-            JSONObject o = arr.getJSONObject(i);
-
-            String ct = o.optString("characterType", "");
-
-            list.add(new CardSnapshot(
-                    o.getInt("id"),
-                    it.polimi.it.enums.Era.valueOf(o.getString("era")),
-                    CardSnapshot.Type.valueOf(o.getString("type")),
-                    ct.isEmpty()
-                            ? null
-                            : it.polimi.it.enums.CharacterType.valueOf(ct),
-                    o.getInt("foodCost"),
-                    o.getInt("finalPoints"),
-                    o.getString("effectDescription"),
-                    null
-            ));
+            list.add(parseCard(arr.getJSONObject(i)));
         }
-
         return list;
     }
 
     public List<CardSnapshot> cardList(String key) {
         JSONArray arr = data.getJSONArray(key);
         List<CardSnapshot> list = new ArrayList<>();
-
         for (int i = 0; i < arr.length(); i++) {
-            JSONObject o = arr.getJSONObject(i);
-
-            String ct = o.optString("characterType", "");
-
-            list.add(new CardSnapshot(
-                    o.getInt("id"),
-                    Era.valueOf(o.getString("era")),
-                    CardSnapshot.Type.valueOf(o.getString("type")),
-                    ct.isEmpty()
-                            ? null
-                            : it.polimi.it.enums.CharacterType.valueOf(ct),
-                    o.getInt("foodCost"),
-                    o.getInt("finalPoints"),
-                    o.getString("effectDescription"),
-                    null
-            ));
+            list.add(parseCard(arr.getJSONObject(i)));
         }
-
         return list;
+    }
+
+    private static CardSnapshot parseCard(JSONObject o) {
+        String ct = o.optString("characterType", "");
+        return new CardSnapshot(
+                o.getInt("id"),
+                Era.valueOf(o.getString("era")),
+                CardSnapshot.Type.valueOf(o.getString("type")),
+                ct.isEmpty()
+                        ? null
+                        : it.polimi.it.enums.CharacterType.valueOf(ct),
+                o.getInt("foodCost"),
+                o.getInt("finalPoints"),
+                o.getString("effectDescription"),
+                parseCharacterDetails(o.optJSONObject("details"))
+        );
+    }
+
+    private static CardSnapshot.CharacterDetails parseCharacterDetails(JSONObject d) {
+        if (d == null) return null;
+        return new CardSnapshot.CharacterDetails(
+                d.optBoolean("triggerIcon", false),
+                d.optInt("starIcons", 0),
+                d.optString("inventionIcon", ""),
+                d.optInt("buildingDiscount", 0),
+                d.optInt("builderPoints", 0));
     }
 
     public List<LeaderboardEntry> leaderboardList(String key) {
@@ -620,22 +621,7 @@ public class Message {
 
     /** Reads a single CardSnapshot from a nested object (not array). */
     public CardSnapshot cardObj(String key) {
-        JSONObject o = data.getJSONObject(key);
-
-        String ct = o.optString("characterType", "");
-
-        return new CardSnapshot(
-                o.getInt("id"),
-                Era.valueOf(o.getString("era")),
-                CardSnapshot.Type.valueOf(o.getString("type")),
-                ct.isEmpty()
-                        ? null
-                        : it.polimi.it.enums.CharacterType.valueOf(ct),
-                o.getInt("foodCost"),
-                o.getInt("finalPoints"),
-                o.getString("effectDescription"),
-                null
-        );
+        return parseCard(data.getJSONObject(key));
     }
 
     /** Reads a TurnOrderTileSnapshot from a nested object. */
@@ -674,10 +660,15 @@ public class Message {
         return new BoardSnapshot(tiles, tot, deckSize);
     }
 
-    // ── Partite multiple: discovery sessioni ──────────────────────────────────
+    // Multiple-game session discovery.
 
     /**
-     * Descrizione leggera di una sessione aperta, inclusa nella risposta SESSION_LIST.
+     * Lightweight description of an open session, included in SESSION_LIST.
+     *
+     * @param sessionId unique session identifier
+     * @param expectedPlayers required number of players
+     * @param currentPlayers currently joined players
+     * @param players joined player nicknames
      */
     public record SessionInfo(
             String       sessionId,
@@ -686,8 +677,10 @@ public class Message {
             java.util.List<String> players) {}
 
     /**
-     * Client → Server: richiede la lista delle sessioni aperte.
-     * @param numPlayersFilter se &gt; 0 filtra per numero di giocatori; 0 = tutte
+     * Client to server: asks for the list of open sessions.
+     *
+     * @param numPlayersFilter if greater than 0, filters by player count; 0
+     *                         returns all sessions
      */
     public static Message listSessions(int numPlayersFilter) {
         return new Message(LIST_SESSIONS, new JSONObject()
@@ -695,7 +688,7 @@ public class Message {
     }
 
     /**
-     * Server → Client: lista delle sessioni aperte.
+     * Server to client: list of open sessions.
      */
     public static Message sessionList(List<SessionInfo> sessions) {
         JSONArray arr = new JSONArray();
@@ -710,8 +703,8 @@ public class Message {
     }
 
     /**
-     * JOIN con sessionId esplicito (per unirsi a una partita specifica).
-     * Se sessionId è null o blank si comporta come il JOIN normale.
+     * Creates a JOIN message with an explicit session id.
+     * If the session id is null or blank, this behaves like the normal JOIN.
      */
     public static Message joinWithSession(String nickname, int numPlayers,
                                           String totemColour, String sessionId) {
@@ -725,7 +718,7 @@ public class Message {
     }
 
     /**
-     * Legge la lista SessionInfo da un messaggio SESSION_LIST.
+     * Reads the SessionInfo list from a SESSION_LIST message.
      */
     public List<SessionInfo> sessionInfoList() {
         JSONArray arr = data.getJSONArray("sessions");
@@ -744,7 +737,7 @@ public class Message {
         return result;
     }
 
-    /** Legge un campo stringa opzionale; restituisce null se assente o JSON-null. */
+    /** Reads an optional string field; returns null when absent or JSON-null. */
     public String optStr(String key) {
         return data.isNull(key) ? null : data.optString(key, null);
     }
