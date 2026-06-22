@@ -193,7 +193,13 @@ of the delivery. Do not commit:
 - the assignment PDF used as reference;
 - temporary lecture material or copied slides;
 - IDE workspace files that are not already intentionally tracked.
+  
 
 ## Testing Coverage
 
 ![Coverage Report](deliverables/TestingCoverage.png)
+
+
+## Credits
+
+The game is distributed in Italy by Cranio Creations ©
