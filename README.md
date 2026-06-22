@@ -1,5 +1,7 @@
 # Mesos - Software Engineering Project
 
+<img src="deliverables/MesosImmagine.png" width="600">
+
 Mesos is a Java client-server implementation of the board game required by the
 course specification. The project provides:
 
