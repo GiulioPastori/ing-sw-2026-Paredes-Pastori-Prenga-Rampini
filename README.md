@@ -169,3 +169,6 @@ of the delivery. Do not commit:
 - temporary lecture material or copied slides;
 - IDE workspace files that are not already intentionally tracked.
 
+## Testing Coverage
+
+![Coverage Report](deliverables/Testing Coverage.png)
