@@ -19,13 +19,43 @@ The application UI is partly Italian.
 
 ## Requirements
 
+To run the released jars:
+
 - JDK 21
-- Maven 3.9+
 - Optional: MySQL 8.x if the leaderboard database feature must be enabled
 
-The GUI uses JavaFX. Build the client jar on the same operating system on which
-it will be executed, because JavaFX dependencies include platform-specific
-native components.
+No external modules, image folders, fonts, or configuration files are required
+to start the game. The released jars are self-contained and include the game
+resources they need.
+
+Maven 3.9+ is required only if you want to rebuild the jars from source.
+
+## Delivery Content
+
+The `deliverables/` folder contains the material requested for the final
+delivery:
+
+- high-level UML and communication documentation:
+  - `deliverables/high-level-uml.drawio.png`
+  - `deliverables/client-server-communication.md`
+  - `deliverables/final/sequence diagram mesos.pdf`
+- detailed UML:
+  - `deliverables/uml_dettaglio.png`
+- generated Javadoc:
+  - `deliverables/javadoc/index.html`
+- test coverage screenshot:
+  - `deliverables/TestingCoverage.png`
+- prebuilt executable jars:
+  - `deliverables/mesos-server.jar`
+  - `deliverables/mesos-client.jar`
+
+```text
+deliverables/mesos-server.jar
+deliverables/mesos-client.jar
+```
+
+These are the only jar files intended for publication. The Maven snapshot jar
+generated under `target/` is a build artifact and is not needed to run the game.
 
 ## Implemented Functionalities
 
@@ -43,9 +73,9 @@ Those are the functionalities we have implemented:
   <tr><td>TUI</td><td align="center">✅</td></tr>
   <tr><td>GUI</td><td align="center">✅</td></tr>
   <tr><td>Multiple games</td><td align="center">✅</td></tr>
-  <tr><td>Persistence</td><td align="center">❌</td></tr>
+  <tr><td>Server-state persistence</td><td align="center">❌</td></tr>
   <tr><td>Disconnections</td><td align="center">✅</td></tr>
-  <tr><td>Database</td><td align="center">✅</td></tr>
+  <tr><td>Database leaderboard</td><td align="center">✅</td></tr>
 </table>
 
 ## Build
@@ -65,11 +95,13 @@ target/mesos-client.jar
 
 The regular Maven artifact `target/GP45-1.0-SNAPSHOT.jar` is also produced, but
 the two `mesos-*.jar` files are the intended deliverables for running the game.
+After rebuilding, replace the matching files under `deliverables/` if the
+prebuilt deliverables must be updated.
 
 ## Run The Server
 
 ```bash
-java -jar target/mesos-server.jar [socketPort] [rmiPort] [cardsJsonPath]
+java -jar deliverables/mesos-server.jar [socketPort] [rmiPort] [cardsJsonPath]
 ```
 
 Defaults:
@@ -86,7 +118,7 @@ argument lets you use an external card database file.
 Example:
 
 ```bash
-java -jar target/mesos-server.jar 12345 12346
+java -jar deliverables/mesos-server.jar 12345 12346
 ```
 
 The server opens both transports when possible. If RMI cannot start, the server
@@ -95,7 +127,7 @@ continues in Socket-only mode.
 ## Run A Client
 
 ```bash
-java -jar target/mesos-client.jar [host] [socketPort]
+java -jar deliverables/mesos-client.jar [host] [socketPort]
 ```
 
 Defaults:
@@ -118,8 +150,8 @@ At startup the client asks:
 Examples:
 
 ```bash
-java -jar target/mesos-client.jar
-java -jar target/mesos-client.jar 192.168.1.10 12345
+java -jar deliverables/mesos-client.jar
+java -jar deliverables/mesos-client.jar 192.168.1.10 12345
 ```
 
 Run one server process and one client process per player.
@@ -149,14 +181,14 @@ warning and the game remains playable without persistent leaderboard updates.
 Example with explicit credentials:
 
 ```bash
-java -Ddb.user=mesos -Ddb.password=secret -jar target/mesos-server.jar
+java -Ddb.user=mesos -Ddb.password=secret -jar deliverables/mesos-server.jar
 ```
 
 ## Documentation
 
 - Client-server communication: [`deliverables/client-server-communication.md`](deliverables/client-server-communication.md)
-- High-level UML editable source: [`deliverables/high-level-uml.drawio`](deliverables/high-level-uml.drawio)
-- High-level UML image preview: [`deliverables/high-level-uml.svg`](deliverables/high-level-uml.svg)
+- High-level UML overview: [`deliverables/high-level-uml.drawio.png`](deliverables/high-level-uml.drawio.png)
+- Sequence diagrams: [`deliverables/final/sequence diagram mesos.pdf`](<deliverables/final/sequence diagram mesos.pdf>)
 - UML diagrams currently available in the repository:
   - `deliverables/uml_dettaglio.png`
   - `mesos_final.drawio.png`
@@ -191,6 +223,7 @@ Commit source code, documentation, resources, tests, and diagrams that are part
 of the delivery. Do not commit:
 
 - `target/`;
+- `target/GP45-1.0-SNAPSHOT.jar`;
 - local reports used only during review;
 - the assignment PDF used as reference;
 - temporary lecture material or copied slides;
