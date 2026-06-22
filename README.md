@@ -171,4 +171,4 @@ of the delivery. Do not commit:
 
 ## Testing Coverage
 
-![Coverage Report](deliverables/Testing Coverage.png)
+![Coverage Report](deliverables/TestingCoverage.png)
