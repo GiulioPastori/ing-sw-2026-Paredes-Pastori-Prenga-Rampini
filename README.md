@@ -32,6 +32,8 @@ Those are the functionalities we have implemented:
     <th>Feature</th>
     <th>Status</th>
   </tr>
+  <tr><td>Basic rules</td><td align="center">✅</td></tr>
+  <tr><td>Complete rules</td><td align="center">✅</td></tr>
   <tr><td>Socket</td><td align="center">✅</td></tr>
   <tr><td>RMI</td><td align="center">✅</td></tr>
   <tr><td>TUI</td><td align="center">✅</td></tr>
