@@ -12,31 +12,31 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 /**
- * Gestore TCP lato server per un singolo client connesso.
+ * TCP server-side handler for a single connected client.
  *
- * <p>Tre thread per client:
+ * <p>Three threads per client:
  * <ul>
- *   <li><b>reader</b> – legge i messaggi in arrivo (thread principale via {@link #run()}).</li>
- *   <li><b>writer</b> – svuota la coda di uscita {@link BlockingQueue}.</li>
- *   <li><b>watchdog</b> – controlla ogni {@value #WATCHDOG_INTERVAL_MS} ms se il client
- *       ha inviato almeno un messaggio negli ultimi {@value #HEARTBEAT_TIMEOUT_MS} ms;
- *       se scade, chiude la connessione.</li>
+ * <li><b>reader</b> – reads incoming messages (main thread via {@link #run()}).</li>
+ * <li><b>writer</b> – empties the outgoing {@link BlockingQueue}.</li>
+ * <li><b>watchdog</b> – checks every {@value #WATCHDOG_INTERVAL_MS} ms if the client
+ * has sent at least one message in the last {@value #HEARTBEAT_TIMEOUT_MS} ms;
+ * if it expires, it closes the connection.</li>
  * </ul>
  *
- * grazie all'{@link AtomicBoolean} {@code disconnectReported}: sia il readLoop
- * che il watchdog possono rilevare la disconnessione, ma solo il primo a farlo
- * notifica la sessione.
+ * thanks to {@link AtomicBoolean} {@code disconnectReported}: both the readLoop
+ * and the watchdog can detect the disconnection, but only the first one to do so
+ * notifies the session.
  */
 public class SocketClientHandler implements ClientConnection, Runnable {
 
     private static final Logger LOG = Logger.getLogger(SocketClientHandler.class.getName());
 
-    /** Intervallo di controllo del watchdog (ms). */
+    /** Watchdog check interval (ms). */
     static final long WATCHDOG_INTERVAL_MS = 5_000;
 
-    /** Silenzio massimo dal client prima di considerarlo disconnesso (ms).
-     *  Con heartbeat ogni 5s lato client, 30s = 6 heartbeat di tolleranza —
-     *  abbastanza per un utente lento ma reattivo in caso di crash reale. */
+    /** Maximum silence from the client before considering it disconnected (ms).
+     * With a heartbeat every 5s on the client side, 30s = 6 tolerated heartbeats —
+     * enough for a slow user but quick to react in case of a real crash. */
     static final long HEARTBEAT_TIMEOUT_MS = 30_000;
 
     private final Socket                 socket;
@@ -48,17 +48,17 @@ public class SocketClientHandler implements ClientConnection, Runnable {
     private BufferedReader reader;
     private PrintWriter    writer;
 
-    /** true dopo close(): impedisce operazioni multiple di chiusura. */
+    /** true after close(): prevents multiple closing operations. */
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     /**
-     * true dopo la prima segnalazione di disconnessione alla sessione.
-     * Garantisce che {@link GameSession#onPlayerDisconnected(String)} venga
-     * invocata una sola volta anche se readLoop e watchdog la rilevano entrambi.
+     * true after the first disconnection report to the session.
+     * Ensures that {@link GameSession#onPlayerDisconnected(String)} is
+     * called only once even if both readLoop and watchdog detect it.
      */
     private final AtomicBoolean disconnectReported = new AtomicBoolean(false);
 
-    /** Timestamp dell'ultimo messaggio ricevuto dal client (qualsiasi tipo). */
+    /** Timestamp of the last message received from the client (any type). */
     private volatile long lastSeenTime = System.currentTimeMillis();
 
     public SocketClientHandler(Socket socket, String nickname, GameSession session, TotemColour totemColour) {
