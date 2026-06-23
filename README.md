@@ -221,18 +221,6 @@ is configured for the test environment:
 mvn test -Dmesos.it.db=true
 ```
 
-## Repository Hygiene
-
-Commit source code, documentation, resources, tests, and diagrams that are part
-of the delivery. Do not commit:
-
-- `target/`;
-- `target/GP45-1.0-SNAPSHOT.jar`;
-- local reports used only during review;
-- the assignment PDF used as reference;
-- temporary lecture material or copied slides;
-- IDE workspace files that are not already intentionally tracked.
-  
 
 ## Testing Coverage
 
