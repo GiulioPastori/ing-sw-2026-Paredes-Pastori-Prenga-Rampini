@@ -56,6 +56,60 @@
           <artifactId>javafx-graphics</artifactId>
           <version>${javafx.version}</version>
       </dependency>
+      <!--
+          JavaFX native libraries are platform-specific. The plain OpenJFX
+          dependencies resolve the current build OS only, which would make a
+          shaded client jar built on Linux unable to start the GUI on Windows
+          and vice versa. Keep both platform classifiers in the client jar.
+      -->
+      <dependency>
+          <groupId>org.openjfx</groupId>
+          <artifactId>javafx-base</artifactId>
+          <version>${javafx.version}</version>
+          <classifier>linux</classifier>
+      </dependency>
+      <dependency>
+          <groupId>org.openjfx</groupId>
+          <artifactId>javafx-controls</artifactId>
+          <version>${javafx.version}</version>
+          <classifier>linux</classifier>
+      </dependency>
+      <dependency>
+          <groupId>org.openjfx</groupId>
+          <artifactId>javafx-fxml</artifactId>
+          <version>${javafx.version}</version>
+          <classifier>linux</classifier>
+      </dependency>
+      <dependency>
+          <groupId>org.openjfx</groupId>
+          <artifactId>javafx-graphics</artifactId>
+          <version>${javafx.version}</version>
+          <classifier>linux</classifier>
+      </dependency>
+      <dependency>
+          <groupId>org.openjfx</groupId>
+          <artifactId>javafx-base</artifactId>
+          <version>${javafx.version}</version>
+          <classifier>win</classifier>
+      </dependency>
+      <dependency>
+          <groupId>org.openjfx</groupId>
+          <artifactId>javafx-controls</artifactId>
+          <version>${javafx.version}</version>
+          <classifier>win</classifier>
+      </dependency>
+      <dependency>
+          <groupId>org.openjfx</groupId>
+          <artifactId>javafx-fxml</artifactId>
+          <version>${javafx.version}</version>
+          <classifier>win</classifier>
+      </dependency>
+      <dependency>
+          <groupId>org.openjfx</groupId>
+          <artifactId>javafx-graphics</artifactId>
+          <version>${javafx.version}</version>
+          <classifier>win</classifier>
+      </dependency>
   </dependencies>
     <build>
         <plugins>

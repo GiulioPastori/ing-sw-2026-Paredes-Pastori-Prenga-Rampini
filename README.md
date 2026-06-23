@@ -98,6 +98,11 @@ the two `mesos-*.jar` files are the intended deliverables for running the game.
 After rebuilding, replace the matching files under `deliverables/` if the
 prebuilt deliverables must be updated.
 
+The client jar bundles JavaFX native libraries for Linux and Windows. This is
+intentional: JavaFX resolves platform-specific native code at GUI startup, so a
+client jar built on one operating system must still contain the native libraries
+required by the other supported operating system.
+
 ## Run The Server
 
 ```bash
