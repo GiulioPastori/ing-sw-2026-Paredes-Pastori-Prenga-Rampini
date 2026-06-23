@@ -39,6 +39,8 @@ delivery:
   - `deliverables/high-level-uml.drawio.png`
   - `deliverables/client-server-communication.md`
   - `deliverables/final/sequence diagram mesos.pdf`
+- project summary UML:
+  - `deliverables/uml_sintesi_progetto.png`
 - detailed UML:
   - `deliverables/uml_dettaglio.png`
 - generated Javadoc:
@@ -53,9 +55,6 @@ delivery:
 deliverables/mesos-server.jar
 deliverables/mesos-client.jar
 ```
-
-These are the only jar files intended for publication. The Maven snapshot jar
-generated under `target/` is a build artifact and is not needed to run the game.
 
 ## Implemented Functionalities
 
@@ -89,7 +88,7 @@ mvn clean package
 The build creates two executable jars:
 
 ```text
-target/mesos-server.jar
+target/mesos-server.jar  
 target/mesos-client.jar
 ```
 
@@ -193,10 +192,10 @@ java -Ddb.user=mesos -Ddb.password=secret -jar deliverables/mesos-server.jar
 
 - Client-server communication: [`deliverables/client-server-communication.md`](deliverables/client-server-communication.md)
 - High-level UML overview: [`deliverables/high-level-uml.drawio.png`](deliverables/high-level-uml.drawio.png)
+- Project summary UML: [`deliverables/uml_sintesi_progetto.png`](deliverables/uml_sintesi_progetto.png)
 - Sequence diagrams: [`deliverables/final/sequence diagram mesos.pdf`](<deliverables/final/sequence diagram mesos.pdf>)
 - UML diagrams currently available in the repository:
   - `deliverables/uml_dettaglio.png`
-  - `mesos_final.drawio.png`
 - Generated Javadoc:
 
 ```bash
