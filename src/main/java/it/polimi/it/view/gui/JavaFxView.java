@@ -102,7 +102,7 @@ public class JavaFxView implements GameView {
                                       int totalEntries,
                                       int numPlayers,
                                       List<LeaderboardEntry> leaderboard,
-                                      Map<String, Integer> playerWinCounts) {}
+                                      Map<String, Integer> playerRanks) {}
 
     /**
      * @param primaryStage main {@link Stage} used to mount the board; usually
@@ -310,7 +310,7 @@ public class JavaFxView implements GameView {
             pendingLeaderboard = null;
             if (pending != null) applyLeaderboard(c, pending);
 
-            Scene scene = new Scene(root, 900, 820);
+            Scene scene = new Scene(root, 960, 900);
             scene.getStylesheets().add(
                     getClass().getResource("/it/polimi/it/view/gui/styles.css").toExternalForm());
             primaryStage.setScene(scene);
@@ -338,10 +338,10 @@ public class JavaFxView implements GameView {
                                 int totalEntries,
                                 int numPlayers,
                                 List<LeaderboardEntry> leaderboard,
-                                Map<String, Integer> playerWinCounts) {
+                                Map<String, Integer> playerRanks) {
         PendingLeaderboard pending = new PendingLeaderboard(
                 recipient, myScore, myRank, totalEntries, numPlayers,
-                leaderboard, playerWinCounts);
+                leaderboard, playerRanks);
         // Forward to the GameOverController of the current scene.
         // If GAME_ENDED has not been processed yet (race), retry on the FX
         // thread after a short delay — the GameOver scene is loaded
@@ -360,7 +360,7 @@ public class JavaFxView implements GameView {
     private void applyLeaderboard(GameOverController c, PendingLeaderboard pending) {
         c.setLeaderboard(pending.recipient(), pending.myScore(), pending.myRank(),
                 pending.totalEntries(), pending.numPlayers(), pending.leaderboard(),
-                pending.playerWinCounts());
+                pending.playerRanks());
     }
 
     // ── request* (pull, blocking) ─────────────────────────────────────────────

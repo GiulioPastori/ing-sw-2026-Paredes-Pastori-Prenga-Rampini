@@ -130,7 +130,7 @@ public interface GameView {
                                  int totalEntries,
                                  int numPlayers,
                                  List<LeaderboardEntry> leaderboard,
-                                 Map<String, Integer> playerWinCounts) {
+                                 Map<String, Integer> playerRanks) {
         showLeaderboard(recipient, myScore, myRank, totalEntries, numPlayers, leaderboard);
     }
 

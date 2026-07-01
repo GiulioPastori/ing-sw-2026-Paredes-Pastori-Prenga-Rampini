@@ -453,6 +453,8 @@
 .player-name { -fx-text-fill: #dcc396; -fx-font-weight: bold; -fx-font-size: 13px; }
 .player-food { -fx-text-fill: #64c864; -fx-font-size: 12px; }
 .player-pp   { -fx-text-fill: #dcb43c; -fx-font-size: 12px; }
+.player-stat-separator { -fx-text-fill: rgba(220,196,150,0.48); -fx-font-size: 12px; }
+.player-aggregate { -fx-text-fill: #a9d6d0; -fx-font-size: 11px; }
 
 .tribe-stack-row {
     -fx-padding: 0;
@@ -598,12 +600,18 @@
     -fx-border-radius: 6;
     -fx-background-radius: 6;
 }
-.gameover-table .column-header, .gameover-table .column-header-background { -fx-background-color: #3a2616; }
+.gameover-table .column-header, .gameover-table .column-header-background, .gameover-table .filler { -fx-background-color: #3a2616; }
 .gameover-table .column-header .label { -fx-text-fill: #dcb43c; -fx-font-weight: bold; }
 .gameover-table .table-row-cell { -fx-background-color: #1a0f08; -fx-text-fill: #dcc396; }
 .gameover-table .table-row-cell:odd { -fx-background-color: #281910; }
 .gameover-table .table-row-cell:selected { -fx-background-color: #5a3c23; }
 .gameover-table .table-row-cell.winner-row { -fx-background-color: rgba(220,180,60,0.2); }
+.gameover-table .table-row-cell.highlight-row { -fx-background-color: rgba(80,180,140,0.24); }
+.gameover-leaderboard-summary {
+    -fx-text-fill: #dcc396;
+    -fx-font-size: 12px;
+    -fx-text-alignment: center;
+}
 .gameover-button { -fx-background-color: #c87850; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand; }
 .gameover-button:hover { -fx-background-color: #d88860; }
 

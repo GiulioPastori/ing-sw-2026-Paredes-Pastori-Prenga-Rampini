@@ -48,7 +48,7 @@ public class GameOverController {
     @FXML private TableColumn<Row, String> nameCol;
     @FXML private TableColumn<Row, Number> ppCol;
     @FXML private TableColumn<Row, Number> foodCol;
-    @FXML private TableColumn<Row, String> winsCol;
+    @FXML private TableColumn<Row, String> dbRankCol;
 
     // Leaderboard widgets.
     @FXML private Label leaderboardHeader;
@@ -68,7 +68,7 @@ public class GameOverController {
         private final SimpleStringProperty  name = new SimpleStringProperty();
         private final SimpleIntegerProperty pp   = new SimpleIntegerProperty();
         private final SimpleIntegerProperty food = new SimpleIntegerProperty();
-        private final SimpleStringProperty  dbWins = new SimpleStringProperty("N.D.");
+        private final SimpleStringProperty  dbRanking = new SimpleStringProperty("N.D.");
         private final boolean               winner;
 
         Row(int rank, PlayerSnapshot p, boolean winner) {
@@ -83,11 +83,15 @@ public class GameOverController {
         public String  getName() { return name.get(); }
         public int     getPp()   { return pp.get(); }
         public int     getFood() { return food.get(); }
-        public String  getDbWins() { return dbWins.get(); }
+        public String  getDbRanking() { return dbRanking.get(); }
         public boolean isWinner(){ return winner; }
 
-        void setDbWins(Integer wins) {
-            dbWins.set(wins == null ? "N.D." : String.valueOf(wins));
+        void setDbRank(Integer rank, int totalEntries) {
+            if (rank == null || rank <= 0 || totalEntries <= 0) {
+                dbRanking.set("N.D.");
+                return;
+            }
+            dbRanking.set("#" + rank + " su " + totalEntries);
         }
     }
 
@@ -120,7 +124,8 @@ public class GameOverController {
         nameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
         ppCol  .setCellValueFactory(new PropertyValueFactory<>("pp"));
         foodCol.setCellValueFactory(new PropertyValueFactory<>("food"));
-        if (winsCol != null) winsCol.setCellValueFactory(new PropertyValueFactory<>("dbWins"));
+        if (dbRankCol != null)
+            dbRankCol.setCellValueFactory(new PropertyValueFactory<>("dbRanking"));
         scoreTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
         // Highlight winner rows through CSS.
@@ -254,9 +259,12 @@ public class GameOverController {
                                int totalEntries,
                                int numPlayers,
                                List<LeaderboardEntry> leaderboard,
-                               Map<String, Integer> playerWinCounts) {
+                               Map<String, Integer> playerRanks) {
         runFx(() -> {
-            applyPlayerWinCounts(playerWinCounts);
+            applyPlayerRanks(playerRanks, totalEntries);
+            if (dbRankCol != null) {
+                dbRankCol.setText("Classifica DB per " + numPlayers + " giocatori");
+            }
             if (leaderboardTable == null) return; // FXML predates this feature
 
             if (leaderboardHeader != null) {
@@ -290,10 +298,10 @@ public class GameOverController {
         });
     }
 
-    private void applyPlayerWinCounts(Map<String, Integer> playerWinCounts) {
-        if (scoreTable == null || playerWinCounts == null || playerWinCounts.isEmpty()) return;
+    private void applyPlayerRanks(Map<String, Integer> playerRanks, int totalEntries) {
+        if (scoreTable == null || playerRanks == null || playerRanks.isEmpty()) return;
         for (Row row : scoreTable.getItems()) {
-            row.setDbWins(playerWinCounts.get(row.getName()));
+            row.setDbRank(playerRanks.get(row.getName()), totalEntries);
         }
         scoreTable.refresh();
     }

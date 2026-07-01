@@ -105,7 +105,7 @@ public class LeaderboardRepository {
     /**
      * Returns the full leaderboard for games of the given size, ordered by
      * final score (descending), then by date (ascending — earlier wins break
-     * ties).
+     * ties), then by nickname for deterministic ties within the same game.
      *
      * @param numPlayers number of players the games of interest had
      * @return one ranked entry per row; never {@code null}
@@ -114,7 +114,7 @@ public class LeaderboardRepository {
         String sql = "SELECT nickname, final_score, num_players, played_at "
                 + "FROM " + DatabaseInitializer.TABLE_NAME + " "
                 + "WHERE num_players = ? "
-                + "ORDER BY final_score DESC, played_at ASC";
+                + "ORDER BY final_score DESC, played_at ASC, nickname ASC";
 
         List<LeaderboardEntry> result = new ArrayList<>();
         try (Connection conn = openConnection();

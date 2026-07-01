@@ -274,7 +274,7 @@ public class Message {
                                       int myScore, int myRank, int totalEntries,
                                       int numPlayers,
                                       List<LeaderboardEntry> leaderboard,
-                                      Map<String, Integer> playerWinCounts) {
+                                      Map<String, Integer> playerRanks) {
         return new Message(LEADERBOARD, new JSONObject()
                 .put("recipient",     recipient)
                 .put("myScore",       myScore)
@@ -282,7 +282,7 @@ public class Message {
                 .put("totalEntries",  totalEntries)
                 .put("numPlayers",    numPlayers)
                 .put("entries",       leaderboardEntriesToJson(leaderboard))
-                .put("playerWinCounts", stringIntMapToJson(playerWinCounts)));
+                .put("playerRanks",   stringIntMapToJson(playerRanks)));
     }
 
     // JSON helpers

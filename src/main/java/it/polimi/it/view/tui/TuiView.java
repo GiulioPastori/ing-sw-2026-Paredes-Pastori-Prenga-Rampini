@@ -250,32 +250,29 @@ public class TuiView implements GameView {
                                 int totalEntries,
                                 int numPlayers,
                                 List<LeaderboardEntry> leaderboard,
-                                Map<String, Integer> playerWinCounts) {
+                                Map<String, Integer> playerRanks) {
         println("");
         printBoxTop("CLASSIFICA — Partite a " + numPlayers + " giocatori");
         // Personal summary
         String rankText = myRank > 0
                 ? "#" + myRank + " su " + totalEntries
                 : "non disponibile";
-        String winsText = winCountText(playerWinCounts, recipient);
         printBoxBody(paint(FG_B_CYAN, true, "Sei " + shorten(recipient, 24)
                 + " — punteggio: " + myScore));
-        printBoxBody(paint(FG_B_CYAN, true, "Posizione: " + rankText
-                + " — vittorie DB: " + winsText));
+        printBoxBody(paint(FG_B_CYAN, true, "Posizione: " + rankText));
         printBoxBody("");
         if (leaderboard == null || leaderboard.isEmpty()) {
             printBoxBody(paint(DIM, "Nessuna partita registrata."));
         } else {
-            printBoxBody(paint(FG_B_YELLOW, "  #   Giocatore       PP   Vittorie  Data"));
+            printBoxBody(paint(FG_B_YELLOW, "  #   Giocatore       PP   Data"));
             int shown = 0;
             for (LeaderboardEntry e : leaderboard) {
                 if (shown++ >= LEADERBOARD_MAX_ROWS) break;
                 String name = shorten(e.nickname(), 14);
-                String row = String.format("  %-3d %-14s %5d  %-8s  %s",
+                String row = String.format("  %-3d %-14s %5d  %s",
                         e.rank(),
                         name,
                         e.finalScore(),
-                        winCountText(playerWinCounts, e.nickname()),
                         e.playedAt() == null ? "—" : LEADERBOARD_DATE_FMT.format(e.playedAt()));
                 // Highlight the recipient's own row(s)
                 if (recipient != null && recipient.equals(e.nickname())
@@ -292,14 +289,6 @@ public class TuiView implements GameView {
             }
         }
         printBoxBottom();
-    }
-
-    private static String winCountText(Map<String, Integer> playerWinCounts, String nickname) {
-        if (playerWinCounts == null || nickname == null) {
-            return "N.D.";
-        }
-        Integer wins = playerWinCounts.get(nickname);
-        return wins == null ? "N.D." : String.valueOf(wins);
     }
 
     private static String shorten(String value, int maxVisibleChars) {

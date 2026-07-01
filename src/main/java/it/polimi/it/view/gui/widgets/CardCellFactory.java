@@ -13,6 +13,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.Button;
+import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -605,23 +606,30 @@ public final class CardCellFactory {
         panel.getChildren().add(header);
 
         // ── Stats ─────────────────────────────────────────────────────────────
-        HBox stats = new HBox(10);
+        HBox stats = new HBox(6);
         stats.setAlignment(Pos.CENTER_LEFT);
         Label food = new Label("🍖 " + p.food());
         food.getStyleClass().addAll("player-food", "emoji-text");
         Label pp = new Label("⭐ " + p.prestigePoints());
         pp.getStyleClass().addAll("player-pp", "emoji-text");
-        stats.getChildren().addAll(food, pp);
+        stats.getChildren().addAll(food, statSeparator(), pp);
+
+        String aggregate = buildCharacterAggregateText(p, isMe);
+        if (!aggregate.isEmpty()) {
+            Label aggregateLabel = new Label(aggregate);
+            aggregateLabel.getStyleClass().addAll("player-aggregate", "emoji-text");
+            aggregateLabel.setTextOverrun(OverrunStyle.ELLIPSIS);
+            aggregateLabel.setMinWidth(0);
+            aggregateLabel.setPrefWidth(132);
+            aggregateLabel.setMaxWidth(132);
+            Tooltip.install(aggregateLabel, new Tooltip(buildCharacterAggregateTooltip(p, isMe)));
+            stats.getChildren().addAll(statSeparator(), aggregateLabel);
+        }
         panel.getChildren().add(stats);
 
         HBox tribeStacks = buildTribeStackRow(p, isMe);
         if (tribeStacks != null) {
             panel.getChildren().add(tribeStacks);
-        }
-
-        if (!isMe && !p.tribeCharacters().isEmpty()) {
-            HBox agg = buildCharacterAggregateRow(p);
-            if (agg != null) panel.getChildren().add(agg);
         }
 
         return panel;
@@ -767,37 +775,45 @@ public final class CardCellFactory {
     }
 
     /**
-     * Computes the per-player aggregate of character distinguishing data
-     * (used in the player panel, below the role counts). Returns null when
-     * there are no relevant aggregates.
+     * Computes the compact aggregate visible in the player panel.
+     * Shaman icons are public; building discount is shown only to its owner.
      */
-    private static HBox buildCharacterAggregateRow(PlayerSnapshot p) {
-        int stars = 0;
-        long triggers = 0;
+    private static String buildCharacterAggregateText(PlayerSnapshot p, boolean isMe) {
+        int shamanIcons = 0;
         int  builderDiscount = 0;
-        int  builderPoints = 0;
-        java.util.Set<String> inventions = new java.util.HashSet<>();
 
         for (CardSnapshot c : p.tribeCharacters()) {
             if (c.details() == null) continue;
-            stars           += c.details().starIcons();
-            builderDiscount += c.details().buildingDiscount();
-            builderPoints   += c.details().builderPoints();
-            if (c.details().triggerIcon()) triggers++;
-            if (!c.details().inventionIcon().isEmpty())
-                inventions.add(c.details().inventionIcon());
+            shamanIcons += c.details().starIcons();
+            if (isMe) builderDiscount += c.details().buildingDiscount();
         }
-        if (stars == 0 && triggers == 0 && inventions.isEmpty()
-                && builderDiscount == 0 && builderPoints == 0) return null;
 
-        HBox row = new HBox(4);
-        row.setAlignment(Pos.CENTER_LEFT);
-        if (stars > 0)             row.getChildren().add(badge("★ " + stars,                "char-stars"));
-        if (triggers > 0)          row.getChildren().add(badge("🎯 ×" + triggers,           "char-trigger"));
-        if (!inventions.isEmpty()) row.getChildren().add(badge("💡 ×" + inventions.size(), "char-invention"));
-        if (builderDiscount > 0)   row.getChildren().add(badge("🔨 -" + builderDiscount,    "char-discount"));
-        if (builderPoints > 0)     row.getChildren().add(badge("★ +" + builderPoints,      "char-pp"));
-        return row;
+        List<String> parts = new ArrayList<>();
+        if (shamanIcons > 0)      parts.add("🌀 " + shamanIcons);
+        if (builderDiscount > 0)  parts.add("🔨 -" + builderDiscount);
+        return String.join(" | ", parts);
+    }
+
+    private static String buildCharacterAggregateTooltip(PlayerSnapshot p, boolean isMe) {
+        int shamanIcons = 0;
+        int builderDiscount = 0;
+
+        for (CardSnapshot c : p.tribeCharacters()) {
+            if (c.details() == null) continue;
+            shamanIcons += c.details().starIcons();
+            if (isMe) builderDiscount += c.details().buildingDiscount();
+        }
+
+        List<String> parts = new ArrayList<>();
+        if (shamanIcons > 0) parts.add("Icone sciamano: " + shamanIcons);
+        if (builderDiscount > 0) parts.add("Sconto edifici: -" + builderDiscount);
+        return String.join(" | ", parts);
+    }
+
+    private static Label statSeparator() {
+        Label separator = new Label("|");
+        separator.getStyleClass().add("player-stat-separator");
+        return separator;
     }
 
     /** Role emoji (uses the bundled emoji font when applied to .emoji-text labels). */

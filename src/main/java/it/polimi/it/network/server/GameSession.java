@@ -367,33 +367,24 @@ public class GameSession implements GameEventListener {
             return;
         }
 
-        Map<String, Integer> playerWinCounts = new HashMap<>();
+        Map<String, Integer> playerRanks = new HashMap<>();
         for (PlayerSnapshot p : finalScores) {
             try {
-                playerWinCounts.put(p.name(), leaderboardRepository.countWinsForPlayer(p.name()));
+                playerRanks.put(p.name(), leaderboardRepository.getPlayerRank(
+                        p.name(), p.prestigePoints(), numPlayers, playedAt));
             } catch (SQLException e) {
-                LOG.log(Level.FINE, "Cannot read win count for " + p.name() + ": "
+                LOG.log(Level.WARNING, "Cannot compute rank for " + p.name() + ": "
                         + e.getMessage(), e);
             }
         }
 
         // Send one personalised message per client
         for (PlayerSnapshot p : finalScores) {
-            int rank;
-            try {
-                rank = leaderboardRepository.getPlayerRank(
-                        p.name(), p.prestigePoints(), numPlayers, playedAt);
-            } catch (SQLException e) {
-                LOG.log(Level.WARNING, "Cannot compute rank for " + p.name() + ": "
-                        + e.getMessage(), e);
-                continue;
-            }
-
             ClientConnection conn = clientMap.get(p.name());
             if (conn != null) {
                 conn.send(Message.leaderboard(
-                        p.name(), p.prestigePoints(), rank, totalEntries,
-                        numPlayers, leaderboard, playerWinCounts));
+                        p.name(), p.prestigePoints(), playerRanks.getOrDefault(p.name(), -1),
+                        totalEntries, numPlayers, leaderboard, playerRanks));
             }
         }
     }

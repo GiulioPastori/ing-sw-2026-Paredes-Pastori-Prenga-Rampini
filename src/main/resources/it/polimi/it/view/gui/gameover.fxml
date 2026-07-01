@@ -16,17 +16,17 @@
       xmlns:fx="http://javafx.com/fxml"
       fx:controller="it.polimi.it.view.gui.controllers.GameOverController"
       styleClass="gameover-root"
-      alignment="CENTER" spacing="14"
-      prefWidth="900" prefHeight="760">
+      alignment="CENTER" spacing="10"
+      prefWidth="960" prefHeight="880">
 
-    <padding><Insets top="30" right="56" bottom="30" left="56"/></padding>
+    <padding><Insets top="22" right="46" bottom="22" left="46"/></padding>
 
     <Label text="🏆" styleClass="gameover-trophy">
-        <font><Font size="80"/></font>
+        <font><Font size="58"/></font>
     </Label>
 
     <Label text="GAME OVER" styleClass="gameover-title">
-        <font><Font name="System Bold" size="40"/></font>
+        <font><Font name="System Bold" size="36"/></font>
     </Label>
 
     <Label fx:id="winnersLabel" text="" styleClass="gameover-winners" wrapText="true"/>
@@ -38,24 +38,48 @@
     <TextArea fx:id="finalBreakdownArea"
               editable="false"
               wrapText="true"
-              prefHeight="120"
+              prefHeight="96"
               styleClass="gameover-breakdown"/>
 
     <Region prefHeight="4"/>
 
     <Label text="Classifica finale" styleClass="gameover-section-title"/>
 
-    <TableView fx:id="scoreTable" prefHeight="260" styleClass="gameover-table">
+    <TableView fx:id="scoreTable" prefHeight="190" styleClass="gameover-table">
         <columns>
-            <TableColumn fx:id="rankCol"  text="#"           prefWidth="60"  />
-            <TableColumn fx:id="nameCol"  text="Giocatore"   prefWidth="260" />
-            <TableColumn fx:id="ppCol"    text="Punti P."    prefWidth="120" />
-            <TableColumn fx:id="foodCol"  text="Cibo"        prefWidth="100" />
-            <TableColumn fx:id="winsCol"  text="Vittorie DB" prefWidth="150" />
+            <TableColumn fx:id="rankCol"    text="#"              prefWidth="60"  />
+            <TableColumn fx:id="nameCol"    text="Giocatore"      prefWidth="220" />
+            <TableColumn fx:id="ppCol"      text="Punti P."       prefWidth="100" />
+            <TableColumn fx:id="foodCol"    text="Cibo"           prefWidth="80"  />
+            <TableColumn fx:id="dbRankCol"  text="Classifica DB"  prefWidth="260" />
         </columns>
     </TableView>
 
-    <Region prefHeight="10"/>
+    <Region prefHeight="4"/>
+
+    <Label fx:id="leaderboardHeader"
+           text="Classifica DB"
+           styleClass="gameover-section-title"/>
+
+    <Label fx:id="leaderboardSummary"
+           text=""
+           styleClass="gameover-leaderboard-summary"
+           wrapText="true"/>
+
+    <TableView fx:id="leaderboardTable"
+               prefWidth="780"
+               maxWidth="780"
+               prefHeight="170"
+               styleClass="gameover-table">
+        <columns>
+            <TableColumn fx:id="lbRankCol"  text="#"          prefWidth="70"  />
+            <TableColumn fx:id="lbNameCol"  text="Giocatore"  prefWidth="320" />
+            <TableColumn fx:id="lbScoreCol" text="Punti P."   prefWidth="130" />
+            <TableColumn fx:id="lbDateCol"  text="Data"       prefWidth="240" />
+        </columns>
+    </TableView>
+
+    <Region prefHeight="8"/>
 
     <HBox alignment="CENTER" spacing="14">
         <Button text="Chiudi" onAction="#onClose" styleClass="gameover-button" prefWidth="160" prefHeight="40"/>
