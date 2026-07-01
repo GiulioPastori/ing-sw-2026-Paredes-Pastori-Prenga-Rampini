@@ -49,6 +49,7 @@ public class Game {
     private int     currentRound;
     private boolean gameOver;
     private final Set<String> disconnectedPlayers = new HashSet<>();
+
     /** Giocatori riconnessi durante RESOLVING_ACTIONS/POST_ROUND: rientrano al prossimo beginRound. */
     private final Set<String> pendingReconnect     = new HashSet<>();
     private boolean testMode = false;
@@ -111,7 +112,7 @@ public class Game {
             return ValidationResult.fail("Not the time to place a totem.");
         }
 
-        // Bug fix 1: enforce turn order (rulebook p.4).
+        // Bug fix 1: enforce turn order
         // Players place in Turn Order Tile sequence (top to bottom).
         // Disconnected players are skipped — they were placed automatically
         // by autoPlaceDisconnectedTotems() at round start.

@@ -38,7 +38,7 @@ public class TurnOrderTile {
         for (TurnPosition pos : positions) {
             if (pos.isFree()) {
                 pos.place(player.getTotemColour());
-                player.setTurnOrder(pos.getPosition());
+                player.setTurnOrder(pos.getPosition()); // turn order
 
                 if (pos.getFoodBonus() > 0) {
                     player.addFood(pos.getFoodBonus());

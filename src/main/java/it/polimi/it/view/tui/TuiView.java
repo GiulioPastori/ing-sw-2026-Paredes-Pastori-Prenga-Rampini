@@ -436,6 +436,7 @@ public class TuiView implements GameView {
         }
     }
 
+
     /**
      * Renders the full board state: Turn Order Tile on the left, Offer Track
      * (with totems on occupied tiles), and the two card rows.

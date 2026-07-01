@@ -670,11 +670,9 @@ public class Message {
      * @param currentPlayers currently joined players
      * @param players joined player nicknames
      */
-    public record SessionInfo(
-            String       sessionId,
-            int          expectedPlayers,
-            int          currentPlayers,
-            java.util.List<String> players) {}
+    public record SessionInfo(String sessionId, int expectedPlayers,
+                              int currentPlayers, List<String> players)
+            implements java.io.Serializable {}
 
     /**
      * Client to server: asks for the list of open sessions.

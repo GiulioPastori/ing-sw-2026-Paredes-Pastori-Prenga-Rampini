@@ -26,7 +26,6 @@ public final class AnsiStyle {
     static final String UNDERLINE = "\u001B[4m";
 
     //  Foreground colours
-    static final String FG_BLACK   = "\u001B[30m";
     static final String FG_RED     = "\u001B[31m";
     static final String FG_GREEN   = "\u001B[32m";
     static final String FG_YELLOW  = "\u001B[33m";
